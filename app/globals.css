@@ -24,3 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* 스크롤 시 나타나는 애니메이션을 위한 클래스 (JS 없이 기본 효과) */
+.transition-lift {
+  transition: transform 0.3s ease-out, shadow 0.3s ease-out;
+}
+
+.transition-lift:hover {
+  transform: translateY(-8px); /* 위로 8px 이동 */
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2); /* 더 짙은 푸른 그림자 */
+}
