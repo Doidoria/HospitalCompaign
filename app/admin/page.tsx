@@ -122,7 +122,11 @@ export default function AdminDashboardPage() {
 
         {/* 탭 1: 예약 관리 테이블 */}
         {activeTab === 'dashboard' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <motion.div 
+            key="dashboard"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
+            className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+          >
             <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg font-bold text-slate-800">전체 예약 내역</h2>
               <div className="relative w-full sm:w-64">
@@ -131,8 +135,40 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            {/* 📱 모바일 전용 UI (카드형) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {reservations.map((res) => (
+                <div key={res.id} className="p-5 space-y-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-bold text-slate-400">{res.id}</span>
+                    <StatusBadge status={res.status} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg">
+                      {res.patient} <span className="text-sm font-medium text-slate-500 ml-1">| {res.hospital}</span>
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4" />
+                      {res.date} {res.time}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mt-3 border border-slate-100">
+                    <span className="text-sm font-medium text-slate-600">
+                      담당: {res.manager !== '-' ? <span className="text-blue-600 font-bold">{res.manager}</span> : '미정'}
+                    </span>
+                    {res.status === '매칭 대기' ? (
+                      <button onClick={() => handleMatch(res.id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">매칭하기</button>
+                    ) : (
+                      <button className="text-slate-400 hover:text-slate-600 p-1"><ChevronRight className="w-5 h-5 mx-auto" /></button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 💻 데스크톱 전용 UI (표형) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
                     <th className="p-4 font-semibold whitespace-nowrap">예약번호</th>
@@ -168,14 +204,60 @@ export default function AdminDashboardPage() {
 
         {/* 탭 2: 매니저 가입 승인 관리 테이블 */}
         {activeTab === 'managers' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <motion.div 
+            key="managers"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
+            className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+          >
             <div className="p-5 border-b border-slate-100">
               <h2 className="text-lg font-bold text-slate-800">가입 승인 대기 목록</h2>
               <p className="text-sm text-slate-500 mt-1">면접 및 교육 수료가 확인된 매니저의 계정을 승인해 주세요.</p>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            {/* 📱 모바일 전용 UI (카드형) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {pendingManagers.map((mgr) => (
+                <div key={mgr.id} className="p-5 space-y-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-bold text-slate-400">지원일: {mgr.applyDate}</span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md">
+                      {mgr.license}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                      {mgr.name} 
+                      <span className="text-sm font-medium text-slate-500 font-normal">| {mgr.phone}</span>
+                    </h3>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <button 
+                      onClick={() => handleApproveManager(mgr.id)} 
+                      className="flex-1 flex justify-center items-center gap-1.5 bg-emerald-100 text-emerald-700 py-3 rounded-xl text-sm font-bold hover:bg-emerald-200 transition-colors"
+                    >
+                      <CheckCircle2 className="w-5 h-5" /> 승인
+                    </button>
+                    <button 
+                      className="flex-1 flex justify-center items-center gap-1.5 bg-red-50 text-red-600 py-3 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                    >
+                      <XCircle className="w-5 h-5" /> 반려
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {pendingManagers.length === 0 && (
+                <div className="p-8 text-center text-slate-500 text-sm">
+                  현재 대기 중인 매니저 가입 신청이 없습니다.
+                </div>
+              )}
+            </div>
+
+            {/* 💻 데스크톱 전용 UI (표형) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="bg-emerald-50/50 text-slate-500 text-sm border-b border-slate-200">
                     <th className="p-4 font-semibold whitespace-nowrap">지원일자</th>

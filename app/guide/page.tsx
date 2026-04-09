@@ -46,14 +46,14 @@ export default function GuidePage() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
       
       {/* 헤더 */}
-      <header className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors p-2 -ml-2">
             <ArrowLeft className="w-5 h-5 mr-2" />
-            <span className="font-medium">메인으로</span>
+            <span className="hidden md:inline font-medium">메인으로</span>
           </Link>
-          <h1 className="font-bold text-lg text-blue-950">이용 요금 및 안내</h1>
-          <div className="w-10"></div>
+          <h1 className="font-bold text-lg md:text-xl text-blue-950">이용 요금 및 안내</h1>
+          <div className="w-10 md:w-20"></div>
         </div>
       </header>
 

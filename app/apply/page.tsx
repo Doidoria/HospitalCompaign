@@ -42,12 +42,12 @@ export default function ApplyPage() {
       {/* 상단 네비게이션바 (간소화 버전) */}
       <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors">
+          <Link href="/" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors p-2 -ml-2">
             <ArrowLeft className="w-5 h-5 mr-2" />
-            <span className="font-medium">뒤로 가기</span>
+            <span className="hidden md:inline font-medium">뒤로 가기</span>
           </Link>
-          <h1 className="font-bold text-xl text-blue-950">예스케어 동행 신청</h1>
-          <div className="w-20"></div> {/* 중앙 정렬을 위한 더미 공간 */}
+          <h1 className="font-bold text-lg md:text-xl text-blue-950">예스케어 동행 신청</h1>
+          <div className="w-10 md:w-20"></div>
         </div>
       </header>
 

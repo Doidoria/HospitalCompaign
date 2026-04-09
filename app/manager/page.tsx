@@ -39,13 +39,15 @@ export default function ManagerApplyPage() {
       
       {/* 상단 네비게이션바 */}
       <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span className="font-medium">메인으로</span>
-          </Link>
-          <h1 className="font-bold text-xl text-blue-950">매니저 교육 및 지원</h1>
-          <div className="w-24"></div> 
+        <div className="max-w-6xl mx-auto px-5 h-16 md:px-6 flex items-center justify-between">
+          <div className="flex-1 flex justify-start">
+            <Link href="/" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors">
+              <ArrowLeft className="w-6 h-6 md:w-5 md:h-5 md:mr-2" />
+              <span className="hidden md:inline font-medium">메인으로</span>
+            </Link>
+          </div>
+          <h1 className="font-bold text-lg md:text-xl text-blue-950 whitespace-nowrap">매니저 교육 및 지원</h1>
+          <div className="flex-1"></div> 
         </div>
       </header>
 
