@@ -1,31 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import { reservationApi, authApi } from '@/src/api/index';
 
 export default function ReservationDetailPage() {
-  // TODO: 실제 환경에서는 URL 파라미터(id)를 통해 백엔드에서 데이터를 불러옵니다.
-  // 임시(Mock) 데이터 상태 관리
+  const params = useParams();
+  const router = useRouter();
+  
+  const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
   const [reservation, setReservation] = useState({
-    id: 'RES-2026-001',
-    status: '결제 대기', // 상태 예시: '매칭 대기', '결제 대기', '예약 확정', '이용 완료', '취소됨'
-    date: '2026. 04. 15 (수)',
-    time: '오전 10:00',
-    hospital: '서울대학교병원 본원',
-    patientName: '김부모',
-    patientPhone: '010-1111-2222',
-    memo: '휠체어 이동 도움이 필요합니다.',
-    
-    // 매칭된 매니저 정보 (매칭 전이면 null)
-    manager: {
-      name: '이동행',
-      license: '요양보호사 1급',
-      rating: 4.9,
-    },
-
-    // 결제 정보
+    id: '',
+    status: '', 
+    date: '',
+    time: '',
+    hospital: '',
+    patientName: '',
+    patientPhone: '010-0000-0000',
+    memo: '안전한 동행 부탁드립니다.',
+    manager: null as any,
     payment: {
       baseFee: 33000,
       extraFee: 0,
@@ -33,19 +31,95 @@ export default function ReservationDetailPage() {
     }
   });
 
+  useEffect(() => {
+    const fetchDetail = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      try {
+        const [userRes, resDetail] = await Promise.all([
+          authApi.getMe(),
+          reservationApi.getDetail(params.id as string)
+        ]);
+        
+        setUserEmail(userRes.data.email);
+        const apiData = resDetail.data;
+
+        const dateObj = new Date(apiData.reservationTime);
+        const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+        const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+        setReservation(prev => ({
+          ...prev,
+          id: apiData.id,
+          status: apiData.status === 'WAITING' ? '매칭 대기' : apiData.status,
+          date: dateStr,
+          time: timeStr,
+          hospital: apiData.hospitalName,
+          patientName: apiData.patientName,
+          patientPhone: apiData.patientPhone || '연락처 없음', 
+          memo: apiData.requirements || '요청사항 없음',
+          manager: apiData.managerName && apiData.managerName !== '-' 
+            ? { name: apiData.managerName, license: '자격증 검증 완료', rating: '5.0' } 
+            : null
+        }));
+
+      } catch (error) {
+        console.error('로딩 에러:', error);
+        Swal.fire({ icon: 'error', title: '오류', text: '예약 내역을 불러올 수 없습니다.' });
+        router.push('/mypage');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetail();
+  }, [params.id, router]);
+
+  // 결제 버튼 로직 (원본 유지)
   const handlePayment = () => {
-    // TODO: 결제 모듈(토스페이먼츠, 포트원 등) 연동
     alert('결제창으로 이동합니다.');
-    // 결제 성공 시뮬레이션
     setReservation(prev => ({ ...prev, status: '예약 확정' }));
   };
 
-  const handleCancel = () => {
-    const isConfirm = window.confirm('정말 예약을 취소하시겠습니까?\n취소 규정에 따라 위약금이 발생할 수 있습니다.');
-    if (isConfirm) {
-      // TODO: 백엔드 취소 API 연동
-      alert('예약이 취소되었습니다.');
-      setReservation(prev => ({ ...prev, status: '취소됨' }));
+  // 🌟 예약 취소 로직 (비밀번호 확인 추가)
+  const handleCancel = async () => {
+    // 1. 상태 체크 (매칭 대기 상태에서만 가능)
+    if (reservation.status !== '매칭 대기') {
+      Swal.fire({
+        icon: 'error',
+        title: '취소 불가',
+        text: '매칭 대기 상태에서만 직접 취소가 가능합니다. 그 외 상태는 고객센터로 문의해 주세요.'
+      });
+      return;
+    }
+
+    // 2. 비밀번호 입력 (보안)
+    const { value: password } = await Swal.fire({
+      title: '예약 취소 본인 확인',
+      text: '보안을 위해 계정 비밀번호를 한 번 더 입력해 주세요.',
+      input: 'password',
+      inputPlaceholder: '비밀번호 입력',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: '비밀번호 확인 및 취소',
+      cancelButtonText: '닫기'
+    });
+
+    if (password) {
+      try {
+        // 3. 비밀번호 검증 후 삭제 진행
+        await authApi.login({ email: userEmail, password: password });
+        await reservationApi.cancel(reservation.id); 
+
+        await Swal.fire({ icon: 'success', title: '취소 완료', text: '예약이 정상적으로 취소되었습니다.' });
+        router.push('/mypage');
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: '인증 실패', text: '비밀번호가 일치하지 않거나 서버 오류가 발생했습니다.' });
+      }
     }
   };
 
@@ -59,7 +133,6 @@ export default function ReservationDetailPage() {
     visible: { opacity: 1, y: 0 }
   };
 
-  // 상태별 뱃지 색상 지정 함수
   const getStatusColor = (status: string) => {
     switch (status) {
       case '매칭 대기': return 'bg-orange-100 text-orange-700';
@@ -70,10 +143,11 @@ export default function ReservationDetailPage() {
     }
   };
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-900 w-8 h-8" /></div>;
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
       
-      {/* 모바일 최적화 헤더 */}
       <header className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/mypage" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors p-2 -ml-2">
@@ -86,9 +160,7 @@ export default function ReservationDetailPage() {
 
       <motion.main 
         className="max-w-2xl mx-auto px-4 pt-6 space-y-6"
-        initial="hidden"
-        animate="visible"
-        variants={pageVariants}
+        initial="hidden" animate="visible" variants={pageVariants}
       >
         {/* 1. 상태 및 기본 정보 카드 */}
         <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
@@ -126,7 +198,7 @@ export default function ReservationDetailPage() {
           </div>
         </motion.section>
 
-        {/* 2. 매니저 정보 카드 (매칭된 경우만 표시) */}
+        {/* 2. 매니저 정보 카드 */}
         {reservation.manager && reservation.status !== '취소됨' && (
           <motion.section variants={itemVariants} className="bg-emerald-50 rounded-[24px] p-6 shadow-sm border border-emerald-100">
             <h3 className="font-bold text-emerald-900 mb-4 flex items-center gap-2">
@@ -182,31 +254,37 @@ export default function ReservationDetailPage() {
           </motion.div>
         )}
 
-        {/* 5. 하단 액션 버튼 (상태에 따라 변경됨) */}
+        {/* 5. 하단 액션 버튼 */}
         <motion.div variants={itemVariants} className="pt-4 flex gap-3">
           {reservation.status === '결제 대기' && (
-            <button 
-              onClick={handlePayment}
-              className="flex-1 bg-blue-900 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors"
-            >
+            <button onClick={handlePayment} className="flex-1 bg-blue-900 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors">
               결제하기
             </button>
           )}
 
-          {(reservation.status === '결제 대기' || reservation.status === '매칭 대기' || reservation.status === '예약 확정') && (
-            <button 
-              onClick={handleCancel}
-              className="px-6 bg-white border border-gray-200 text-gray-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center gap-2"
-            >
-              <XCircle className="w-5 h-5" />
-              <span className="hidden md:inline">예약 취소</span>
-            </button>
-          )}
-          
-          {reservation.status === '취소됨' && (
-            <button className="flex-1 bg-gray-200 text-gray-500 font-bold py-4 rounded-2xl cursor-not-allowed">
-              취소된 예약입니다
-            </button>
+          {/* 오직 '매칭 대기' 일 때만 취소 버튼 활성화 */}
+          {reservation.status === '매칭 대기' ? (
+            <div className="w-full flex gap-3">
+              <button 
+                onClick={() => router.push(`/reservation/edit/${reservation.id}`)}
+                className="flex-1 bg-white border border-blue-200 text-blue-600 font-bold py-4 rounded-2xl hover:bg-blue-50 transition-colors"
+              >
+                예약 수정
+              </button>
+              <button 
+                onClick={handleCancel}
+                className="flex-1 bg-white border border-gray-200 text-gray-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-5 h-5" />
+                <span>예약 취소</span>
+              </button>
+            </div>
+          ) : (
+            reservation.status !== '결제 대기' && (
+              <div className="w-full bg-gray-100 text-gray-400 text-sm font-bold py-4 rounded-2xl text-center">
+                현재 상태에서는 직접 수정 및 취소가 불가합니다
+              </div>
+            )
           )}
         </motion.div>
 

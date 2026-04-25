@@ -1,15 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BookOpen, ShieldCheck, HeartHandshake, ArrowLeft, CheckCircle2, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import { apiClient } from '@/src/api/client'; 
+import { authApi } from '@/src/api/index';
 
 export default function ManagerApplyPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      authApi.getMe()
+        .then(res => {
+          if (res.data.role === 'MANAGER' || res.data.role === 'ADMIN') {
+            Swal.fire({ icon: 'info', title: '안내', text: '이미 매니저 권한이 부여된 계정입니다.' });
+            router.push('/manager/dashboard'); // 권한에 맞는 곳으로 리다이렉트
+          }
+        })
+        .catch(() => {});
+    }
+  }, [router]);
+  
+  // 프론트엔드 상태 (백엔드 Request DTO와 이름 일치)
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    hasLicense: 'none', // 요양보호사, 사회복지사 등 자격 여부
+    licenseName: 'none',
+    experience: '',
     motivation: ''
   });
 
@@ -18,10 +38,33 @@ export default function ManagerApplyPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🌟 폼 제출 시 백엔드로 전송하는 로직으로 변경
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('매니저 지원 데이터:', formData);
-    alert('매니저 교육 신청이 완료되었습니다. 개별 연락드리겠습니다.');
+    
+    // 토큰 확인 (로그인 안 된 유저는 튕겨냄)
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      Swal.fire({ icon: 'warning', title: '로그인 필요', text: '지원서를 제출하려면 먼저 로그인해 주세요.' });
+      router.push('/login');
+      return;
+    }
+
+    try {
+      // 백엔드의 @PostMapping("/apply-manager") 호출
+      await apiClient.post('/api/members/apply-manager', formData);
+      
+      await Swal.fire({
+        icon: 'success', 
+        title: '신청 완료', 
+        text: '매니저 교육 신청이 완료되었습니다. 관리자 심사 후 권한이 부여됩니다.'
+      });
+      router.push('/mypage'); // 제출 완료 후 마이페이지로 이동
+
+    } catch (error) {
+      console.error(error);
+      Swal.fire({ icon: 'error', title: '신청 실패', text: '오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' });
+    }
   };
 
   const pageVariants: Variants = {
@@ -73,11 +116,9 @@ export default function ManagerApplyPage() {
 
       <motion.main 
         className="max-w-6xl mx-auto px-6 pt-16 grid grid-cols-1 lg:grid-cols-2 gap-12"
-        initial="hidden"
-        animate="visible"
-        variants={pageVariants}
+        initial="hidden" animate="visible" variants={pageVariants}
       >
-        {/* 좌측: 교육 커리큘럼 소개 (PPT 내용 반영) */}
+        {/* 좌측: 교육 커리큘럼 소개 */}
         <div className="space-y-8">
           <div>
             <h3 className="text-2xl font-bold text-gray-800 mb-6">예스케어 매니저 필수 교육 과정</h3>
@@ -123,26 +164,13 @@ export default function ManagerApplyPage() {
           <p className="text-gray-500 mb-8 text-sm">정보를 남겨주시면 교육 일정 및 채용 절차를 안내해 드립니다.</p>
           
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">이름</label>
-              <input 
-                type="text" name="name" onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" required 
-              />
-            </div>
             
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">연락처</label>
-              <input 
-                type="tel" name="phone" placeholder="010-0000-0000" onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" required 
-              />
-            </div>
-
+            {/* 이름과 연락처는 회원가입 시 받은 정보(Token)로 처리되므로 폼에서 제거하여 편리하게 만듭니다. */}
+            
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">보유 자격증 (선택)</label>
               <select 
-                name="hasLicense" onChange={handleChange}
+                name="licenseName" onChange={handleChange} value={formData.licenseName}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white transition-all"
               >
                 <option value="none">없음 (신규 교육 희망)</option>
@@ -154,9 +182,19 @@ export default function ManagerApplyPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">지원 동기 (선택)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">관련 경력 (선택)</label>
               <textarea 
-                name="motivation" rows={3} onChange={handleChange}
+                name="experience" rows={2} onChange={handleChange} value={formData.experience}
+                placeholder="관련 업무 경험이 있다면 간략히 적어주세요."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none transition-all"
+              ></textarea>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">지원 동기 (필수)</label>
+              <textarea 
+                name="motivation" rows={4} onChange={handleChange} value={formData.motivation}
+                placeholder="예스케어 매니저에 지원하시는 이유를 적어주세요." required
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none transition-all"
               ></textarea>
             </div>

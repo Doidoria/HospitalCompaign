@@ -1,39 +1,86 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Calendar, Clock, MapPin, User, FileText, LogOut, ChevronRight, Activity } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import { STATUS_MAP, StatusKey } from '@/src/constants/statusMap';
 
 export default function MyPage() {
-  // TODO: 실제 백엔드 연동 시 API에서 받아올 임시(Mock) 데이터
-  const userName = "김보호";
-  
-  const upcomingReservation = {
-    id: 'RES-2026-001',
-    date: '2026. 04. 15 (수)',
-    time: '오전 10:00',
-    hospital: '서울대학교병원 본원',
-    status: '매칭 완료',
-    managerName: '이동행 매니저',
+  const router = useRouter();
+  const [userName, setUserName] = useState("고객"); // 추후 유저 정보 API가 있다면 대체 가능
+  const [upcomingReservation, setUpcomingReservation] = useState<any>(null);
+  const [pastRecords, setPastRecords] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🌟 컴포넌트가 마운트될 때 백엔드 API 호출
+  useEffect(() => {
+    const fetchReservations = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        Swal.fire({ icon: 'warning', title: '로그인 필요', text: '로그인 후 이용해 주세요.' });
+        router.push('/login');
+        return;
+      }
+
+      try {
+        const response = await axios.get('http://localhost:8081/api/reservations/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = response.data;
+
+        // 🌟 백엔드 데이터를 프론트엔드 UI에 맞게 가공
+        const processedData = data.map((res: any) => {
+          const dateObj = new Date(res.reservationTime);
+          const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+          const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+          const cleanStatus = res.status ? res.status.trim().toUpperCase() : 'WAITING';
+
+          return {
+            id: res.id,
+            date: dateStr,
+            time: timeStr,
+            hospital: res.hospitalName,
+            status: cleanStatus,
+            patientName: res.patientName,
+            reportAvailable: cleanStatus === 'COMPLETED'
+          };
+        });
+
+        // 데이터 분류 로직
+        const upcoming = processedData.find((res: any) => 
+            res.status !== 'COMPLETED' && res.status !== 'CANCELLED'
+          );
+        
+        // 나머지는 '지난 이용 내역(또는 전체 내역)'으로 분류
+        const past = processedData.filter((res: any) => res.id !== upcoming?.id);
+
+        setUpcomingReservation(upcoming || null);
+        setPastRecords(past);
+
+      } catch (error) {
+        console.error('예약 내역 조회 에러:', error);
+        localStorage.removeItem('accessToken'); // 토큰 만료 등 에러 시 로그아웃 처리
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReservations();
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    router.push('/login');
   };
 
-  const pastRecords = [
-    {
-      id: 'RES-2026-000',
-      date: '2026. 03. 20 (금)',
-      hospital: '연세세브란스병원',
-      reportAvailable: true,
-    },
-    {
-      id: 'RES-2025-099',
-      date: '2025. 12. 10 (수)',
-      hospital: '서울아산병원',
-      reportAvailable: true,
-    }
-  ];
-
-  // 애니메이션 설정
+  // 애니메이션 설정 (유저 원본 유지)
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -43,6 +90,10 @@ export default function MyPage() {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
   };
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans text-gray-500">데이터를 불러오는 중입니다...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
@@ -57,7 +108,7 @@ export default function MyPage() {
             <span className="text-sm font-medium text-gray-600 hidden md:block">
               <span className="text-blue-700 font-bold">{userName}</span>님, 환영합니다
             </span>
-            <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors">
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors">
               <LogOut className="w-4 h-4" />
               <span>로그아웃</span>
             </button>
@@ -95,56 +146,48 @@ export default function MyPage() {
               <div className="bg-white p-8 rounded-[32px] shadow-md border border-blue-100 relative overflow-hidden">
                 {/* 상단 뱃지 */}
                 <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                  <span className="bg-blue-100 text-blue-800 text-sm font-bold px-3 py-1 rounded-full">
-                    {upcomingReservation.status}
+                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                    STATUS_MAP[upcomingReservation.status as StatusKey]?.colorClass || 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {STATUS_MAP[upcomingReservation.status as StatusKey]?.label || upcomingReservation.status}
                   </span>
                   <span className="text-sm text-gray-400">예약번호: {upcomingReservation.id}</span>
                 </div>
 
-                {/* 상세 정보 */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-500">
-                      <Calendar className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium mb-0.5">예약 일자</p>
-                      <p className="text-lg font-bold text-gray-800">{upcomingReservation.date}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-500">
-                      <Clock className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium mb-0.5">방문 시간</p>
-                      <p className="text-lg font-bold text-gray-800">{upcomingReservation.time}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-500">
-                      <MapPin className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium mb-0.5">병원 정보</p>
-                      <p className="text-lg font-bold text-gray-800">{upcomingReservation.hospital}</p>
-                    </div>
-                  </div>
-
-                  {upcomingReservation.managerName && (
-                    <div className="flex items-center gap-4 pt-4 mt-2 border-t border-dashed border-gray-100">
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                        <User className="w-6 h-6" />
+                {/* 상세 정보 (전체 영역을 클릭 가능한 링크로 감싸 상세페이지로 이동 유도) */}
+                <Link href={`/reservation/${upcomingReservation.id}`} className="block hover:bg-gray-50/50 transition-colors p-2 -m-2 rounded-xl">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-500">
+                        <Calendar className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-sm text-emerald-700 font-medium mb-0.5">담당 매니저</p>
-                        <p className="text-lg font-bold text-gray-800">{upcomingReservation.managerName}</p>
+                        <p className="text-sm text-gray-500 font-medium mb-0.5">예약 일자</p>
+                        <p className="text-lg font-bold text-gray-800">{upcomingReservation.date}</p>
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-500">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium mb-0.5">방문 시간</p>
+                        <p className="text-lg font-bold text-gray-800">{upcomingReservation.time}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-500">
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium mb-0.5">병원 정보</p>
+                        <p className="text-lg font-bold text-gray-800">{upcomingReservation.hospital}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
                 
                 {/* 배경 장식 */}
                 <Activity className="absolute -bottom-10 -right-10 w-48 h-48 text-blue-50 opacity-50 pointer-events-none" />
@@ -165,32 +208,46 @@ export default function MyPage() {
           <motion.div variants={itemVariants} className="space-y-6">
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <FileText className="w-5 h-5 text-gray-500" />
-              케어 리포트
+              케어 리포트 및 과거 내역
             </h3>
 
             <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-6">
               <div className="space-y-4">
-                {pastRecords.map((record) => (
-                  <div key={record.id} className="p-4 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group cursor-pointer flex flex-col gap-3">
-                    <div>
-                      <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md mb-2 inline-block">이용 완료</span>
-                      <h4 className="font-bold text-gray-800">{record.hospital}</h4>
-                      <p className="text-sm text-gray-500 mt-0.5">{record.date}</p>
+                {pastRecords.length > 0 ? (
+                  pastRecords.map((record) => (
+                    <div key={record.id} className="p-4 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group cursor-pointer flex flex-col gap-3">
+                      <Link href={`/reservation/${record.id}`}>
+                        <div>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-md mb-2 inline-block ${
+                            STATUS_MAP[record.status as StatusKey]?.colorClass || 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {STATUS_MAP[record.status as StatusKey]?.label || record.status}
+                          </span>
+                          <h4 className="font-bold text-gray-800">{record.hospital}</h4>
+                          <p className="text-sm text-gray-500 mt-0.5">{record.date}</p>
+                        </div>
+                      </Link>
+                      
+                      {record.reportAvailable && (
+                        <Link href={`/report/${record.id}`}>
+                          <button className="w-full mt-2 flex items-center justify-between bg-white border border-emerald-200 text-emerald-700 text-sm font-bold py-2 px-4 rounded-xl group-hover:bg-emerald-50 transition-colors">
+                            <span>리포트 보기</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </Link>
+                      )}
                     </div>
-                    
-                    {record.reportAvailable && (
-                      <button className="w-full flex items-center justify-between bg-white border border-emerald-200 text-emerald-700 text-sm font-bold py-2 px-4 rounded-xl group-hover:bg-emerald-50 transition-colors">
-                        <span>리포트 보기</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-center text-sm py-8">조회된 내역이 없습니다.</p>
+                )}
               </div>
               
-              <button className="w-full mt-6 text-sm text-gray-500 font-medium hover:text-gray-800 transition-colors">
-                과거 내역 전체보기
-              </button>
+              {pastRecords.length > 0 && (
+                <button className="w-full mt-6 text-sm text-gray-500 font-medium hover:text-gray-800 transition-colors">
+                  과거 내역 전체보기
+                </button>
+              )}
             </div>
           </motion.div>
 
