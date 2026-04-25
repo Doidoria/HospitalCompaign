@@ -5,9 +5,9 @@ import { motion, Variants } from 'framer-motion';
 import { Calendar, Clock, MapPin, User, FileText, LogOut, ChevronRight, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import { STATUS_MAP, StatusKey } from '@/src/constants/statusMap';
+import { reservationApi } from '@/src/api/index';
 
 export default function MyPage() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function MyPage() {
   const [pastRecords, setPastRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🌟 컴포넌트가 마운트될 때 백엔드 API 호출
+  // 컴포넌트가 마운트될 때 백엔드 API 호출
   useEffect(() => {
     const fetchReservations = async () => {
       const token = localStorage.getItem('accessToken');
@@ -27,13 +27,10 @@ export default function MyPage() {
       }
 
       try {
-        const response = await axios.get('http://localhost:8081/api/reservations/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
+        const response = await reservationApi.getMyList();
         const data = response.data;
 
-        // 🌟 백엔드 데이터를 프론트엔드 UI에 맞게 가공
+        // 백엔드 데이터를 프론트엔드 UI에 맞게 가공
         const processedData = data.map((res: any) => {
           const dateObj = new Date(res.reservationTime);
           const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });

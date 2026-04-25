@@ -12,6 +12,7 @@ export const authApi = {
   
   // 3. 내 예약 목록 가져오기 (마이페이지 기능)
   getMe: () => apiClient.get('/api/members/me'),
+  checkEmail: (email: string) => apiClient.get(`/api/members/check-email?email=${email}`),
 };
 
 // ==========================================
@@ -38,6 +39,12 @@ export const reservationApi = {
 export const reportApi = {
   create: (data: any) => apiClient.post('/api/reports', data),
   getDetail: (reservationId: string) => apiClient.get(`/api/reports/reservation/${reservationId}`), 
+
+  createWithPdf: (formData: FormData) => apiClient.post('/api/reports', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data', // 파일 전송 시 필수
+    },
+  }),
 };
 
 // ==========================================

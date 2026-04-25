@@ -5,14 +5,14 @@ import { motion, Variants } from 'framer-motion';
 import { Mail, Lock, User, ArrowLeft, Phone, CheckCircle2, MapPin, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import DaumPostcodeEmbed from 'react-daum-postcode';
+import { authApi } from '@/src/api/index';
 
 export default function SignupPage() {
   const router = useRouter();
   const [isOpenPost, setIsOpenPost] = useState(false);
-  const [isEmailChecked, setIsEmailChecked] = useState(false); // 🌟 이메일 중복 검사 통과 여부
+  const [isEmailChecked, setIsEmailChecked] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '', 
@@ -22,7 +22,7 @@ export default function SignupPage() {
     phone: '', 
     address: '', 
     detailAddress: '', 
-    guardianName: '',      // 🌟 추가됨: 보호자 성명
+    guardianName: '',
     emergencyContact: '', 
     agreed: false
   });
@@ -59,7 +59,7 @@ export default function SignupPage() {
 
     try {
       // TODO: 백엔드에 이메일 중복 검사 API 호출 (현재 가상의 엔드포인트)
-      const response = await axios.get(`http://localhost:8081/api/members/check-email?email=${formData.email}`);
+      const response = await authApi.checkEmail(formData.email);
       
       if (response.data.isAvailable) {
         Swal.fire({ icon: 'success', title: '사용 가능', text: '사용 가능한 이메일입니다.' });
@@ -111,13 +111,13 @@ export default function SignupPage() {
     try {
       const finalAddress = `${formData.address} ${formData.detailAddress}`.trim();
 
-      const response = await axios.post('http://localhost:8081/api/members/join', {
+      const response = await authApi.signup({
         email: formData.email,
         password: formData.password,
         name: formData.name, 
         phoneNumber: cleanPhone,
         address: finalAddress,
-        guardianName: formData.guardianName, // 🌟 새로 추가된 보호자 성명 전송
+        guardianName: formData.guardianName,
         emergencyContact: cleanEmergency
       });
 

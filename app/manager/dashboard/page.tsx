@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { reservationApi, authApi } from '@/src/api/index';
+import axios from 'axios';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -38,16 +39,16 @@ export default function ManagerDashboard() {
         }
         setManagerName(meRes.data.name);
 
-        // 2. 예약 데이터 불러오기 (임시로 전체 예약을 불러와서 상태별로 필터링)
-        const resRes = await reservationApi.getAll();
+        const config = { headers: { Authorization: `Bearer ${token}` } };
         
-        // 매칭 대기 중인 예약만 (내가 수락할 수 있는 것들)
-        const waiting = resRes.data.filter((r: any) => r.status === 'WAITING' || r.status === '매칭 대기');
-        // 예약 확정 & 이용 완료된 것 중 내 것만 (현재는 식별자가 없으니 확정/완료 전체를 보여줌 - 추후 보완 필요)
-        const confirmed = resRes.data.filter((r: any) => r.status === 'CONFIRMED' || r.status === '예약 확정');
+        const [waitingRes, mySchedulesRes] = await Promise.all([
+          axios.get('http://localhost:8081/api/reservations/waiting', config),
+          axios.get('http://localhost:8081/api/reservations/manager/me', config)
+        ]);
 
-        setAvailableRequests(waiting);
-        setMySchedules(confirmed);
+        // 백엔드에서 이미 필터링된 데이터를そのまま 넣어줍니다.
+        setAvailableRequests(waitingRes.data);
+        setMySchedules(mySchedulesRes.data);
 
       } catch (error) {
         console.error('대시보드 로딩 에러:', error);

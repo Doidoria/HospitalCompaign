@@ -5,8 +5,8 @@ import { motion, Variants } from 'framer-motion';
 import { Mail, Lock, User, ShieldCheck, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import Swal from 'sweetalert2';
+import { authApi } from '@/src/api/index';
 
 export default function LoginPage() {
   const [loginType, setLoginType] = useState<'user' | 'manager'>('user');
@@ -18,24 +18,15 @@ export default function LoginPage() {
     e.preventDefault();
     
     try {
-      // 1. 탭에 상관없이 일단 백엔드에 로그인 요청
-      const response = await axios.post('http://localhost:8081/api/members/login', {
-        email: email,
-        password: password
-      });
-
-      // 2. 토큰 저장
+      // 🌟 로컬호스트 주소와 axios를 지우고 깔끔하게 authApi로 교체!
+      const response = await authApi.login({ email, password });
+      
       const token = response.data.token || response.data;
       localStorage.setItem('accessToken', token);
 
-      // 3. 토큰을 꽂아서 내 권한 확인
-      const meResponse = await axios.get('http://localhost:8081/api/members/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const userRole = meResponse.data.role; // USER, MANAGER, ADMIN 중 하나
-
-      // 🌟 4. 여기서 탭(loginType)과 내 권한(userRole)을 교차 검사합니다!
+      // 🌟 헤더에 토큰 넣는 로직 삭제 (인터셉터가 자동 처리)
+      const meResponse = await authApi.getMe(); 
+      const userRole = meResponse.data.role;
       
       // [유저 탭]으로 로그인했는데 매니저 권한인 경우
       if (loginType === 'user' && userRole === 'MANAGER') {
