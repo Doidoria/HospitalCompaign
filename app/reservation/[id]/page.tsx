@@ -24,11 +24,10 @@ export default function ReservationDetailPage() {
     patientPhone: '010-0000-0000',
     memo: '안전한 동행 부탁드립니다.',
     manager: null as any,
-    payment: {
-      baseFee: 33000,
-      extraFee: 0,
-      totalFee: 33000,
-    }
+    payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 },
+    category: '진료',
+    detailedContent: '',
+    doctorInquiry: ''
   });
 
   useEffect(() => {
@@ -64,7 +63,10 @@ export default function ReservationDetailPage() {
           memo: apiData.requirements || '요청사항 없음',
           manager: apiData.managerName && apiData.managerName !== '-' 
             ? { name: apiData.managerName, license: '자격증 검증 완료', rating: '5.0' } 
-            : null
+            : null,
+          category: apiData.category || '진료',
+          detailedContent: apiData.detailedContent || '',
+          doctorInquiry: apiData.doctorInquiry || ''
         }));
 
       } catch (error) {
@@ -85,7 +87,7 @@ export default function ReservationDetailPage() {
     setReservation(prev => ({ ...prev, status: '예약 확정' }));
   };
 
-  // 🌟 예약 취소 로직 (비밀번호 확인 추가)
+  // 예약 취소 로직 (비밀번호 확인 추가)
   const handleCancel = async () => {
     // 1. 상태 체크 (매칭 대기 상태에서만 가능)
     if (reservation.status !== '매칭 대기') {
@@ -172,8 +174,15 @@ export default function ReservationDetailPage() {
           </div>
 
           <div className="space-y-4">
+            <div>
+              <span className={`inline-block px-2.5 py-1 mb-2 rounded-md text-xs font-bold ${
+                reservation.category === '검사' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+              }`}>
+                {reservation.category}
+              </span>
+              <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
+            </div>
             <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-2.5">
                 <Calendar className="w-5 h-5 text-gray-400" />
@@ -193,6 +202,22 @@ export default function ReservationDetailPage() {
               <div className="mt-4 p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
                 <span className="font-semibold text-gray-700">요청사항: </span>
                 {reservation.memo}
+              </div>
+            )}
+
+            {/* 상세 내역 출력 */}
+            {reservation.detailedContent && (
+              <div className="mt-3 p-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600">
+                <span className="font-semibold text-gray-800 block mb-1">상세 내역:</span>
+                {reservation.detailedContent}
+              </div>
+            )}
+
+            {/* 의사 질의 출력 */}
+            {reservation.doctorInquiry && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-900">
+                <span className="font-semibold text-amber-800 block mb-1">의사 선생님께 드릴 질문:</span>
+                {reservation.doctorInquiry}
               </div>
             )}
           </div>

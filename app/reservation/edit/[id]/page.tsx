@@ -11,10 +11,13 @@ export default function ReservationEditPage() {
   const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [isOpenPost, setIsOpenPost] = useState(false); // 🌟 주소 검색 모달 상태
+  const [isOpenPost, setIsOpenPost] = useState(false);
 
   const [formData, setFormData] = useState({
-    hospitalName: '', date: '', time: '', requirements: ''
+    hospitalName: '', date: '', time: '', requirements: '',
+    category: '진료', 
+    detailedContent: '',
+    doctorInquiry: ''
   });
 
   useEffect(() => {
@@ -32,7 +35,10 @@ export default function ReservationEditPage() {
           hospitalName: data.hospitalName,
           date: datePart,
           time: timePart.substring(0, 5),
-          requirements: data.requirements || ''
+          requirements: data.requirements || '',
+          category: data.category || '진료',
+          detailedContent: data.detailedContent || '',
+          doctorInquiry: data.doctorInquiry || '',
         });
         setLoading(false);
       })
@@ -47,7 +53,7 @@ export default function ReservationEditPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 🌟 주소 검색 완료 시 병원명에 자동 입력
+  // 주소 검색 완료 시 병원명에 자동 입력
   const handleCompletePost = (data: any) => {
     let fullAddress = data.address;
     if (data.buildingName) fullAddress += ` (${data.buildingName})`;
@@ -67,7 +73,10 @@ export default function ReservationEditPage() {
       await reservationApi.update(id as string, {
         hospitalName: formData.hospitalName.trim(),
         reservationTime: formattedTime,
-        requirements: formData.requirements
+        requirements: formData.requirements,
+        category: formData.category,
+        detailedContent: formData.detailedContent,
+        doctorInquiry: formData.doctorInquiry
       });
 
       await Swal.fire('수정 완료', '예약 내용이 성공적으로 변경되었습니다.', 'success');
@@ -82,7 +91,7 @@ export default function ReservationEditPage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20 relative">
       
-      {/* 🌟 주소 검색 팝업 (모달) */}
+      {/* 주소 검색 팝업 (모달) */}
       {isOpenPost && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden relative shadow-2xl">
@@ -110,18 +119,47 @@ export default function ReservationEditPage() {
               <MapPin className="w-5 h-5 text-blue-500" /> 병원 정보
             </h3>
             <div className="flex gap-2">
-              <input 
-                type="text" name="hospitalName" value={formData.hospitalName} readOnly
+              <input type="text" name="hospitalName" value={formData.hospitalName} readOnly
                 onClick={() => setIsOpenPost(true)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer" required 
-              />
-              <button 
-                type="button" onClick={() => setIsOpenPost(true)}
-                className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap"
-              >
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer" required/>
+              <button type="button" onClick={() => setIsOpenPost(true)}
+                className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap">
                 <Search className="w-4 h-4 mr-1.5" /> 검색
               </button>
             </div>
+          </div>
+
+          {/* 동행 목적 선택 (카테고리) */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4">
+            <h3 className="font-bold text-slate-800 mb-4">동행 목적</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {['진료', '검사'].map((type) => (
+                <button key={type} type="button" onClick={() => setFormData(prev => ({ ...prev, category: type }))}
+                  className={`py-3 rounded-xl font-bold transition-all ${
+                    formData.category === type ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 상세 내역 및 의사 질의 (기존 특이사항 섹션 위/아래에 배치) */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4">
+            <h3 className="font-bold text-slate-800 mb-4">상세 내역</h3>
+            <textarea 
+              name="detailedContent" rows={3} value={formData.detailedContent} onChange={handleChange} 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none"
+              placeholder="진료 과목이나 구체적인 증상을 적어주세요."
+            />
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4">
+            <h3 className="font-bold text-slate-800 mb-4">의사 선생님께 드릴 질문</h3>
+            <textarea 
+              name="doctorInquiry" rows={3} value={formData.doctorInquiry} onChange={handleChange} 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none"
+              placeholder="교수님께 확인하고 싶은 내용을 적어주세요."
+            />
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">

@@ -11,7 +11,7 @@ import { reservationApi, authApi } from '../../src/api/index';
 
 export default function ApplyPage() {
   const router = useRouter();
-  const [isOpenPost, setIsOpenPost] = useState(false); // 주소 검색 모달 상태
+  const [isOpenPost, setIsOpenPost] = useState(false);
 
   const [formData, setFormData] = useState({
     date: '', time: '', hospitalName: '', patientName: '',
@@ -19,7 +19,7 @@ export default function ApplyPage() {
     requirements: ''
   });
 
-  // 🌟 [핵심] 로그인 체크 및 내 정보 자동 완성
+  // 로그인 체크 및 내 정보 자동 완성
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
