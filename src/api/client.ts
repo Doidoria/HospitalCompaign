@@ -5,6 +5,7 @@ export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '69420', 
   },
   withCredentials: true, // 쿠키 기반 세션/CORS 처리 시 필요
 });
