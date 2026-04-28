@@ -31,6 +31,8 @@ export const reservationApi = {
   getDetail: (id: string) => apiClient.get(`/api/reservations/${id}`),
   cancel: (id: string) => apiClient.delete(`/api/reservations/${id}`),
   update: (id: string, data: any) => apiClient.put(`/api/reservations/${id}`, data),
+  getWaiting: () => apiClient.get('/api/reservations/waiting'),
+  getManagerSchedules: () => apiClient.get('/api/reservations/manager/me'),
 };
 
 // ==========================================

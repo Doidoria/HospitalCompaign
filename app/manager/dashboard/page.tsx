@@ -42,8 +42,8 @@ export default function ManagerDashboard() {
         const config = { headers: { Authorization: `Bearer ${token}` } };
         
         const [waitingRes, mySchedulesRes] = await Promise.all([
-          axios.get('http://localhost:8081/api/reservations/waiting', config),
-          axios.get('http://localhost:8081/api/reservations/manager/me', config)
+          reservationApi.getWaiting(),
+          reservationApi.getManagerSchedules()
         ]);
 
         // 백엔드에서 이미 필터링된 데이터를そのまま 넣어줍니다.

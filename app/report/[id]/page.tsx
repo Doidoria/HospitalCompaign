@@ -7,8 +7,6 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { reportApi, reservationApi } from '@/src/api/index';
-import { toPng } from 'html-to-image';
-import jsPDF from 'jspdf';
 
 export default function ReportDetailPage() {
   const params = useParams();
@@ -50,11 +48,12 @@ export default function ReportDetailPage() {
 
   const handleDownloadPdf = async () => {
     if (!reportRef.current) return;
-
-    try {
       setIsGeneratingPdf(true);
 
-      // 1. html-to-image로 화면 캡처 (최신 CSS 완벽 지원)
+    try {
+      const { toPng } = await import('html-to-image');
+      const { default: jsPDF } = await import('jspdf');
+
       const imgData = await toPng(reportRef.current, {
         quality: 0.95,
         backgroundColor: '#f9fafb', // Tailwind bg-gray-50 색상 유지

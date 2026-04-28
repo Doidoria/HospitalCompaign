@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
         };
       });
       setReservations(formattedData);
-      setTotalPages(res.data.totalPages); // 👉 전체 페이지 수 저장
+      setTotalPages(res.data.totalPages);
     } catch (error) {
       console.error('예약 로딩 에러:', error);
     } finally {
@@ -58,7 +58,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 🌟 2. 실제 매니저 대기 목록 불러오기
+  // 실제 매니저 대기 목록 불러오기
   const fetchPendingManagers = async () => {
     try {
       const res = await adminApi.getPendingManagers();
@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
     loadAllData();
   }, []);
 
-  // 3. 예약 상태 변경 로직
+  // 예약 상태 변경 로직
   const handleStatusChange = async (id: number, newStatus: string) => {
     try {
       await reservationApi.updateStatus(id, newStatus);
@@ -91,31 +91,48 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 🌟 4. 매니저 승인 로직
+  // 매니저 승인 로직
   const handleApproveManager = async (memberId: number, name: string) => {
-    const isConfirm = window.confirm(`${name} 님을 매니저로 승인하시겠습니까?`);
-    if (!isConfirm) return;
+    const result = await Swal.fire({
+      title: '매니저 승인',
+      text: `${name} 님의 매니저 자격을 승인하시겠습니까?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '승인',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#059669', // emerald-600
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       await adminApi.approveManager(memberId);
       Swal.fire({ icon: 'success', title: '승인 완료', text: `${name} 님이 매니저로 승인되었습니다.` });
-      fetchPendingManagers(); // 승인 후 목록 다시 불러오기 (화면 갱신)
+      fetchPendingManagers();
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '승인 실패', text: '서버 오류가 발생했습니다.' });
+      Swal.fire({ icon: 'error', title: '오류', text: '승인 처리 중 오류가 발생했습니다.' });
     }
   };
 
-  // 1. 반려 함수 추가
   const handleRejectManager = async (applicationId: number, name: string) => {
-    const isConfirm = window.confirm(`${name} 님의 지원을 반려하시겠습니까? (데이터가 삭제됩니다)`);
-    if (!isConfirm) return;
+    const result = await Swal.fire({
+      title: '지원 반려',
+      text: `${name} 님의 매니저 지원을 반려하시겠습니까?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '반려',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#dc2626', // red-600
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       await adminApi.rejectManager(applicationId);
-      Swal.fire({ icon: 'success', title: '반려 완료', text: '지원서가 삭제되었습니다.' });
-      fetchPendingManagers(); // 목록 새로고침
+      Swal.fire({ icon: 'success', title: '반려 완료', text: '지원이 반려되었습니다.' });
+      fetchPendingManagers();
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '반려 실패', text: '오류가 발생했습니다.' });
+      Swal.fire({ icon: 'error', title: '오류', text: '반려 처리 중 오류가 발생했습니다.' });
     }
   };
 
@@ -130,7 +147,7 @@ export default function AdminDashboardPage() {
     const isWaiting = status === 'WAITING' || status === '매칭 대기';
     const isConfirmed = status === 'CONFIRMED' || status === '예약 확정';
     const isCompleted = status === 'COMPLETED' || status === '이용 완료';
-    const isCanceled = status === 'CANCELED' || status === '취소됨';
+    const isCanceled = status === 'CANCELLED' || status === '취소됨';
 
     const colorClass = isWaiting ? 'bg-orange-100 text-orange-700' : isConfirmed ? 'bg-blue-100 text-blue-700' : isCompleted ? 'bg-emerald-100 text-emerald-700' : isCanceled ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700';
     const displayStatus = isWaiting ? '매칭 대기' : isConfirmed ? '예약 확정' : isCompleted ? '이용 완료' : isCanceled ? '취소됨' : status;
@@ -270,7 +287,7 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* 🌟 탭 2: 매니저 가입 승인 관리 테이블 (실제 데이터 연동 완료) */}
+        {/* 탭 2: 매니저 가입 승인 관리 테이블 (실제 데이터 연동 완료) */}
         {activeTab === 'managers' && (
           <motion.div key="managers" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-5 border-b border-slate-100">
@@ -287,16 +304,32 @@ export default function AdminDashboardPage() {
                       {mgr.licenseName === 'none' ? '자격증 없음' : mgr.licenseName === 'caregiver' ? '요양보호사' : mgr.licenseName === 'socialworker' ? '사회복지사' : mgr.licenseName}
                     </span>
                   </div>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-[11px] font-bold text-slate-400 mr-1 uppercase tracking-wider">Available:</span>
+                    {mgr.availableDays?.split(',').map((day: string) => (
+                      <span key={day} className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-100">
+                        {day}
+                      </span>
+                    ))}
+                    <span className="text-[11px] text-slate-500 ml-1">({mgr.availableTime})</span>
+                  </div>
                   <div>
                     <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                       {mgr.name} <span className="text-sm font-medium text-slate-500 font-normal">| {mgr.phone}</span>
                     </h3>
+                    {mgr.certificateUrl && (
+                      <a href={`${process.env.NEXT_PUBLIC_API_URL}${mgr.certificateUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-2 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200">
+                        📄 증빙서류 확인
+                      </a>
+                    )}
                   </div>
                   <div className="flex gap-2 pt-2">
                     <button 
                       onClick={() => handleApproveManager(mgr.memberId, mgr.name)}
-                      className="flex-1 flex justify-center items-center gap-1.5 bg-emerald-100 text-emerald-700 py-3 rounded-xl text-sm font-bold hover:bg-emerald-200 transition-colors"
-                    >
+                      className="flex-1 flex justify-center items-center gap-1.5 bg-emerald-100 text-emerald-700 py-3 rounded-xl text-sm font-bold hover:bg-emerald-200 transition-colors">
                       <CheckCircle2 className="w-5 h-5" /> 승인
                     </button>
                     <button className="flex-1 flex justify-center items-center gap-1.5 bg-red-50 text-red-600 py-3 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
@@ -315,6 +348,8 @@ export default function AdminDashboardPage() {
                     <th className="p-4 font-semibold whitespace-nowrap">지원일자</th>
                     <th className="p-4 font-semibold whitespace-nowrap">이름/연락처</th>
                     <th className="p-4 font-semibold whitespace-nowrap">보유 자격증</th>
+                    <th className="p-4 font-semibold whitespace-nowrap text-center">근무 가능 시간</th>
+                    <th className="p-4 font-semibold whitespace-nowrap text-center">첨부파일</th>
                     <th className="p-4 font-semibold whitespace-nowrap text-right">계정 승인</th>
                   </tr>
                 </thead>
@@ -328,6 +363,30 @@ export default function AdminDashboardPage() {
                           mgr.licenseName === 'caregiver' ? '요양보호사' : 
                           mgr.licenseName === 'socialworker' ? '사회복지사' : 
                           mgr.licenseName === 'nurse' ? '간호사/간호조무사' : mgr.licenseName}
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex gap-1">
+                            {mgr.availableDays?.split(',').map((day: string) => (
+                              <span key={day} className="bg-emerald-50 text-emerald-700 text-[10px] px-1.5 py-0.5 rounded font-bold border border-emerald-100">
+                                {day}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-medium">{mgr.availableTime}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        {mgr.certificateUrl ? (
+                          <a href={`${process.env.NEXT_PUBLIC_API_URL}${mgr.certificateUrl}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">
+                            파일 보기
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-xs">없음</span>
+                        )}
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
@@ -343,7 +402,7 @@ export default function AdminDashboardPage() {
                       </td>
                     </tr>
                   ))}
-                  {pendingManagers.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-slate-500">현재 대기 중인 지원서가 없습니다.</td></tr>}
+                  {pendingManagers.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-500">현재 대기 중인 지원서가 없습니다.</td></tr>}
                 </tbody>
               </table>
             </div>

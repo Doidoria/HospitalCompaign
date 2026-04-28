@@ -49,13 +49,8 @@ export default function MyPage() {
           };
         });
 
-        // 데이터 분류 로직 (가장 가까운 미완료 예약을 메인으로)
-        const upcoming = processedData.find((res: any) => 
-            res.status !== 'COMPLETED' && res.status !== 'CANCELLED'
-        );
-        
-        // 나머지는 '지난 이용 내역(또는 전체 내역)'으로 분류
-        const past = processedData.filter((res: any) => res.id !== upcoming?.id);
+        const upcoming = processedData.filter((res: any) => res.status !== 'COMPLETED' && res.status !== 'CANCELLED');
+        const past = processedData.filter((res: any) => res.status === 'COMPLETED' || res.status === 'CANCELLED');
 
         setUpcomingReservation(upcoming || null);
         setPastRecords(past);

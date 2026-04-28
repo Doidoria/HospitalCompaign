@@ -30,19 +30,40 @@ export default function ManagerApplyPage() {
   const [formData, setFormData] = useState({
     licenseName: 'none',
     experience: '',
-    motivation: ''
+    motivation: '',
+    availableDays: [] as string[],
+    availableTime: '종일 (09:00~22:00)'
   });
+
+  const handleDayToggle = (day: string) => {
+    setFormData(prev => {
+      const days = prev.availableDays;
+      if (days.includes(day)) {
+        return { ...prev, availableDays: days.filter(d => d !== day) }; // 빼기
+      } else {
+        return { ...prev, availableDays: [...days, day] }; // 넣기
+      }
+    });
+  };
+
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 🌟 폼 제출 시 백엔드로 전송하는 로직으로 변경
+  // 파일이 선택되었을 때 실행되는 핸들러
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setCertificateFile(e.target.files[0]);
+    }
+  };  
+
+  // 폼 제출 시 백엔드로 전송하는 로직으로 변경
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 토큰 확인 (로그인 안 된 유저는 튕겨냄)
     const token = localStorage.getItem('accessToken');
     if (!token) {
       Swal.fire({ icon: 'warning', title: '로그인 필요', text: '지원서를 제출하려면 먼저 로그인해 주세요.' });
@@ -51,15 +72,29 @@ export default function ManagerApplyPage() {
     }
 
     try {
-      // 백엔드의 @PostMapping("/apply-manager") 호출
-      await apiClient.post('/api/members/apply-manager', formData);
+      // JSON 데이터와 파일을 묶기 위해 FormData 사용
+      const submitData = new FormData();
+      
+      // JSON 데이터를 'request'라는 이름의 Blob(덩어리)로 변환해서 넣음
+      submitData.append(
+        "request",
+        new Blob([JSON.stringify(formData)], { type: "application/json" })
+      );
+
+      // 파일이 선택되었다면 'file'이라는 이름으로 추가
+      if (certificateFile) {
+        submitData.append("file", certificateFile);
+      }
+
+      // 백엔드로 전송 (데이터 형태가 FormData면 axios가 알아서 multipart/form-data로 세팅해줌)
+      await apiClient.post('/api/members/apply-manager', submitData);
       
       await Swal.fire({
         icon: 'success', 
         title: '신청 완료', 
         text: '매니저 교육 신청이 완료되었습니다. 관리자 심사 후 권한이 부여됩니다.'
       });
-      router.push('/mypage'); // 제출 완료 후 마이페이지로 이동
+      router.push('/mypage');
 
     } catch (error) {
       console.error(error);
@@ -164,9 +199,6 @@ export default function ManagerApplyPage() {
           <p className="text-gray-500 mb-8 text-sm">정보를 남겨주시면 교육 일정 및 채용 절차를 안내해 드립니다.</p>
           
           <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* 이름과 연락처는 회원가입 시 받은 정보(Token)로 처리되므로 폼에서 제거하여 편리하게 만듭니다. */}
-            
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">보유 자격증 (선택)</label>
               <select 
@@ -178,6 +210,55 @@ export default function ManagerApplyPage() {
                 <option value="socialworker">사회복지사</option>
                 <option value="nurse">간호사/간호조무사</option>
                 <option value="other">기타</option>
+              </select>
+            </div>
+            
+            {/* 파일 업로드 */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">자격증명 사본 (PDF)</label>
+              <input 
+                type="file" 
+                accept="application/pdf"
+                onChange={handleFileChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white transition-all cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">※ 자격증이 있으신 경우 PDF 파일로 첨부해 주세요.</p>
+            </div>
+
+            {/* 근무 가능 요일 선택 */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">근무 가능 요일 (중복 선택 가능)</label>
+              <div className="flex flex-wrap gap-2">
+                {['월', '화', '수', '목', '금', '토', '일'].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => handleDayToggle(day)}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                      formData.availableDays.includes(day)
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 근무 가능 시간 선택 */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">근무 가능 시간</label>
+              <select 
+                name="availableTime" 
+                onChange={handleChange} 
+                value={formData.availableTime}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white transition-all"
+              >
+                <option value="오전 (09:00~13:00)">오전 (09:00~13:00)</option>
+                <option value="오후 (14:00~22:00)">오후 (14:00~22:00)</option>
+                <option value="종일 (09:00~22:00)">종일 (09:00~22:00)</option>
+                <option value="시간 협의">시간 협의 가능</option>
               </select>
             </div>
 

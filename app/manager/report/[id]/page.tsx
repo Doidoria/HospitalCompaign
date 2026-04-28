@@ -7,8 +7,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-import { toPng } from 'html-to-image';
-import jsPDF from 'jspdf';
 
 export default function ReportWritePage() {
   const params = useParams();
@@ -52,26 +50,21 @@ export default function ReportWritePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportRef.current) return;
-
     if (!formData.department || !formData.doctorOpinion || !formData.prescription || !formData.managerComment) {
       Swal.fire({ icon: 'warning', title: '입력 확인', text: '필수 항목을 모두 입력해 주세요.' });
       return;
     }
+    setIsSubmitting(true);
 
     try {
-      setIsSubmitting(true);
+      const { toPng } = await import('html-to-image');
+      const { default: jsPDF } = await import('jspdf');
 
-      // 1. PDF 생성 (html-to-image 사용 - 최신 CSS 완벽 지원)
-      const imgData = await toPng(reportRef.current, { 
-        quality: 0.95, 
-        backgroundColor: '#ffffff',
-        cacheBust: true 
-      });
+      const imgData = await toPng(reportRef.current, { cacheBust: true, style: { transform: 'scale(1)' } });
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (reportRef.current.offsetHeight * pdfWidth) / reportRef.current.offsetWidth;
-      
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const pdfBlob = pdf.output('blob');
 
