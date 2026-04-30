@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import {
   BriefcaseMedical, CalendarDays, Activity, ChevronRight, CheckCircle2,
-  MapPin, Clock, FileText, ArrowLeft, ShieldCheck, X
+  MapPin, Clock, FileText, ArrowLeft, ShieldCheck, X, CalendarPlus, XCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -82,12 +82,140 @@ export default function ManagerDashboard() {
         setMySchedules(prev => [acceptedReq, ...prev]);
       }
     } catch (error: any) {
-      // 🌟 다른 매니저가 0.1초 차이로 먼저 눌렀을 때의 에러 처리
+      // 다른 매니저가 0.1초 차이로 먼저 눌렀을 때의 에러 처리
       const errorMsg = error.response?.data || '서버 오류가 발생했습니다.';
       Swal.fire({ icon: 'warning', title: '배정 실패', text: errorMsg });
       
       // 이미 뺏긴 예약이라면 화면에서도 즉시 지워줍니다.
       setAvailableRequests(prev => prev.filter(r => r.id !== reservationId));
+    }
+  };
+
+  // 재방문 대리 신청 팝업
+  const handleProxyReservation = async (req: any) => {
+    const { value: formValues } = await Swal.fire({
+      title: '재방문 대리 신청',
+      width: '45em',
+      html: `
+        <div class="text-left space-y-4 mt-4 font-sans text-sm max-h-[70vh] overflow-y-auto px-2">
+          <p class="text-blue-600 font-bold mb-4">※ 기존 정보를 바탕으로 다음 방문을 신청합니다. 수정이 필요한 부분만 입력하세요.</p>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">재방문 회차</label>
+              <select id="proxy-revisit" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-400">
+                <option value="1차 재방문">1차 재방문</option>
+                <option value="2차 재방문">2차 재방문</option>
+                <option value="3차 재방문">3차 재방문</option>
+                <option value="4차 재방문">4차 재방문</option>
+                <option value="5차 재방문">5차 재방문</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">다음 방문 일시</label>
+              <input type="datetime-local" id="proxy-time" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-400">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">방문 병원</label>
+              <input type="text" id="proxy-hospital" value="${req.hospitalName}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">진료 카테고리</label>
+              <select id="proxy-category" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+                <option value="일반 진료" ${req.category === '일반 진료' ? 'selected' : ''}>일반 진료</option>
+                <option value="정밀 검사" ${req.category === '정밀 검사' ? 'selected' : ''}>정밀 검사</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">보호자 성함</label>
+              <input type="text" id="proxy-gname" value="${req.guardianName || ''}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">보호자 연락처</label>
+              <input type="text" id="proxy-gphone" value="${req.guardianPhone || ''}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">매니저와 만나는 장소</label>
+            <input type="text" id="proxy-meeting" value="${req.meetingPoint || '자택'}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">이동 수단</label>
+              <input type="text" id="proxy-transport" value="${req.transportation || ''}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">환자 거동 상태</label>
+              <select id="proxy-mobility" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
+                <option value="독립 보행 가능" ${req.mobility === '독립 보행 가능' ? 'selected' : ''}>독립 보행 가능</option>
+                <option value="지팡이/워커 보행" ${req.mobility === '지팡이/워커 보행' ? 'selected' : ''}>지팡이/워커 보행</option>
+                <option value="부축 필요" ${req.mobility === '부축 필요' ? 'selected' : ''}>부축 필요</option>
+                <option value="휠체어 이용" ${req.mobility === '휠체어 이용' ? 'selected' : ''}>휠체어 이용</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">보호자 특별 요청사항 (메모)</label>
+            <textarea id="proxy-reqs" rows="2" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">${req.requirements || ''}</textarea>
+          </div>
+
+          <div>
+            <label class="block font-bold text-blue-600 mb-1">상세 진료 내용</label>
+            <textarea id="proxy-detail" rows="2" class="w-full px-3 py-2.5 rounded-xl border border-blue-100 bg-blue-50/30 outline-none">${req.detailedContent || ''}</textarea>
+          </div>
+
+          <div>
+            <label class="block font-bold text-amber-600 mb-1">의사 선생님께 드릴 질문</label>
+            <textarea id="proxy-inquiry" rows="2" class="w-full px-3 py-2.5 rounded-xl border border-amber-100 bg-amber-50/30 outline-none">${req.doctorInquiry || ''}</textarea>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '대리 신청 완료하기',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#ea580c',
+      preConfirm: () => {
+        const time = (document.getElementById('proxy-time') as HTMLInputElement).value;
+        if (!time) {
+          Swal.showValidationMessage('방문 일시를 선택해주세요.');
+          return false;
+        }
+        return {
+          reservationTime: time + ':00',
+          revisitCount: (document.getElementById('proxy-revisit') as HTMLSelectElement).value,
+          hospitalName: (document.getElementById('proxy-hospital') as HTMLInputElement).value,
+          category: (document.getElementById('proxy-category') as HTMLSelectElement).value,
+          guardianName: (document.getElementById('proxy-gname') as HTMLInputElement).value,
+          guardianPhone: (document.getElementById('proxy-gphone') as HTMLInputElement).value,
+          meetingPoint: (document.getElementById('proxy-meeting') as HTMLInputElement).value,
+          transportation: (document.getElementById('proxy-transport') as HTMLInputElement).value,
+          mobility: (document.getElementById('proxy-mobility') as HTMLSelectElement).value,
+          requirements: (document.getElementById('proxy-reqs') as HTMLTextAreaElement).value,
+          detailedContent: (document.getElementById('proxy-detail') as HTMLTextAreaElement).value,
+          doctorInquiry: (document.getElementById('proxy-inquiry') as HTMLTextAreaElement).value,
+          memo: "재방문 대리 신청"
+        };
+      }
+    });
+
+    if (formValues) {
+      try {
+        await reservationApi.createProxy(req.id, formValues);
+        Swal.fire({ icon: 'success', title: '신청 완료', text: '다음 동행 일정이 성공적으로 접수되었습니다.' });
+        const mySchedulesRes = await reservationApi.getManagerSchedules();
+        setMySchedules(mySchedulesRes.data);
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: '신청 실패', text: '오류가 발생했습니다.' });
+      }
     }
   };
 
@@ -228,13 +356,30 @@ export default function ManagerDashboard() {
                       </div>
                     </div>
                     <p className="text-sm text-slate-600 flex items-center gap-1.5"><MapPin className="w-4 h-4 text-emerald-500" /> {req.hospitalName}</p>
-                    {!isCompleted && (
-                      <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
-                        <Link href={`/manager/report/${req.id}`} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg transition-colors text-center text-sm">
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
+                      <button onClick={() => { setSelectedRequest(req); setIsModalOpen(true); }}
+                        className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 rounded-lg transition-colors text-center text-sm border border-slate-200 shadow-sm">
+                        상세 정보 보기
+                      </button>
+                      {!isCompleted ? (
+                        <Link href={`/manager/report/${req.id}`} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2.5 rounded-lg transition-colors text-center text-sm border border-blue-200 shadow-sm">
                           케어 리포트 작성
                         </Link>
-                      </div>
-                    )}
+                      ) : req.noRevisit ? (
+                        <button disabled className="flex-1 bg-gray-100 text-gray-400 font-bold py-2.5 rounded-lg text-center text-sm border border-gray-200 shadow-sm flex items-center justify-center gap-1 cursor-not-allowed">
+                          <XCircle className="w-4 h-4" /> 재방문 없음
+                        </button>
+                      ) : req.hasProxy ? (
+                        <button disabled className="flex-1 bg-gray-100 text-gray-400 font-bold py-2.5 rounded-lg text-center text-sm border border-gray-200 shadow-sm flex items-center justify-center gap-1 cursor-not-allowed">
+                          <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
+                        </button>
+                      ) : (
+                        <button onClick={() => handleProxyReservation(req)}
+                          className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-2.5 rounded-lg transition-colors text-center text-sm border border-orange-200 shadow-sm flex items-center justify-center gap-1">
+                          <CalendarPlus className="w-4 h-4" /> 재방문 대리 신청
+                        </button>
+                      )}
+                    </div>
                   </motion.div>
                 );
               })
@@ -267,20 +412,24 @@ export default function ManagerDashboard() {
                       </button>
                     </div>
                     <p><span className="font-semibold text-slate-900 w-20 inline-block">환자명</span> {selectedRequest.patientName}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900 w-19 inline-block shrink-0">만나는 장소</span> 
-                      <span className="text-blue-700 font-bold">{selectedRequest.meetingPoint || '자택 앞 (연락 요망)'}</span>
-                      {selectedRequest.meetingPoint === '자택' && (
-                        <button onClick={() => {const address = selectedRequest.patientAddress; // 백엔드에서 넘겨받을 주소 정보
-                            if (!address) 
-                              { Swal.fire({ icon: 'warning', title: '주소 미등록', text: '환자 정보에 등록된 자택 주소가 없습니다. 고객에게 연락해 주세요.' });
-                              return;
-                            } window.open(`https://map.kakao.com/link/search/${encodeURIComponent(address)}`, '_blank'); // 카카오맵 URL 연결
-                          }}
-                          className="ml-2 px-3 py-1 bg-[#FEE500] text-[#191919] text-xs font-bold rounded-lg hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm shrink-0">
-                          카카오맵 확인
-                        </button>
-                      )}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="font-semibold text-slate-900 w-20 inline-block shrink-0">만나는 장소</span> 
+                      <span className="text-blue-700 font-bold">
+                        {selectedRequest.meetingPoint ? selectedRequest.meetingPoint.replace(' /// ', ' ') : '자택 앞 (연락 요망)'}
+                      </span>
+                      <button onClick={() => {
+                          const rawPoint = selectedRequest.meetingPoint || '자택';
+                          const searchTarget = rawPoint === '자택' ? selectedRequest.patientAddress : rawPoint.split(' /// ')[0];
+                          
+                          if (!searchTarget) {
+                            Swal.fire({ icon: 'warning', title: '주소 미등록', text: '정확한 주소가 없습니다.' });
+                            return;
+                          }
+                          window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
+                        }}
+                        className="ml-2 px-3 py-1 bg-[#FEE500] text-[#191919] text-xs font-bold rounded-lg hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm shrink-0">
+                        카카오맵 확인
+                      </button>
                     </div>
                     <p><span className="font-semibold text-slate-900 w-20 inline-block">이동 수단</span> {selectedRequest.transportation}</p>
                   </div>

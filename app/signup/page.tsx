@@ -24,7 +24,7 @@ export default function SignupPage() {
     address: '', 
     detailAddress: '', 
     guardianName: '',
-    emergencyContact: ''
+    guardianPhone: ''
   });
 
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
@@ -144,7 +144,7 @@ export default function SignupPage() {
 
     const phoneRegex = /^01([0|1|6|7|8|9])([0-9]{3,4})([0-9]{4})$/;
     const cleanPhone = formData.phone.replace(/-/g, '');
-    const cleanEmergency = formData.emergencyContact.replace(/-/g, '');
+    const cleanEmergency = formData.guardianPhone.replace(/-/g, '');
 
     if (!phoneRegex.test(cleanPhone) || !phoneRegex.test(cleanEmergency)) {
       Swal.fire({ icon: 'warning', title: '연락처 오류', text: '올바른 휴대폰 번호 11자리를 입력해 주세요.' });
@@ -170,7 +170,7 @@ export default function SignupPage() {
         address: formData.address,
         detailAddress: formData.detailAddress,
         guardianName: formData.guardianName,
-        emergencyContact: cleanEmergency
+        guardianPhone: cleanEmergency
       });
 
       if (response.status === 200 || response.status === 201) {
@@ -333,7 +333,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">보호자(비상) 연락처</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center"><Phone className="w-5 h-5 text-red-400" /></div>
-                <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} placeholder="숫자만 입력 (가족 등 비상연락망)" className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                <input type="tel" name="guardianPhone" value={formData.guardianPhone} onChange={handleChange} placeholder="숫자만 입력 (가족 등 비상연락망)" className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
               </div>
             </div>
 

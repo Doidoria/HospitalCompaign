@@ -16,6 +16,7 @@ export default function ReportWritePage() {
   const [targetReservation, setTargetReservation] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  const [noNextSchedule, setNoNextSchedule] = useState(false); // 다음 에약 일정 없음 체크 여부
 
   const [formData, setFormData] = useState({
     department: '',
@@ -78,6 +79,7 @@ export default function ReportWritePage() {
         nextSchedule: formData.nextSchedule,
         managerComment: formData.managerComment,
         patientCondition: formData.patientCondition,
+        noNextSchedule: noNextSchedule
       };
       
       payload.append('request', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
@@ -165,7 +167,7 @@ export default function ReportWritePage() {
                   <div className="p-1.5 bg-emerald-50 rounded-lg"><Stethoscope className="w-4 h-4 text-emerald-500" /></div>
                   진료 요약 <span className="text-red-500 text-xs">*</span>
                 </label>
-                {/* 🌟 모바일 핵심: text-base(16px)를 적용해야 아이폰에서 입력 시 화면이 강제로 확대되지 않습니다. */}
+                {/* 모바일 핵심: text-base(16px)를 적용해야 아이폰에서 입력 시 화면이 강제로 확대되지 않습니다. */}
                 <input type="text" name="department" value={formData.department} onChange={handleChange} placeholder="진료 과목 (예: 신경과, 정형외과)" 
                   className="w-full px-4 py-3.5 mb-3 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none" required />
                 <textarea name="doctorOpinion" rows={3} value={formData.doctorOpinion} onChange={handleChange} placeholder="의사 선생님의 주요 소견이나 당부 말씀을 기록해 주세요." 
@@ -180,8 +182,16 @@ export default function ReportWritePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> 다음 예약 일정</label>
-                  <input type="text" name="nextSchedule" value={formData.nextSchedule} onChange={handleChange} placeholder="예) 5/15(금) 오전 11시" 
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 cursor-pointer hover:text-slate-700 transition-colors"></label>
+                  <input type="datetime-local" name="nextSchedule" value={formData.nextSchedule} onChange={handleChange} disabled={noNextSchedule}
                     className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none" />
+                  <div className="flex justify-end mt-2.5 mr-1">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer hover:text-slate-700 transition-colors">
+                      <input type="checkbox" checked={noNextSchedule} onChange={(e) => { setNoNextSchedule(e.target.checked);
+                          if (e.target.checked) setFormData({...formData, nextSchedule: ''});
+                        }} className="w-4 h-4 accent-orange-500 rounded-sm cursor-pointer" />다음 예약 일정 없음
+                    </label>
+                  </div>
                 </div>
               </div>
             </motion.div>

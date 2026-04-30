@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { 
   LayoutDashboard, Users, CalendarDays, Activity, 
-  Search, CheckCircle2, XCircle, ChevronRight, UserPlus 
+  Search, CheckCircle2, XCircle, ChevronRight, UserPlus,
+  FileText, MapPin, X // 🌟 모달용 아이콘 추가
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -18,6 +19,10 @@ export default function AdminDashboardPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // 🌟 모달창 상태 추가
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   // 1. 예약 데이터 불러오기
   const fetchReservations = async (page: number) => {
@@ -79,6 +84,17 @@ export default function AdminDashboardPage() {
     };
     loadAllData();
   }, []);
+
+  // 🌟 예약 상세 정보 불러오기 로직 추가
+  const handleOpenDetail = async (id: number) => {
+    try {
+      const res = await reservationApi.getDetail(String(id));
+      setSelectedRequest(res.data);
+      setIsModalOpen(true);
+    } catch (error) {
+      Swal.fire('오류', '상세 정보를 불러올 수 없습니다.', 'error');
+    }
+  };
 
   // 예약 상태 변경 로직
   const handleStatusChange = async (id: number, newStatus: string) => {
@@ -159,7 +175,88 @@ export default function AdminDashboardPage() {
   const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex flex-col md:flex-row relative">
+      
+      {/* 🌟 예약 상세 정보 팝업 (모달창) */}
+      {isModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                예약 상세 정보 <span className="text-sm font-normal text-slate-500">#{selectedRequest.id}</span>
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              <div>
+                <h4 className="text-sm font-bold text-slate-500 mb-2">고객 정보</h4>
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+                  <p><span className="font-semibold text-slate-900 block mb-1">환자명</span> {selectedRequest.patientName} ({selectedRequest.patientPhone})</p>
+                  <p><span className="font-semibold text-slate-900 block mb-1">보호자명</span> {selectedRequest.guardianName || '-'} ({selectedRequest.guardianPhone || '-'})</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-slate-500 mb-2">일정 및 장소</h4>
+                <div className="bg-slate-50 p-4 rounded-xl text-sm text-slate-700 space-y-3 border border-slate-100">
+                  <p><span className="font-semibold text-slate-900 w-20 inline-block">일시</span> {selectedRequest.reservationTime.replace('T', ' ').substring(0, 16)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 w-20 inline-block shrink-0">목적지</span> 
+                    <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(selectedRequest.hospitalName)}`, '_blank')} className="text-emerald-700 font-bold hover:underline decoration-emerald-300 flex items-center gap-1">
+                      {selectedRequest.hospitalName} <MapPin className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 w-20 inline-block shrink-0">만나는 장소</span> 
+                    <span className="text-blue-700 font-bold">
+                      {selectedRequest.meetingPoint ? selectedRequest.meetingPoint.replace(' /// ', ' ') : '자택'}
+                    </span>
+                    <button onClick={() => {
+                        const rawPoint = selectedRequest.meetingPoint || '자택';
+                        const searchTarget = rawPoint === '자택' ? selectedRequest.patientAddress : rawPoint.split(' /// ')[0];
+                        
+                        if (!searchTarget) return Swal.fire('알림', '주소 정보가 없습니다.', 'warning');
+                        window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
+                      }}
+                      className="ml-2 px-2.5 py-1 bg-[#FEE500] text-[#191919] text-[11px] font-bold rounded-md hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm"
+                    >
+                      지도 보기
+                    </button>
+                  </div>
+                  <p><span className="font-semibold text-slate-900 w-20 inline-block">이동 수단</span> {selectedRequest.transportation || '미기재'}</p>
+                </div>
+              </div>
+
+              {/* 3단 분할 상세 요청사항 */}
+              <div className="space-y-4 border-t border-slate-100 pt-5">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-500 mb-1.5">보호자 특별 요청사항</h4>
+                  <div className="bg-slate-50 p-3.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap border border-slate-200">
+                    {selectedRequest.requirements || selectedRequest.memo || '요청사항이 없습니다.'}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-blue-600 mb-1.5">상세 진료 및 검사 내용</h4>
+                  <div className="bg-blue-50/50 p-3.5 rounded-xl text-sm text-slate-800 border border-blue-100 whitespace-pre-wrap">
+                    {selectedRequest.detailedContent || '상세 내용이 없습니다.'}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-amber-600 mb-1.5">의사 선생님께 꼭 여쭤봐야 할 질문</h4>
+                  <div className="bg-amber-50 p-3.5 rounded-xl text-sm text-amber-900 font-bold whitespace-pre-wrap border border-amber-200">
+                    {selectedRequest.doctorInquiry || '질문 사항이 없습니다.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <aside className="w-full md:w-64 bg-slate-900 text-slate-300 md:min-h-screen flex flex-col p-4 shadow-xl z-20">
         <div className="px-4 py-6 mb-4 border-b border-slate-800">
           <Link href="/" className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
@@ -200,11 +297,11 @@ export default function AdminDashboardPage() {
 
         {activeTab === 'dashboard' && (
           <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-             {/* 예약 관리 탭 UI 유지 */}
              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-lg font-bold text-slate-800">전체 예약 내역</h2>
             </div>
             
+            {/* 🌟 모바일 뷰 카드에 상세 보기 버튼 추가 */}
             <div className="md:hidden divide-y divide-slate-100">
               {reservations.map((res) => (
                 <div key={res.id} className="p-5 space-y-3 hover:bg-slate-50 transition-colors">
@@ -219,20 +316,30 @@ export default function AdminDashboardPage() {
                     <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5"><CalendarDays className="w-4 h-4" />{res.date} {res.time}</p>
                   </div>
                   <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mt-3 border border-slate-100">
-                    <span className="text-sm font-medium text-slate-600">상태 변경:</span>
-                    <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-sm font-bold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="WAITING">매칭 대기</option><option value="CONFIRMED">예약 확정</option><option value="COMPLETED">이용 완료</option><option value="CANCELED">취소됨</option>
-                    </select>
+                    <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors">
+                      상세 보기
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-600">상태:</span>
+                      <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-sm font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="WAITING">매칭 대기</option><option value="CONFIRMED">예약 확정</option><option value="COMPLETED">이용 완료</option><option value="CANCELED">취소됨</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
+            {/* 🌟 데스크톱 뷰 테이블에 상세 보기 버튼 추가 */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
-                    <th className="p-4 font-semibold whitespace-nowrap">예약번호</th><th className="p-4 font-semibold whitespace-nowrap">일시</th><th className="p-4 font-semibold whitespace-nowrap">환자/병원</th><th className="p-4 font-semibold whitespace-nowrap">현재 상태</th><th className="p-4 font-semibold whitespace-nowrap text-center">상태 관리</th>
+                    <th className="p-4 font-semibold whitespace-nowrap">예약번호</th>
+                    <th className="p-4 font-semibold whitespace-nowrap">일시</th>
+                    <th className="p-4 font-semibold whitespace-nowrap">환자/병원</th>
+                    <th className="p-4 font-semibold whitespace-nowrap">현재 상태</th>
+                    <th className="p-4 font-semibold whitespace-nowrap text-center">상세 및 상태 관리</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
@@ -243,9 +350,14 @@ export default function AdminDashboardPage() {
                       <td className="p-4"><p className="font-bold text-slate-800">{res.patient}</p><p className="text-xs text-slate-500">{res.hospital}</p></td>
                       <td className="p-4"><StatusBadge status={res.status} /></td>
                       <td className="p-4 text-center">
-                        <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-sm font-bold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:border-slate-300 transition-colors">
-                          <option value="WAITING">매칭 대기</option><option value="CONFIRMED">예약 확정</option><option value="COMPLETED">이용 완료</option><option value="CANCELED">취소됨</option>
-                        </select>
+                        <div className="flex justify-center items-center gap-2">
+                          <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors whitespace-nowrap">
+                            상세 보기
+                          </button>
+                          <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-sm font-bold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm hover:border-slate-300 transition-colors">
+                            <option value="WAITING">매칭 대기</option><option value="CONFIRMED">예약 확정</option><option value="COMPLETED">이용 완료</option><option value="CANCELED">취소됨</option>
+                          </select>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -253,6 +365,8 @@ export default function AdminDashboardPage() {
                 </tbody>
               </table>
             </div>
+            
+            {/* 페이지네이션 유지 */}
             <div className="flex justify-center items-center gap-2 p-6 border-t border-slate-100">
               <button 
                 disabled={currentPage === 0}
@@ -287,7 +401,7 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* 탭 2: 매니저 가입 승인 관리 테이블 (실제 데이터 연동 완료) */}
+        {/* 탭 2: 매니저 가입 승인 관리 테이블 (기존 내용 완벽 유지) */}
         {activeTab === 'managers' && (
           <motion.div key="managers" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-5 border-b border-slate-100">
@@ -332,7 +446,7 @@ export default function AdminDashboardPage() {
                       className="flex-1 flex justify-center items-center gap-1.5 bg-emerald-100 text-emerald-700 py-3 rounded-xl text-sm font-bold hover:bg-emerald-200 transition-colors">
                       <CheckCircle2 className="w-5 h-5" /> 승인
                     </button>
-                    <button className="flex-1 flex justify-center items-center gap-1.5 bg-red-50 text-red-600 py-3 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
+                    <button onClick={() => handleRejectManager(mgr.id, mgr.name)} className="flex-1 flex justify-center items-center gap-1.5 bg-red-50 text-red-600 py-3 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
                       <XCircle className="w-5 h-5" /> 반려
                     </button>
                   </div>

@@ -14,7 +14,7 @@ export default function MyInfoEditPage() {
   
   const [isOpenPost, setIsOpenPost] = useState(false);
   
-  // 🌟 모든 회원 정보 보관함
+  // 모든 회원 정보 보관함
   const [formData, setFormData] = useState({
     name: '',
     phoneNumber: '',
@@ -22,19 +22,19 @@ export default function MyInfoEditPage() {
     address: '',
     detailAddress: '',
     guardianName: '',
-    emergencyContact: ''
+    guardianPhone: ''
   });
 
-  // 📱 휴대폰 인증 관련 상태 추가
+  // 휴대폰 인증 관련 상태 추가
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
   const [smsCode, setSmsCode] = useState('');
   
-  // 🔐 비밀번호 변경 관련 상태 추가
+  // 비밀번호 변경 관련 상태 추가
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // 🌟 비밀번호 정규식 (8자 이상, 영문, 숫자, 특수문자 포함)
+  // 비밀번호 정규식 (8자 이상, 영문, 숫자, 특수문자 포함)
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
 
   // 인증 성공 시 내 정보 불러오기
@@ -48,7 +48,7 @@ export default function MyInfoEditPage() {
           address: res.data.address || '',
           detailAddress: res.data.detailAddress || '',
           guardianName: res.data.guardianName || '',
-          emergencyContact: res.data.emergencyContact || ''
+          guardianPhone: res.data.guardianPhone || ''
         });
       }).catch(() => Swal.fire('오류', '내 정보를 불러올 수 없습니다.', 'error'));
     }
@@ -216,7 +216,7 @@ export default function MyInfoEditPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">비상 연락처</label>
-                    <input type="text" value={formData.emergencyContact} onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="010-0000-0000" />
+                    <input type="text" value={formData.guardianPhone} onChange={(e) => setFormData({...formData, guardianPhone: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="010-0000-0000" />
                   </div>
                 </div>
               </div>

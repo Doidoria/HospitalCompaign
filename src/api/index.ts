@@ -38,6 +38,7 @@ export const reservationApi = {
   update: (id: string, data: any) => apiClient.put(`/api/reservations/${id}`, data),
   getWaiting: () => apiClient.get('/api/reservations/waiting'),
   getManagerSchedules: () => apiClient.get('/api/reservations/manager/me'),
+  createProxy: (id: number, data: any) => apiClient.post(`/api/reservations/${id}/proxy`, data),
 };
 
 // ==========================================
