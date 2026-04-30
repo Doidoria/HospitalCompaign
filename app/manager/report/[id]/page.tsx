@@ -76,7 +76,8 @@ export default function ReportWritePage() {
         doctorOpinion: formData.doctorOpinion,
         prescription: formData.prescription,
         nextSchedule: formData.nextSchedule,
-        managerComment: formData.managerComment
+        managerComment: formData.managerComment,
+        patientCondition: formData.patientCondition,
       };
       
       payload.append('request', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));

@@ -171,7 +171,15 @@ export default function ManagerDashboard() {
                     <div className="space-y-2 mb-5">
                       <div className="flex items-start gap-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
                         <MapPin className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                        <p><span className="font-semibold text-slate-700">목적지:</span> {req.hospitalName}</p>
+                        <div className="flex justify-between items-center w-full">
+                          <p><span className="font-semibold text-slate-700">목적지:</span> {req.hospitalName}</p>
+                          <button onClick={(e) => { e.stopPropagation();
+                              window.open(`https://map.kakao.com/link/search/${encodeURIComponent(req.hospitalName)}`, '_blank');
+                            }}
+                            className="text-[10px] bg-[#FEE500] border border-slate-200 px-2 py-1 rounded-md text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all font-bold shadow-sm">
+                           위치 확인
+                          </button>
+                        </div>
                       </div>
 
                       {/* 2. 상세 요청사항 모달 띄우기 버튼 */}
@@ -250,26 +258,27 @@ export default function ManagerDashboard() {
                 <div>
                   <h4 className="text-sm font-bold text-slate-500 mb-2">동행 기본 정보</h4>
                   <div className="bg-slate-50 p-4 rounded-xl text-sm text-slate-700 space-y-2 border border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-900 w-19 inline-block shrink-0">목적지</span> 
+                      <button  onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(selectedRequest.hospitalName)}`, '_blank')}
+                        className="text-emerald-700 font-bold hover:underline decoration-emerald-300 underline-offset-4 flex items-center gap-1">
+                        {selectedRequest.hospitalName}
+                        <MapPin className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     <p><span className="font-semibold text-slate-900 w-20 inline-block">환자명</span> {selectedRequest.patientName}</p>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900 w-20 inline-block shrink-0">만나는 장소</span> 
+                      <span className="font-semibold text-slate-900 w-19 inline-block shrink-0">만나는 장소</span> 
                       <span className="text-blue-700 font-bold">{selectedRequest.meetingPoint || '자택 앞 (연락 요망)'}</span>
-                      
-                      {/* 만나는 장소가 '자택'인 경우 지도 버튼 노출 */}
                       {selectedRequest.meetingPoint === '자택' && (
-                        <button 
-                          onClick={() => {
-                            const address = selectedRequest.patientAddress; // 백엔드에서 넘겨받을 주소 정보
-                            if (!address) {
-                              Swal.fire({ icon: 'warning', title: '주소 미등록', text: '환자 정보에 등록된 자택 주소가 없습니다. 고객에게 연락해 주세요.' });
+                        <button onClick={() => {const address = selectedRequest.patientAddress; // 백엔드에서 넘겨받을 주소 정보
+                            if (!address) 
+                              { Swal.fire({ icon: 'warning', title: '주소 미등록', text: '환자 정보에 등록된 자택 주소가 없습니다. 고객에게 연락해 주세요.' });
                               return;
-                            }
-                            // 카카오맵 URL 연결
-                            window.open(`https://map.kakao.com/link/search/${encodeURIComponent(address)}`, '_blank');
+                            } window.open(`https://map.kakao.com/link/search/${encodeURIComponent(address)}`, '_blank'); // 카카오맵 URL 연결
                           }}
-                          className="ml-2 px-3 py-1 bg-[#FEE500] text-[#191919] text-xs font-bold rounded-lg hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm shrink-0"
-                        >
-                          카카오맵 확인 🗺️
+                          className="ml-2 px-3 py-1 bg-[#FEE500] text-[#191919] text-xs font-bold rounded-lg hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm shrink-0">
+                          카카오맵 확인
                         </button>
                       )}
                     </div>

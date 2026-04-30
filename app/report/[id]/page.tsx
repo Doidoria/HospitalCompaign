@@ -111,6 +111,12 @@ export default function ReportDetailPage() {
                 </div>
               </div>
             </div>
+            <div className="mt-4 flex items-center gap-2 bg-blue-900/50 p-3 rounded-xl border border-blue-800/50">
+                <span className="text-blue-200 text-sm font-semibold">당일 환자 컨디션:</span>
+                {reportData.patientCondition === 'good' && <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">😊 좋음</span>}
+                {reportData.patientCondition === 'normal' && <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">😐 보통</span>}
+                {reportData.patientCondition === 'bad' && <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">😥 저하</span>}
+              </div>
             <FileText className="absolute -bottom-6 -right-6 w-32 h-32 text-blue-900 opacity-50" />
           </motion.div>
 

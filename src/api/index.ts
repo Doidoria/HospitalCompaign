@@ -8,13 +8,16 @@ export const authApi = {
   login: (data: any) => apiClient.post('/api/members/login', data),  
   
   // 2. 회원가입
-  signup: (data: any) => apiClient.post('/api/members/join', data),  
+  signup: (data: any) => apiClient.post('/api/members/join', data),
   
   // 3. 내 예약 목록 가져오기 (마이페이지 기능)
   getMe: () => apiClient.get('/api/members/me'),
   checkEmail: (email: string) => apiClient.get(`/api/members/check-email?email=${email}`),
   sendSms: (phone: string) => apiClient.post('/api/members/sms/send', { phone }),
   verifySms: (phone: string, code: string) => apiClient.post('/api/members/sms/verify', { phone, code }),
+  verifyPassword: (password: string) => apiClient.post('/api/members/verify-password', { password }),
+  changePassword: (newPassword: string) => apiClient.put('/api/members/password', { newPassword }),
+  updateMe: (data: any) => apiClient.put('/api/members/me', data),
 };
 
 // ==========================================

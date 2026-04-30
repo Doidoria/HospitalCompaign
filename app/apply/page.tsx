@@ -11,7 +11,7 @@ import { reservationApi, authApi } from '@/src/api/index';
 
 export default function ApplyPage() {
   const router = useRouter();
-  const [isOpenPost, setIsOpenPost] = useState(false);
+  const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
 
   const [formData, setFormData] = useState({
     date: '', time: '', hospitalName: '', patientName: '',
@@ -20,7 +20,9 @@ export default function ApplyPage() {
   });
 
   const [basicExtraData, setBasicExtraData] = useState({
-    meetingPoint: '',
+    meetingType: '자택',
+    meetingAddress: '',  // 검색된 주소
+    meetingDetail: '',   // 상세 위치
     transportation: '택시 이용',
     mobility: '도보'
   });
@@ -84,8 +86,12 @@ export default function ApplyPage() {
     let fullAddress = data.address;
     if (data.buildingName) fullAddress += ` (${data.buildingName})`;
     
-    setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
-    setIsOpenPost(false);
+    if (postTarget === 'hospital') {
+      setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
+    } else if (postTarget === 'meeting') {
+      setBasicExtraData(prev => ({ ...prev, meetingAddress: fullAddress }));
+    }
+    setPostTarget('none');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,6 +119,9 @@ export default function ApplyPage() {
       } else {
         finalDetail = `- 검사 종류: ${detailData.testType}\n- 금식/준비: ${detailData.isFasting}\n- 귀가 수단: ${detailData.transportation}`;
       }
+      const finalMeetingPoint = basicExtraData.meetingType === '자택' 
+        ? '자택' 
+        : `${basicExtraData.meetingAddress} ${basicExtraData.meetingDetail}`.trim();
 
       const requestData = {
         patientName: formData.patientName.trim(),
@@ -127,7 +136,7 @@ export default function ApplyPage() {
         doctorInquiry: formData.doctorInquiry,   // 주황 박스: 의사 선생님께 드릴 질문
         
         category: formData.category,               
-        meetingPoint: basicExtraData.meetingPoint, 
+        meetingPoint: finalMeetingPoint,
         transportation: basicExtraData.transportation, 
         mobility: basicExtraData.mobility          
       };
@@ -156,12 +165,14 @@ export default function ApplyPage() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 relative">
       
       {/* 주소 검색 팝업 (모달) */}
-      {isOpenPost && (
+      {postTarget !== 'none' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden relative shadow-2xl">
             <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-gray-800">병원 주소 검색</h3>
-              <button onClick={() => setIsOpenPost(false)} className="text-gray-500 font-bold px-2">X</button>
+              <h3 className="font-bold text-gray-800">
+                {postTarget === 'hospital' ? '병원 주소 검색' : '만나는 장소 검색'}
+              </h3>
+              <button onClick={() => setPostTarget('none')} className="text-gray-500 font-bold px-2 hover:text-red-500 transition-colors">X</button>
             </div>
             <div className="h-[400px]">
               <DaumPostcodeEmbed onComplete={handleCompletePost} style={{ height: '100%' }} />
@@ -192,28 +203,48 @@ export default function ApplyPage() {
             <h3 className="text-xl font-bold text-gray-800 mb-6">2. 동행 기본 정보</h3>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">매니저와 만나는 장소</label>
-                <input type="text" onChange={(e) => setBasicExtraData({...basicExtraData, meetingPoint: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200" placeholder="예) 자택 1층 공동현관 앞" />
-              </div>
-              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">매니저와 만나는 장소</label>
                 <div className="flex gap-3 mb-3">
-                  <button type="button" onClick={() => setBasicExtraData({...basicExtraData, meetingPoint: '자택'})}
-                    className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${basicExtraData.meetingPoint === '자택' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  <button type="button" onClick={() => setBasicExtraData({...basicExtraData, meetingType: '자택'})}
+                    className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${basicExtraData.meetingType === '자택' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                     🏠 자택 (기본 주소지)
                   </button>
-                  <button type="button" onClick={() => setBasicExtraData({...basicExtraData, meetingPoint: ''})} 
-                    className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${basicExtraData.meetingPoint !== '자택' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  <button type="button" onClick={() => setBasicExtraData({...basicExtraData, meetingType: '지정'})} 
+                    className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${basicExtraData.meetingType === '지정' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                     📍 장소 직접 지정
                   </button>
                 </div>
                 
-                {/* '장소 직접 지정'을 선택했을 때만 입력창 노출 */}
-                {basicExtraData.meetingPoint !== '자택' && (
-                  <input type="text" value={basicExtraData.meetingPoint}
-                    onChange={(e) => setBasicExtraData({...basicExtraData, meetingPoint: e.target.value})} 
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" 
-                    placeholder="예) 병원 로비 키오스크 앞, 자택 1층 공동현관" />
+                {/* 🌟 '장소 직접 지정'을 선택했을 때만 주소 검색창과 상세 입력창 노출 */}
+                {basicExtraData.meetingType === '지정' && (
+                  <div className="space-y-3 mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" /> 기본 주소 검색
+                      </label>
+                      <div className="flex gap-2">
+                        <input type="text" readOnly value={basicExtraData.meetingAddress}
+                          placeholder="검색 버튼을 눌러 주소를 찾아주세요" 
+                          onClick={() => setPostTarget('meeting')}
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 outline-none cursor-pointer" 
+                          required={basicExtraData.meetingType === '지정'} 
+                        />
+                        <button type="button" onClick={() => setPostTarget('meeting')}
+                          className="bg-gray-700 text-white px-4 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors whitespace-nowrap">
+                          검색
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">상세 위치 입력</label>
+                      <input type="text" value={basicExtraData.meetingDetail}
+                        onChange={(e) => setBasicExtraData({...basicExtraData, meetingDetail: e.target.value})} 
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none bg-white" 
+                        placeholder="예) 1층 공동현관 앞, 관리사무소 옆" 
+                        required={basicExtraData.meetingType === '지정'} 
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
               <div>
@@ -280,10 +311,10 @@ export default function ApplyPage() {
                 <div className="flex gap-2">
                   <input type="text" name="hospitalName" value={formData.hospitalName} readOnly
                     placeholder="우측 검색 버튼을 눌러 병원 주소를 찾아주세요" 
-                    onClick={() => setIsOpenPost(true)}
+                    onClick={() => setPostTarget('hospital')}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 outline-none cursor-pointer" required 
                   />
-                  <button type="button" onClick={() => setIsOpenPost(true)}
+                  <button type="button" onClick={() => setPostTarget('hospital')}
                     className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap">
                     <Search className="w-4 h-4 md:mr-1.5" /> <span className="hidden md:inline">검색</span>
                   </button>

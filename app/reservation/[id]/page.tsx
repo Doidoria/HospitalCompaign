@@ -27,7 +27,9 @@ export default function ReservationDetailPage() {
     payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 },
     category: '진료',
     detailedContent: '',
-    doctorInquiry: ''
+    doctorInquiry: '',
+    meetingPoint: '',  // 만나는 장소
+    patientAddress: '' // 자택 주소 (지도 검색용)
   });
 
   useEffect(() => {
@@ -66,7 +68,9 @@ export default function ReservationDetailPage() {
             : null,
           category: apiData.category || '진료',
           detailedContent: apiData.detailedContent || '',
-          doctorInquiry: apiData.doctorInquiry || ''
+          doctorInquiry: apiData.doctorInquiry || '',
+          meetingPoint: apiData.meetingPoint || '자택',
+          patientAddress: apiData.patientAddress || ''
         }));
 
       } catch (error) {
@@ -158,17 +162,23 @@ export default function ReservationDetailPage() {
             </span>
             <span className="text-sm text-gray-400">예약번호: {reservation.id}</span>
           </div>
-
           <div className="space-y-4">
             <div>
               <span className={`inline-block px-2.5 py-1 mb-2 rounded-md text-xs font-bold ${
-                reservation.category === '검사' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-              }`}>
+                reservation.category === '검사' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                 {reservation.category}
               </span>
-              <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
+                <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(reservation.hospital)}`, '_blank')}
+                  className="px-2.5 py-1 bg-[#FEE500] text-[#191919] text-[11px] font-bold rounded-md hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm">
+                  카카오맵
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+            
+            {/* 기본 정보 그리드 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
               <div className="flex items-center gap-2.5">
                 <Calendar className="w-5 h-5 text-gray-400" />
                 <span>{reservation.date}</span>
@@ -179,12 +189,31 @@ export default function ReservationDetailPage() {
               </div>
               <div className="flex items-center gap-2.5">
                 <User className="w-5 h-5 text-gray-400" />
-                <span>환자: {reservation.patientName} ({reservation.patientPhone})</span>
+                <span>환자: {reservation.patientName}</span>
+              </div>
+              
+              {/* 만나는 장소 (클릭 시 카카오맵 연동) */}
+              <div className="flex items-center gap-2.5">
+                <MapPin className="w-5 h-5 text-orange-500" />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold text-gray-700">장소:</span>
+                  <button onClick={() => {
+                      // '자택'이면 회원 정보의 상세 주소로, 아니면 입력한 장소로 검색
+                      const searchTarget = reservation.meetingPoint === '자택' ? reservation.patientAddress : reservation.meetingPoint;
+                      if (!searchTarget || searchTarget === '자택') {
+                        Swal.fire({ icon: 'warning', title: '주소 확인 불가', text: '등록된 정확한 주소가 없습니다.' });
+                        return;
+                      }
+                      window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
+                    }}
+                    className="text-blue-600 font-bold hover:text-blue-800 hover:underline decoration-blue-300 underline-offset-4 transition-colors">
+                    {reservation.meetingPoint}
+                  </button>
+                </div>
               </div>
             </div>
             
             <div className="mt-6 space-y-3 border-t border-gray-100 pt-5">
-              
               {/* 1. 보호자 요청사항 */}
               {reservation.memo && (
                 <div className="p-4 bg-gray-50 rounded-2xl flex items-start gap-3 border border-gray-100/80">

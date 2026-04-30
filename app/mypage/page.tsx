@@ -45,7 +45,9 @@ export default function MyPage() {
             status: cleanStatus,
             patientName: res.patientName,
             reportAvailable: cleanStatus === 'COMPLETED',
-            category: res.category || '일반 진료'
+            category: res.category || '일반 진료',
+            meetingPoint: res.meetingPoint || '자택',
+            managerName: res.managerName && res.managerName !== '-' ? res.managerName : null
           };
         });
 
@@ -113,6 +115,11 @@ export default function MyPage() {
         <motion.div variants={itemVariants} className="mb-10">
           <h2 className="text-3xl font-extrabold text-gray-800 mb-2">마이페이지</h2>
           <p className="text-gray-500">예약 내역과 케어 리포트를 한곳에서 관리하세요.</p>
+          <Link href="/mypage/edit">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-colors shadow-sm">
+              <User className="w-4 h-4" /> 내 정보 수정
+            </button>
+          </Link>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -131,13 +138,18 @@ export default function MyPage() {
 
             {upcomingReservation ? (
               <div className="bg-white p-8 rounded-[32px] shadow-sm border border-blue-100 relative overflow-hidden group">
-                {/* 상단 뱃지 */}
                 <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                  <span className={`text-sm font-bold px-3 py-1.5 rounded-lg ${
-                    STATUS_MAP[upcomingReservation.status as StatusKey]?.colorClass || 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {STATUS_MAP[upcomingReservation.status as StatusKey]?.label || upcomingReservation.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {/* 상태 뱃지 */}
+                    <span className={`text-sm font-bold px-3 py-1.5 rounded-lg ${
+                      STATUS_MAP[upcomingReservation.status as StatusKey]?.colorClass || 'bg-gray-100 text-gray-500'}`}>
+                      {STATUS_MAP[upcomingReservation.status as StatusKey]?.label || upcomingReservation.status}
+                    </span>
+                    <span className={`text-sm font-bold px-3 py-1.5 rounded-lg ${
+                      upcomingReservation.category === '정밀 검사' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {upcomingReservation.category}
+                    </span>
+                  </div>
                   <span className="text-sm text-gray-400 font-medium">예약번호 #{upcomingReservation.id}</span>
                 </div>
 
@@ -163,8 +175,29 @@ export default function MyPage() {
                         <p className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{upcomingReservation.hospital}</p>
                       </div>
                     </div>
+
+                    {/* 만나는 장소*/}
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium mb-1">매니저와 만나는 장소</p>
+                        <p className="text-lg font-bold text-gray-800 leading-snug">{upcomingReservation.meetingPoint}</p>
+                      </div>
+                    </div>
+                    {upcomingReservation.managerName && (
+                      <div className="flex items-start gap-4 mt-2">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                          <User className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-indigo-500 font-medium mb-1">배정된 담당 매니저</p>
+                          <p className="text-lg font-bold text-indigo-800">{upcomingReservation.managerName} 매니저</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
                   <div className="mt-8 pt-6 border-t border-gray-50 flex justify-end">
                     <button className="flex items-center gap-1 text-blue-600 font-bold hover:gap-2 transition-all">
                       상세 정보 보기 <ChevronRight className="w-5 h-5" />
@@ -223,8 +256,11 @@ export default function MyPage() {
 
                       {/* 중단: 병원명 및 환자명 */}
                       <div className="pl-1 mb-2">
-                        <h4 className="text-lg font-extrabold text-gray-900 truncate">
+                        <h4 className="text-lg font-extrabold text-gray-900 truncate flex items-center gap-2">
                           {record.hospital}
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">
+                            {record.category}
+                          </span>
                         </h4>
                         <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
                           <User className="w-4 h-4" /> {record.patientName} 님 동행

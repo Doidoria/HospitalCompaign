@@ -74,7 +74,6 @@ export default function Header() {
             {isLoggedIn ? (
               <div className="flex items-center gap-6 border-l border-gray-200 pl-6">
                 <Link href="/mypage" className="text-blue-700 font-bold hover:text-blue-900 transition duration-300">마이페이지</Link>
-                <span className="text-sm font-bold text-blue-900">{userName}님</span>
                 {userRole === 'ADMIN' && (
                   <Link href="/admin" className="text-red-600 font-bold hover:text-red-800 flex items-center gap-1.5 transition duration-300">
                     <ShieldAlert className="w-4 h-4" /> 관리자
@@ -83,6 +82,7 @@ export default function Header() {
                 {userRole === 'MANAGER' && (
                   <Link href="/manager/dashboard" className="text-emerald-600 font-bold hover:text-emerald-800 transition duration-300">매니저 시스템</Link>
                 )}
+                <span className="text-sm font-bold text-blue-900">{userName}님</span>
                 <button onClick={handleLogout} className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition duration-300">
                   <LogOut className="w-4 h-4" /> 로그아웃
                 </button>

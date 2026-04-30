@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Save, MapPin, Calendar, FileText, Search } from 'lucide-react';
+import { ArrowLeft, Save, MapPin, Calendar, FileText, Search, MessageSquare, HelpCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import { reservationApi } from '@/src/api/index';
@@ -14,10 +14,12 @@ export default function ReservationEditPage() {
   const [isOpenPost, setIsOpenPost] = useState(false);
 
   const [formData, setFormData] = useState({
-    hospitalName: '', date: '', time: '', requirements: '',
-    category: '진료', 
-    detailedContent: '',
-    doctorInquiry: ''
+    hospitalName: '', 
+    date: '', 
+    time: '', 
+    requirements: '',     // 보호자 특별 요청사항
+    detailedContent: '',  // 상세 진료 내용
+    doctorInquiry: ''     // 의사 질의
   });
 
   useEffect(() => {
@@ -35,17 +37,16 @@ export default function ReservationEditPage() {
           hospitalName: data.hospitalName,
           date: datePart,
           time: timePart.substring(0, 5),
-          requirements: data.requirements || '',
-          category: data.category || '진료',
+          requirements: data.requirements || data.memo || '', // 백엔드 필드 매핑
           detailedContent: data.detailedContent || '',
-          doctorInquiry: data.doctorInquiry || '',
+          doctorInquiry: data.doctorInquiry || ''
         });
-        setLoading(false);
       })
-      .catch(() => {
-        Swal.fire('오류', '예약 정보를 불러올 수 없습니다.', 'error');
-        router.push('/mypage');
-      });
+      .catch(err => {
+        console.error(err);
+        Swal.fire('오류', '데이터를 불러올 수 없습니다.', 'error');
+      })
+      .finally(() => setLoading(false));
   }, [id, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -53,7 +54,6 @@ export default function ReservationEditPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 주소 검색 완료 시 병원명에 자동 입력
   const handleCompletePost = (data: any) => {
     let fullAddress = data.address;
     if (data.buildingName) fullAddress += ` (${data.buildingName})`;
@@ -63,40 +63,41 @@ export default function ReservationEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.date || !formData.time || !formData.hospitalName) {
-      Swal.fire('입력 오류', '병원 이름과 날짜, 시간을 모두 입력해주세요.', 'warning');
-      return;
-    }
-
-    const formattedTime = `${formData.date}T${formData.time}:00`;
     try {
-      await reservationApi.update(id as string, {
-        hospitalName: formData.hospitalName.trim(),
+      const formattedTime = `${formData.date}T${formData.time}:00`;
+      
+      const requestData = {
+        hospitalName: formData.hospitalName,
         reservationTime: formattedTime,
         requirements: formData.requirements,
-        category: formData.category,
         detailedContent: formData.detailedContent,
         doctorInquiry: formData.doctorInquiry
-      });
+      };
 
-      await Swal.fire('수정 완료', '예약 내용이 성공적으로 변경되었습니다.', 'success');
-      router.push(`/reservation/${id}`); 
+      // api/index.ts 에 선언된 수정 함수명(update 또는 edit)에 맞게 호출합니다.
+      // 만약 함수명이 update라면 reservationApi.update() 로 변경해주세요.
+      await reservationApi.update(id as string, requestData); 
+
+      await Swal.fire({ icon: 'success', title: '수정 완료', text: '예약 정보가 성공적으로 수정되었습니다.', confirmButtonColor: '#1e3a8a' });
+      router.push(`/reservation/${id}`);
     } catch (error) {
-      Swal.fire('수정 실패', '오류가 발생했습니다. 다시 시도해주세요.', 'error');
+      console.error(error);
+      Swal.fire({ icon: 'error', title: '수정 실패', text: '입력 정보를 다시 확인해주세요.' });
     }
   };
 
-  if (loading) return <div className="p-10 text-center font-bold text-blue-900">데이터를 불러오는 중...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-sans text-gray-500">데이터를 불러오는 중입니다...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 relative">
-      {/* 주소 검색 팝업 (모달) */}
+    <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900">
+      
+      {/* 주소 검색 모달 */}
       {isOpenPost && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden relative shadow-2xl">
             <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
               <h3 className="font-bold text-gray-800">병원 주소 검색</h3>
-              <button type="button" onClick={() => setIsOpenPost(false)} className="text-gray-500 font-bold px-2">X</button>
+              <button onClick={() => setIsOpenPost(false)} className="text-gray-500 font-bold px-2 hover:text-red-500 transition-colors">X</button>
             </div>
             <div className="h-[400px]">
               <DaumPostcodeEmbed onComplete={handleCompletePost} style={{ height: '100%' }} />
@@ -104,85 +105,89 @@ export default function ReservationEditPage() {
           </div>
         </div>
       )}
-      <main className="max-w-xl mx-auto p-5">
+
+      <main className="max-w-2xl mx-auto px-4 pt-8">
+        <div className="flex items-center gap-3 mb-8">
+          <button onClick={() => router.back()} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <h2 className="text-2xl font-extrabold text-gray-800">예약 정보 수정</h2>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-blue-500" /> 병원 정보
-            </h3>
-            <div className="flex gap-2">
-              <input type="text" name="hospitalName" value={formData.hospitalName} readOnly
-                onClick={() => setIsOpenPost(true)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer" required/>
-              <button type="button" onClick={() => setIsOpenPost(true)}
-                className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap">
-                <Search className="w-4 h-4 mr-1.5" /> 검색
-              </button>
+          {/* 1. 일정 및 병원 수정 */}
+          <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+              <div className="bg-emerald-100 p-2 rounded-xl text-emerald-700">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">일정 및 병원 수정</h3>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">방문 일시</label>
+                <div className="flex gap-3">
+                  <input type="date" name="date" value={formData.date} onChange={handleChange} className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" required />
+                  <input type="time" name="time" value={formData.time} onChange={handleChange} className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" required />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                  <MapPin className="w-4 h-4 text-gray-400" /> 병원 위치
+                </label>
+                <div className="flex gap-2">
+                  <input type="text" name="hospitalName" value={formData.hospitalName} readOnly placeholder="검색 버튼을 눌러주세요" onClick={() => setIsOpenPost(true)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 outline-none cursor-pointer" required />
+                  <button type="button" onClick={() => setIsOpenPost(true)} className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap shadow-sm">
+                    <Search className="w-4 h-4 mr-1.5" /> 검색
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* 동행 목적 선택 (카테고리) */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4">
-            <h3 className="font-bold text-slate-800 mb-4">동행 목적</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {['진료', '검사'].map((type) => (
-                <button key={type} type="button" onClick={() => setFormData(prev => ({ ...prev, category: type }))}
-                  className={`py-3 rounded-xl font-bold transition-all ${
-                    formData.category === type ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
-                  {type}
-                </button>
-              ))}
+          {/* 2. 3단 분할 상세 내용 수정 */}
+          <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+              <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">상세 요청사항 수정</h3>
+            </div>
+
+            <div className="space-y-6">
+              
+              {/* 회색 박스: 보호자 요청사항 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  보호자 특별 요청사항
+                </label>
+                <textarea name="requirements" rows={3} value={formData.requirements} onChange={handleChange} placeholder="매니저가 알아야 할 특별한 사항을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-gray-400 outline-none resize-none bg-gray-50"></textarea>
+              </div>
+
+              {/* 파란 박스: 상세 진료 내용 */}
+              <div>
+                <label className="block text-sm font-semibold text-blue-600 mb-2 flex items-center gap-1">
+                  <MessageSquare className="w-4 h-4" /> 상세 진료 및 검사 내용
+                </label>
+                <textarea name="detailedContent" rows={3} value={formData.detailedContent} onChange={handleChange} placeholder="진료 과목이나 주요 증상을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-blue-50/30"></textarea>
+              </div>
+
+              {/* 주황 박스: 의사 선생님께 질문할 내용 */}
+              <div>
+                <label className="block text-sm font-semibold text-amber-600 mb-2 flex items-center gap-1">
+                  <HelpCircle className="w-4 h-4" /> 의사 선생님께 꼭 여쭤봐야 할 질문
+                </label>
+                <textarea name="doctorInquiry" rows={3} value={formData.doctorInquiry} onChange={handleChange} placeholder="병원에서 꼭 확인해야 할 질문을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:ring-2 focus:ring-amber-500 outline-none resize-none bg-amber-50/30"></textarea>
+              </div>
+              
             </div>
           </div>
 
-          {/* 상세 내역 및 의사 질의 (기존 특이사항 섹션 위/아래에 배치) */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4">
-            <h3 className="font-bold text-slate-800 mb-4">상세 내역</h3>
-            <textarea 
-              name="detailedContent" rows={3} value={formData.detailedContent} onChange={handleChange} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none"
-              placeholder="진료 과목이나 구체적인 증상을 적어주세요."
-            />
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4">
-            <h3 className="font-bold text-slate-800 mb-4">의사 선생님께 드릴 질문</h3>
-            <textarea 
-              name="doctorInquiry" rows={3} value={formData.doctorInquiry} onChange={handleChange} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none"
-              placeholder="교수님께 확인하고 싶은 내용을 적어주세요."
-            />
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-500" /> 일정 수정
-            </h3>
-            <div className="flex gap-3">
-              <input 
-                type="date" name="date" value={formData.date} onChange={handleChange} 
-                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" required
-              />
-              <input 
-                type="time" name="time" value={formData.time} onChange={handleChange} 
-                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" required
-              />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" /> 특이사항 및 요청사항
-            </h3>
-            <textarea 
-              name="requirements" rows={4} value={formData.requirements} onChange={handleChange} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-            ></textarea>
-          </div>
-
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-md">
-            <Save className="w-5 h-5" /> 변경 사항 저장
+          <button type="submit" className="w-full bg-blue-900 text-white font-bold text-lg py-5 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]">
+            <Save className="w-5 h-5" /> 예약 수정 완료하기
           </button>
         </form>
       </main>
