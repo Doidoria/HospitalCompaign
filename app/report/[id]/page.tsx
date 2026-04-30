@@ -88,18 +88,7 @@ export default function ReportDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      <header className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/mypage" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors p-2 -ml-2">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <h1 className="font-bold text-lg text-blue-950">케어 리포트 상세</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
       <motion.main className="max-w-2xl mx-auto px-4 pt-6" initial="hidden" animate="visible" variants={containerVariants}>
-        
         <div ref={reportRef} className="pb-4">
           
           {/* 헤더 카드 */}

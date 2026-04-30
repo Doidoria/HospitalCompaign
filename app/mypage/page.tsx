@@ -35,7 +35,6 @@ export default function MyPage() {
           const dateObj = new Date(res.reservationTime);
           const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
           const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-
           const cleanStatus = res.status ? res.status.trim().toUpperCase() : 'WAITING';
 
           return {
@@ -45,14 +44,15 @@ export default function MyPage() {
             hospital: res.hospitalName,
             status: cleanStatus,
             patientName: res.patientName,
-            reportAvailable: cleanStatus === 'COMPLETED'
+            reportAvailable: cleanStatus === 'COMPLETED',
+            category: res.category || '일반 진료'
           };
         });
 
         const upcoming = processedData.filter((res: any) => res.status !== 'COMPLETED' && res.status !== 'CANCELLED');
         const past = processedData.filter((res: any) => res.status === 'COMPLETED' || res.status === 'CANCELLED');
 
-        setUpcomingReservation(upcoming || null);
+        setUpcomingReservation(upcoming.length > 0 ? upcoming[0] : null);
         setPastRecords(past);
 
       } catch (error) {
@@ -104,25 +104,6 @@ export default function MyPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      
-      {/* 헤더 */}
-      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="font-extrabold text-xl text-blue-950 tracking-tight">
-            예스케어
-          </Link>
-          <div className="flex items-center gap-6">
-            <span className="text-sm font-medium text-gray-600 hidden md:block">
-              <span className="text-blue-700 font-bold">{userName}</span>님, 환영합니다
-            </span>
-            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors">
-              <LogOut className="w-4 h-4" />
-              <span>로그아웃</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <motion.main 
         className="max-w-6xl mx-auto px-6 pt-10"
         initial="hidden"

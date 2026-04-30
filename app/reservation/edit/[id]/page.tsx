@@ -90,7 +90,6 @@ export default function ReservationEditPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 relative">
-      
       {/* 주소 검색 팝업 (모달) */}
       {isOpenPost && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
@@ -105,12 +104,6 @@ export default function ReservationEditPage() {
           </div>
         </div>
       )}
-
-      <header className="bg-white border-b h-16 flex items-center px-5 sticky top-0 z-10">
-        <button type="button" onClick={() => router.back()} className="text-slate-600"><ArrowLeft className="w-6 h-6" /></button>
-        <h1 className="flex-1 text-center font-bold text-lg mr-6 text-gray-900">예약 정보 수정</h1>
-      </header>
-
       <main className="max-w-xl mx-auto p-5">
         <form onSubmit={handleSubmit} className="space-y-6">
           

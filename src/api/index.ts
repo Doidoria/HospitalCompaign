@@ -56,3 +56,8 @@ export const adminApi = {
   rejectManager: (applicationId: number) => apiClient.delete(`/api/members/manager-applications/${applicationId}`),
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
 };
+
+export const categoryApi = {
+  // 서비스 카테고리 전체 목록 조회
+  getAll: () => apiClient.get('/api/categories'), 
+};

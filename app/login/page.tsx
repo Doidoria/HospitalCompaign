@@ -66,15 +66,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-md mx-auto px-6 h-16 flex items-center">
-          <Link href="/" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span className="font-medium">메인으로</span>
-          </Link>
-        </div>
-      </header>
-
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <motion.div 
           className="w-full max-w-md bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden"

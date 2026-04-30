@@ -223,15 +223,6 @@ export default function SignupPage() {
         </div>
       )}
 
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100">
-        <div className="max-w-md mx-auto px-6 h-16 flex items-center">
-          <Link href="/login" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span className="font-medium">로그인으로 돌아가기</span>
-          </Link>
-        </div>
-      </header>
-
       <main className="flex-1 flex items-center justify-center px-6 pt-10">
         <motion.div 
           className="w-full max-w-md bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden p-5 md:p-8"
@@ -302,7 +293,7 @@ export default function SignupPage() {
               {isCodeSent && !isPhoneVerified && (
                 <div className="flex gap-2 mt-2 relative">
                   <input type="text" value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} placeholder="인증번호 6자리" className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                  <span className="absolute right-[80px] top-1/2 -translate-y-1/2 text-red-500 font-bold text-sm">
+                  <span className="absolute right-[100px] top-1/2 -translate-y-1/2 text-red-500 font-bold text-sm">
                     {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
                   </span>
                   <button type="button" onClick={handleVerifyCode} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">확인</button>

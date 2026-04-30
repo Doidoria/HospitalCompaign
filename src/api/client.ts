@@ -30,15 +30,19 @@ apiClient.interceptors.request.use(
 );
 
 // 3. 응답(Response) 인터셉터: 백엔드에서 에러를 보냈을 때 공통 처리
+let isAlertOpen = false; 
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 401 Unauthorized 에러(토큰 만료 등) 발생 시 로그인 페이지로 강제 이동
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');
-        window.location.href = '/login';
-        alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        if (!isAlertOpen) {
+          isAlertOpen = true;
+          alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

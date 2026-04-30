@@ -105,19 +105,6 @@ export default function ReportWritePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      <header className="bg-emerald-600 text-white sticky top-0 z-50 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/manager/dashboard" className="flex items-center text-emerald-50 hover:text-white transition-colors p-2 -ml-2">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <h1 className="font-bold text-lg flex items-center gap-2">
-            <FileEdit className="w-4 h-4" />
-            리포트 작성
-          </h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
       <motion.main className="max-w-2xl mx-auto px-4 pt-6" initial="hidden" animate="visible" variants={pageVariants}>
         
         {/* 상단 대상자 정보 요약 */}

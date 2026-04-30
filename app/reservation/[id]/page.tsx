@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, Loader2, FileText, MessageSquare, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -149,21 +149,7 @@ export default function ReservationDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      
-      <header className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/mypage" className="flex items-center text-gray-600 hover:text-blue-900 transition-colors p-2 -ml-2">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <h1 className="font-bold text-lg text-blue-950">예약 상세 내역</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <motion.main 
-        className="max-w-2xl mx-auto px-4 pt-6 space-y-6"
-        initial="hidden" animate="visible" variants={pageVariants}
-      >
+      <motion.main className="max-w-2xl mx-auto px-4 pt-6 space-y-6" initial="hidden" animate="visible" variants={pageVariants}>
         {/* 1. 상태 및 기본 정보 카드 */}
         <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
@@ -182,7 +168,6 @@ export default function ReservationDetailPage() {
               </span>
               <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
             </div>
-            <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-2.5">
                 <Calendar className="w-5 h-5 text-gray-400" />
@@ -198,28 +183,52 @@ export default function ReservationDetailPage() {
               </div>
             </div>
             
-            {reservation.memo && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
-                <span className="font-semibold text-gray-700">요청사항: </span>
-                {reservation.memo}
-              </div>
-            )}
+            <div className="mt-6 space-y-3 border-t border-gray-100 pt-5">
+              
+              {/* 1. 보호자 요청사항 */}
+              {reservation.memo && (
+                <div className="p-4 bg-gray-50 rounded-2xl flex items-start gap-3 border border-gray-100/80">
+                  <FileText className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-extrabold text-gray-500 block mb-1.5">보호자 특별 요청사항</span>
+                    <p className="text-sm text-gray-700 leading-relaxed">{reservation.memo}</p>
+                  </div>
+                </div>
+              )}
 
-            {/* 상세 내역 출력 */}
-            {reservation.detailedContent && (
-              <div className="mt-3 p-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600">
-                <span className="font-semibold text-gray-800 block mb-1">상세 내역:</span>
-                {reservation.detailedContent}
-              </div>
-            )}
+              {/* 2. 상세 내역 (가독성 개선 버전) */}
+              {reservation.detailedContent && (
+                <div className="p-4 bg-blue-50/50 rounded-2xl flex items-start gap-3 border border-blue-100/60">
+                  <MessageSquare className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                  <div className="w-full">
+                    <span className="text-xs font-extrabold text-blue-600 block mb-2">상세 진료 및 검사 내용</span>
+                    <div className="space-y-1.5">
+                      {reservation.detailedContent.split('\n').map((line, index) => (
+                        <div key={index} className="flex items-start gap-1.5">
+                          {/* 항목 앞에 작은 점(dot)을 찍어 리스트 느낌 강조 */}
+                          <div className="w-1 h-1 rounded-full bg-blue-300 mt-2 shrink-0" />
+                          <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                            {line.replace('- ', '')} {/* 앞에 붙은 '- ' 기호는 제거하고 출력 */}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            {/* 의사 질의 출력 */}
-            {reservation.doctorInquiry && (
-              <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-900">
-                <span className="font-semibold text-amber-800 block mb-1">의사 선생님께 드릴 질문:</span>
-                {reservation.doctorInquiry}
-              </div>
-            )}
+              {/* 3. 의사 선생님께 드릴 질문 (제일 중요하므로 눈에 띄게 강조!) */}
+              {reservation.doctorInquiry && (
+                <div className="p-4 bg-amber-50 rounded-2xl flex items-start gap-3 border border-amber-200/60 shadow-sm">
+                  <HelpCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-extrabold text-amber-600 block mb-1.5">의사 선생님께 꼭 여쭤봐야 할 질문</span>
+                    <p className="text-sm text-amber-900 leading-relaxed font-medium">{reservation.doctorInquiry}</p>
+                  </div>
+                </div>
+              )}
+              
+            </div>
           </div>
         </motion.section>
 
