@@ -18,6 +18,7 @@ export const authApi = {
   verifyPassword: (password: string) => apiClient.post('/api/members/verify-password', { password }),
   changePassword: (newPassword: string) => apiClient.put('/api/members/password', { newPassword }),
   updateMe: (data: any) => apiClient.put('/api/members/me', data),
+  getManagerAppStatus: () => apiClient.get('/api/members/me/manager-application'),
 };
 
 // ==========================================
@@ -59,6 +60,8 @@ export const adminApi = {
   approveManager: (memberId: number) => apiClient.patch(`/api/members/${memberId}/approve`),
   rejectManager: (applicationId: number) => apiClient.delete(`/api/members/manager-applications/${applicationId}`),
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
+  rejectManagerApp: (id: number, data: { rejectionReason: string }) => 
+    apiClient.post(`/api/members/manager-applications/${id}/reject`, data),
 };
 
 export const categoryApi = {

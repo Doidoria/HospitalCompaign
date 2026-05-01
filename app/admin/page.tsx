@@ -5,7 +5,7 @@ import { motion, Variants } from 'framer-motion';
 import { 
   LayoutDashboard, Users, CalendarDays, Activity, 
   Search, CheckCircle2, XCircle, ChevronRight, UserPlus,
-  FileText, MapPin, X // 🌟 모달용 아이콘 추가
+  FileText, MapPin, X 
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -20,11 +20,10 @@ export default function AdminDashboardPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 🌟 모달창 상태 추가
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-  // 1. 예약 데이터 불러오기
+  // 예약 데이터 불러오기
   const fetchReservations = async (page: number) => {
     setLoading(true);
     try {
@@ -63,7 +62,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 실제 매니저 대기 목록 불러오기
   const fetchPendingManagers = async () => {
     try {
       const res = await adminApi.getPendingManagers();
@@ -73,7 +71,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 초기 렌더링 시 두 데이터 모두 불러오기
   useEffect(() => {
     const loadAllData = async () => {
       setLoading(true);
@@ -85,7 +82,6 @@ export default function AdminDashboardPage() {
     loadAllData();
   }, []);
 
-  // 🌟 예약 상세 정보 불러오기 로직 추가
   const handleOpenDetail = async (id: number) => {
     try {
       const res = await reservationApi.getDetail(String(id));
@@ -96,7 +92,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 예약 상태 변경 로직
   const handleStatusChange = async (id: number, newStatus: string) => {
     try {
       await reservationApi.updateStatus(id, newStatus);
@@ -107,7 +102,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 매니저 승인 로직
   const handleApproveManager = async (memberId: number, name: string) => {
     const result = await Swal.fire({
       title: '매니저 승인',
@@ -116,7 +110,7 @@ export default function AdminDashboardPage() {
       showCancelButton: true,
       confirmButtonText: '승인',
       cancelButtonText: '취소',
-      confirmButtonColor: '#059669', // emerald-600
+      confirmButtonColor: '#059669', 
     });
 
     if (!result.isConfirmed) return;
@@ -130,25 +124,33 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // 반려 로직 업그레이드 (사유 입력창 띄우기)
   const handleRejectManager = async (applicationId: number, name: string) => {
-    const result = await Swal.fire({
-      title: '지원 반려',
-      text: `${name} 님의 매니저 지원을 반려하시겠습니까?`,
-      icon: 'warning',
+    const { value: reason } = await Swal.fire({
+      title: '지원 반려 사유 입력',
+      input: 'textarea',
+      inputLabel: `${name} 님에게 전달할 반려 사유를 상세히 적어주세요.`,
+      inputPlaceholder: '예) 필수 이수 교육 수료증이 누락되었습니다.',
       showCancelButton: true,
-      confirmButtonText: '반려',
+      confirmButtonColor: '#dc2626',
+      confirmButtonText: '반려 처리',
       cancelButtonText: '취소',
-      confirmButtonColor: '#dc2626', // red-600
+      inputValidator: (value) => {
+        if (!value) {
+          return '반려 사유를 필수로 입력해야 합니다!';
+        }
+      }
     });
 
-    if (!result.isConfirmed) return;
-
-    try {
-      await adminApi.rejectManager(applicationId);
-      Swal.fire({ icon: 'success', title: '반려 완료', text: '지원이 반려되었습니다.' });
-      fetchPendingManagers();
-    } catch (error) {
-      Swal.fire({ icon: 'error', title: '오류', text: '반려 처리 중 오류가 발생했습니다.' });
+    // 사유가 정상적으로 입력되었을 때만 API 호출
+    if (reason) {
+      try {
+        await adminApi.rejectManagerApp(applicationId, { rejectionReason: reason });
+        Swal.fire({ icon: 'success', title: '반려 완료', text: '지원이 반려되었습니다.' });
+        fetchPendingManagers(); // 목록 새로고침
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: '오류', text: '반려 처리 중 오류가 발생했습니다.' });
+      }
     }
   };
 
@@ -177,7 +179,6 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex flex-col md:flex-row relative">
       
-      {/* 🌟 예약 상세 정보 팝업 (모달창) */}
       {isModalOpen && selectedRequest && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
@@ -231,7 +232,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* 3단 분할 상세 요청사항 */}
               <div className="space-y-4 border-t border-slate-100 pt-5">
                 <div>
                   <h4 className="text-sm font-bold text-slate-500 mb-1.5">보호자 특별 요청사항</h4>
@@ -301,7 +301,6 @@ export default function AdminDashboardPage() {
               <h2 className="text-lg font-bold text-slate-800">전체 예약 내역</h2>
             </div>
             
-            {/* 🌟 모바일 뷰 카드에 상세 보기 버튼 추가 */}
             <div className="md:hidden divide-y divide-slate-100">
               {reservations.map((res) => (
                 <div key={res.id} className="p-5 space-y-3 hover:bg-slate-50 transition-colors">
@@ -330,7 +329,6 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            {/* 🌟 데스크톱 뷰 테이블에 상세 보기 버튼 추가 */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
@@ -366,7 +364,6 @@ export default function AdminDashboardPage() {
               </table>
             </div>
             
-            {/* 페이지네이션 유지 */}
             <div className="flex justify-center items-center gap-2 p-6 border-t border-slate-100">
               <button 
                 disabled={currentPage === 0}
@@ -401,7 +398,7 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* 탭 2: 매니저 가입 승인 관리 테이블 (기존 내용 완벽 유지) */}
+        {/* 탭 2: 매니저 가입 승인 관리 */}
         {activeTab === 'managers' && (
           <motion.div key="managers" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-5 border-b border-slate-100">
@@ -446,6 +443,7 @@ export default function AdminDashboardPage() {
                       className="flex-1 flex justify-center items-center gap-1.5 bg-emerald-100 text-emerald-700 py-3 rounded-xl text-sm font-bold hover:bg-emerald-200 transition-colors">
                       <CheckCircle2 className="w-5 h-5" /> 승인
                     </button>
+                    {/* 모바일 뷰 반려 버튼 연결 */}
                     <button onClick={() => handleRejectManager(mgr.id, mgr.name)} className="flex-1 flex justify-center items-center gap-1.5 bg-red-50 text-red-600 py-3 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
                       <XCircle className="w-5 h-5" /> 반려
                     </button>
