@@ -18,13 +18,13 @@ export default function LoginPage() {
     e.preventDefault();
     
     try {
-      // 🌟 로컬호스트 주소와 axios를 지우고 깔끔하게 authApi로 교체!
+      // 로컬호스트 주소와 axios를 지우고 깔끔하게 authApi로 교체!
       const response = await authApi.login({ email, password });
       
       const token = response.data.token || response.data;
       localStorage.setItem('accessToken', token);
 
-      // 🌟 헤더에 토큰 넣는 로직 삭제 (인터셉터가 자동 처리)
+      // 헤더에 토큰 넣는 로직 삭제 (인터셉터가 자동 처리)
       const meResponse = await authApi.getMe(); 
       const userRole = meResponse.data.role;
       
@@ -41,23 +41,29 @@ export default function LoginPage() {
         localStorage.removeItem('accessToken'); // 토큰 뺏기 (로그아웃 처리)
         return;
       }
-
-      // 정상 로그인 처리
-      await Swal.fire({ icon: 'success', title: '로그인 성공', text: '예스케어에 오신 것을 환영합니다.', showConfirmButton: false, timer: 1500 });
       
       // 권한별 페이지 이동
       if (userRole === 'ADMIN') router.push('/admin');
       else if (userRole === 'MANAGER') router.push('/manager/dashboard');
       else router.push('/mypage');
 
-    } catch (error) {
-      console.error("로그인 에러:", error);
-      Swal.fire({
-        icon: 'error', title: '로그인 실패', text: '이메일 또는 비밀번호를 다시 확인해 주세요.',
-        confirmButtonColor: '#1e3a8a'
-      });
-    }
-  };
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        Swal.fire({
+          icon: 'error',
+          title: '이용 정지 안내',
+          text: '정지된 계정입니다. 관리자에게 문의하세요.',
+        });
+      } 
+      else {
+        Swal.fire({
+          icon: 'error',
+          title: '로그인 실패',
+          text: '이메일 또는 비밀번호를 다시 확인해주세요.',
+        });
+      }
+    };
+  }
 
   const pageVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
@@ -66,16 +72,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
-        <motion.div 
-          className="w-full max-w-md bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden"
-          initial="hidden" animate="visible" variants={pageVariants}
-        >
+      <main className="flex-1 flex items-start justify-center px-6 pt-10 lg:pt-32">
+        <motion.div className="w-full max-w-md bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden" initial="hidden" animate="visible" variants={pageVariants}>
           <div className="flex text-center font-bold text-lg border-b border-gray-100">
-            <button onClick={() => setLoginType('user')} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-colors ${loginType === 'user' ? 'bg-blue-50 text-blue-900 border-b-2 border-blue-900' : 'text-gray-400 hover:bg-gray-50'}`} >
+            <button onClick={() => setLoginType('user')} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-colors 
+              ${loginType === 'user' ? 'bg-blue-50 text-blue-900 border-b-2 border-blue-900' : 'text-gray-400 hover:bg-gray-50'}`} >
               <User className="w-5 h-5" /> 보호자/환자
             </button>
-            <button onClick={() => setLoginType('manager')} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-colors ${loginType === 'manager' ? 'bg-emerald-50 text-emerald-800 border-b-2 border-emerald-600' : 'text-gray-400 hover:bg-gray-50'}`} >
+            <button onClick={() => setLoginType('manager')} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-colors 
+              ${loginType === 'manager' ? 'bg-emerald-50 text-emerald-800 border-b-2 border-emerald-600' : 'text-gray-400 hover:bg-gray-50'}`} >
               <ShieldCheck className="w-5 h-5" /> 동행 매니저
             </button>
           </div>

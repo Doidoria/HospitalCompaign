@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, User, Stethoscope, Clock, CheckCircle2, AlertTriangle, FileEdit, Loader2 } from 'lucide-react';
+import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
-import Link from 'next/link';
 import Swal from 'sweetalert2';
 
 export default function ReportWritePage() {
@@ -76,7 +75,7 @@ export default function ReportWritePage() {
         department: formData.department,
         doctorOpinion: formData.doctorOpinion,
         prescription: formData.prescription,
-        nextSchedule: formData.nextSchedule,
+        nextSchedule: noNextSchedule ? '' : formData.nextSchedule, 
         managerComment: formData.managerComment,
         patientCondition: formData.patientCondition,
         noNextSchedule: noNextSchedule
@@ -167,29 +166,29 @@ export default function ReportWritePage() {
                   <div className="p-1.5 bg-emerald-50 rounded-lg"><Stethoscope className="w-4 h-4 text-emerald-500" /></div>
                   진료 요약 <span className="text-red-500 text-xs">*</span>
                 </label>
-                {/* 모바일 핵심: text-base(16px)를 적용해야 아이폰에서 입력 시 화면이 강제로 확대되지 않습니다. */}
                 <input type="text" name="department" value={formData.department} onChange={handleChange} placeholder="진료 과목 (예: 신경과, 정형외과)" 
                   className="w-full px-4 py-3.5 mb-3 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none" required />
                 <textarea name="doctorOpinion" rows={3} value={formData.doctorOpinion} onChange={handleChange} placeholder="의사 선생님의 주요 소견이나 당부 말씀을 기록해 주세요." 
-                  className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none" required></textarea>
+                  className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all 
+                  text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none" required></textarea>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-gray-100">
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-2">처방 및 복약 안내</label>
                   <textarea name="prescription" rows={2} value={formData.prescription} onChange={handleChange} placeholder="예) 기존 약 유지, 위장약 1주분 추가" 
-                    className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none"></textarea>
+                    className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all 
+                    text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none"></textarea>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> 다음 예약 일정</label>
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 cursor-pointer hover:text-slate-700 transition-colors"></label>
                   <input type="datetime-local" name="nextSchedule" value={formData.nextSchedule} onChange={handleChange} disabled={noNextSchedule}
-                    className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none" />
+                    className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all 
+                    text-base text-gray-800 placeholder:text-gray-400 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" />
                   <div className="flex justify-end mt-2.5 mr-1">
                     <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer hover:text-slate-700 transition-colors">
-                      <input type="checkbox" checked={noNextSchedule} onChange={(e) => { setNoNextSchedule(e.target.checked);
-                          if (e.target.checked) setFormData({...formData, nextSchedule: ''});
-                        }} className="w-4 h-4 accent-orange-500 rounded-sm cursor-pointer" />다음 예약 일정 없음
+                      <input type="checkbox" checked={noNextSchedule} onChange={(e) => setNoNextSchedule(e.target.checked)} 
+                      className="w-4 h-4 accent-orange-500 rounded-sm cursor-pointer" />다음 예약 일정 없음
                     </label>
                   </div>
                 </div>
@@ -204,16 +203,18 @@ export default function ReportWritePage() {
               </label>
               <p className="text-xs text-gray-500 mb-4">이동 시 특이사항이나 보호자에게 전하고 싶은 따뜻한 말을 남겨주세요.</p>
               <textarea name="managerComment" rows={4} value={formData.managerComment} onChange={handleChange} placeholder="예) 아버님께서 병원 이동하시는 내내 컨디션이 좋으셨습니다." 
-                className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-purple-100 bg-purple-50/30 focus:bg-white focus:ring-2 focus:ring-purple-500 transition-all text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none" required></textarea>
+                className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-purple-100 bg-purple-50/30 focus:bg-white focus:ring-2 focus:ring-purple-500 transition-all 
+                text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none" required></textarea>
             </motion.div>
           </div>
 
-          {/* 🌟 4. 하단 고정(Sticky) 전송 버튼: 모바일에서 스크롤을 내려도 항상 버튼이 보이도록 고정합니다. */}
+          {/* 4. 하단 고정(Sticky) */}
           <motion.div variants={itemVariants} 
             className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 pb-safe z-40 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
             <div className="max-w-2xl mx-auto flex items-center gap-3">
               <button type="submit" disabled={isSubmitting} 
-                className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
+                className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
+                active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
                 {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
                 {isSubmitting ? '전송 중...' : '보호자에게 전송하기'}
               </button>

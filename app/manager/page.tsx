@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BookOpen, ShieldCheck, HeartHandshake, ArrowLeft, CheckCircle2, GraduationCap } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
-import { apiClient } from '@/src/api/client'; 
 import { authApi } from '@/src/api/index';
+import { apiClient } from '@/src/api/client'; 
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export default function ManagerApplyPage() {
   const router = useRouter();

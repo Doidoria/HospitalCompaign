@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, Menu, X, LogOut, ShieldAlert, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { authApi } from '@/src/api/index'; 
+import { useRouter, usePathname } from 'next/navigation';
+import { authApi } from '@/src/api/index';
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('USER');
@@ -27,9 +28,15 @@ export default function Header() {
         .catch(() => {
           localStorage.removeItem('accessToken');
           setIsLoggedIn(false);
+          setUserName('');
+          setUserRole('USER');
         });
+    } else {
+      setIsLoggedIn(false);
+      setUserName('');
+      setUserRole('USER');
     }
-  }, []);
+  }, [pathname]);
 
   // 로그아웃 처리
   const handleLogout = () => {
@@ -38,8 +45,7 @@ export default function Header() {
     setUserRole('USER');
     setUserName('');
     setIsMobileMenuOpen(false);
-    alert('로그아웃 되었습니다.');
-    router.push('/');
+    router.push('/login');
   };
 
   // 모바일 메뉴가 열렸을 때 배경 스크롤 방지
@@ -94,7 +100,7 @@ export default function Header() {
             )}
           </nav>
           
-          {/* 모바일 햄버거 버튼 (PC에서는 숨김) */}
+          {/* 모바일 햄버거 버튼 */}
           <button 
             className="md:hidden text-gray-800 p-2 z-50 relative focus:outline-none" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

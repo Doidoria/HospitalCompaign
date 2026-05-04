@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Calendar, Clock, MapPin, User, FileText, LogOut, ChevronRight, Activity, CalendarDays, GraduationCap, Settings } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, FileText, LogOut, ChevronRight, Activity, CalendarDays, GraduationCap, Settings, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -52,7 +52,8 @@ export default function MyPage() {
             hospital: res.hospitalName,
             status: cleanStatus,
             patientName: res.patientName,
-            reportAvailable: cleanStatus === 'COMPLETED'
+            reportAvailable: cleanStatus === 'COMPLETED',
+            reviewRating: res.reviewRating
           };
         });
 
@@ -171,24 +172,14 @@ export default function MyPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      
-      {/* 🌟 헤더(Header) 영역 삭제 완료! (글로벌 헤더 사용) */}
-
-      <motion.main 
-        className="max-w-6xl mx-auto px-4 sm:px-6 pt-10"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
+      <motion.main className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 "initial="hidden" animate="visible" variants={containerVariants}>
         <motion.div variants={itemVariants} className="mb-10">
           <h2 className="text-3xl font-extrabold text-gray-800 mb-2">마이페이지</h2>
           <p className="text-gray-500 font-medium">예약 내역과 케어 리포트를 한곳에서 관리하세요.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* 좌측: 다가오는 예약 (메인) */}
-          <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <motion.div variants={itemVariants} className="lg:col-span-3 space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-blue-950 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
@@ -258,12 +249,12 @@ export default function MyPage() {
           </motion.div>
 
           {/* 우측 사이드바: 내 정보 및 과거 내역 */}
-          <motion.div variants={itemVariants} className="space-y-6">
-            
+          <motion.div variants={itemVariants} className="lg:col-span-2 grid grid-rows-[auto_1fr] h-full gap-6">
             <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-7 relative overflow-hidden">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-extrabold text-gray-800">내 정보</h3>
-                <Link href="/mypage/edit" className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-50 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-100 hover:text-blue-600 transition-colors border border-gray-200 shadow-sm" title="내 정보 수정">
+                <Link href="/mypage/edit" className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-50 text-gray-600 text-sm font-bold rounded-xl 
+                hover:bg-gray-100 hover:text-blue-600 transition-colors border border-gray-200 shadow-sm" title="내 정보 수정">
                   <Settings className="w-4 h-4" /> 내 정보 수정
                 </Link>
               </div>
@@ -277,14 +268,14 @@ export default function MyPage() {
 
               {/* 매니저 교육·지원 현황 버튼 */}
               <button onClick={handleCheckManagerStatus}
-                className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 py-4 rounded-2xl font-bold hover:bg-blue-100 transition-all shadow-sm active:scale-[0.98] border border-blue-100"
-              >
+                className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 py-4 rounded-2xl font-bold 
+                hover:bg-blue-100 transition-all shadow-sm active:scale-[0.98] border border-blue-100">
                 <GraduationCap className="w-5 h-5" /> 매니저 교육·지원 현황
               </button>
             </div>
 
             {/* 과거 내역 및 리포트 */}
-            <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-7">
+            <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-7 flex-1 flex flex-col">
               <h3 className="text-lg font-extrabold text-gray-800 mb-5 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-gray-500" />
                 케어 리포트 및 과거 내역
@@ -319,17 +310,29 @@ export default function MyPage() {
 
                       <div className="flex gap-2 mt-2 pt-4 border-t border-gray-50">
                         <Link href={`/reservation/${record.id}`} className="flex-1">
-                          <button className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1">
+                          <button className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1 whitespace-nowrap">
                             상세 보기
                           </button>
                         </Link>
                         
                         {record.reportAvailable && (
                           <Link href={`/report/${record.id}`} className="flex-1">
-                            <button className="w-full py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 ring-1 ring-emerald-200/50 shadow-sm">
+                            <button className="w-full py-3 px-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 ring-1 ring-emerald-200/50 shadow-sm whitespace-nowrap">
                               <FileText className="w-4 h-4" /> 리포트 보기
                             </button>
                           </Link>
+                        )}
+                        {record.status === 'COMPLETED' && !record.reviewRating && (
+                          <Link href={`/reservation/survey/${record.id}`} className="flex-1">
+                            <button className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 ring-1 ring-blue-200/50 shadow-sm whitespace-nowrap">
+                              <Star className="w-4 h-4 fill-blue-700" /> 후기 작성
+                            </button>
+                          </Link>
+                        )}
+                        {record.reviewRating && (
+                          <button disabled className="flex-1 py-2.5 px-3 bg-gray-100 text-gray-500 text-[13px] font-bold rounded-xl flex items-center justify-center gap-1.5 border border-gray-200 cursor-not-allowed whitespace-nowrap">
+                            <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> 후기 작성 완료
+                          </button>
                         )}
                       </div>
                     </div>
@@ -343,7 +346,7 @@ export default function MyPage() {
               </div>
               
               {pastRecords.length > 0 && (
-                <button className="w-full mt-6 py-3.5 text-sm text-gray-500 font-bold bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <button className="w-full mt-auto py-3.5 text-sm text-gray-500 font-bold bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                   과거 내역 더보기
                 </button>
               )}

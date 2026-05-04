@@ -13,6 +13,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [isOpenPost, setIsOpenPost] = useState(false);
   const [isEmailChecked, setIsEmailChecked] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [formData, setFormData] = useState({
     email: '', 
@@ -131,17 +132,18 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
 
     if (!isEmailChecked) {
-      Swal.fire({ icon: 'warning', title: '중복 검사 필요', text: '이메일(아이디) 중복 검사를 진행해 주세요.' });
+      setErrorMessage('이메일(아이디) 중복 검사를 진행해 주세요.');
       return;
     }
     if (!isPasswordValid) {
-      Swal.fire({ icon: 'error', title: '비밀번호 규칙', text: '영문, 숫자, 특수문자를 포함하여 8~16자로 입력해 주세요.' });
+      setErrorMessage('비밀번호를 규칙에 맞게 입력해 주세요.');
       return;
     }
     if (!isPasswordMatch) {
-      Swal.fire({ icon: 'error', title: '비밀번호 확인', text: '비밀번호가 일치하지 않습니다.' });
+      setErrorMessage('비밀번호가 일치하지 않습니다.');
       return;
     }
 
@@ -150,23 +152,23 @@ export default function SignupPage() {
     const cleanEmergency = formData.guardianPhone.replace(/-/g, '');
 
     if (!phoneRegex.test(cleanPhone)) {
-      Swal.fire({ icon: 'warning', title: '연락처 오류', text: '올바른 본인 휴대폰 번호 11자리를 입력해 주세요.' });
+      setErrorMessage('올바른 본인 휴대폰 번호 11자리를 입력해 주세요.');
       return;
     }
     if (cleanEmergency && !phoneRegex.test(cleanEmergency)) {
-      Swal.fire({ icon: 'warning', title: '연락처 오류', text: '올바른 보호자 휴대폰 번호 11자리를 입력해 주세요.' });
+      setErrorMessage('올바른 보호자 휴대폰 번호 11자리를 입력해 주세요.');
       return;
     }
     if (!formData.address || !formData.zipCode) {
-      Swal.fire({ icon: 'warning', title: '주소 입력', text: '주소 검색을 통해 우편번호와 기본 주소를 입력해 주세요.' });
+      setErrorMessage('주소 검색을 통해 우편번호와 기본 주소를 입력해 주세요.');
       return;
     }
     if (!isPhoneVerified) {
-      Swal.fire({ icon: 'warning', title: '본인 인증 필요', text: '휴대폰 본인 인증을 완료해 주세요.' });
+      setErrorMessage('휴대폰 본인 인증을 완료해 주세요.');
       return;
     }
     if (!allAgreed) {
-      Swal.fire({ icon: 'warning', title: '약관 동의', text: '필수 이용약관에 모두 동의해 주세요.' });
+      setErrorMessage('필수 이용약관에 모두 동의해 주세요.');
       return;
     }
     
@@ -189,19 +191,13 @@ export default function SignupPage() {
           const token = loginRes.data.token || loginRes.data;
           localStorage.setItem('accessToken', token);
 
-          Swal.fire({
-            icon: 'success', title: '가입 환영!', text: '예스케어의 회원이 되신 것을 환영합니다.',
-            confirmButtonText: '마이페이지로 이동', confirmButtonColor: '#1e3a8a'
-          }).then(() => {
-            router.push('/mypage'); 
-          });
+          router.push('/mypage'); 
         } catch (loginError) {
-          Swal.fire({ icon: 'success', title: '가입 완료', text: '가입이 완료되었습니다. 로그인해 주세요.' })
-            .then(() => router.push('/login'));
+          router.push('/login');
         }
       }
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '가입 실패', text: '회원가입 처리 중 오류가 발생했습니다.' });
+      setErrorMessage('회원가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
     }
   };
 
@@ -403,7 +399,13 @@ export default function SignupPage() {
                 </label>
               </div>
             </div>
-
+            {/* 에러 메시지 UI*/}
+            {errorMessage && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 mt-4 animate-in fade-in zoom-in-95">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                <p className="text-sm font-bold text-red-600">{errorMessage}</p>
+              </div>
+            )}
             <button type="submit" className="w-full bg-blue-950 text-white text-lg font-bold py-4.5 rounded-2xl shadow-xl hover:bg-blue-900 transition-all mt-4 active:scale-[0.98]">
               가입 완료하기
             </button>

@@ -22,6 +22,14 @@ export default function ReservationEditPage() {
     doctorInquiry: ''     // 의사 질의
   });
 
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end', // 혹은 'bottom'
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
+  });
+
   useEffect(() => {
     reservationApi.getDetail(id as string)
       .then(res => {
@@ -65,7 +73,6 @@ export default function ReservationEditPage() {
     e.preventDefault();
     try {
       const formattedTime = `${formData.date}T${formData.time}:00`;
-      
       const requestData = {
         hospitalName: formData.hospitalName,
         reservationTime: formattedTime,
@@ -73,16 +80,13 @@ export default function ReservationEditPage() {
         detailedContent: formData.detailedContent,
         doctorInquiry: formData.doctorInquiry
       };
-
-      // api/index.ts 에 선언된 수정 함수명(update 또는 edit)에 맞게 호출합니다.
-      // 만약 함수명이 update라면 reservationApi.update() 로 변경해주세요.
       await reservationApi.update(id as string, requestData); 
-
-      await Swal.fire({ icon: 'success', title: '수정 완료', text: '예약 정보가 성공적으로 수정되었습니다.', confirmButtonColor: '#1e3a8a' });
+      Toast.fire({ icon: 'success', title: '예약 정보가 수정되었습니다.' });
       router.push(`/reservation/${id}`);
+      
     } catch (error) {
       console.error(error);
-      Swal.fire({ icon: 'error', title: '수정 실패', text: '입력 정보를 다시 확인해주세요.' });
+      Toast.fire({ icon: 'error', title: '수정에 실패했습니다. 다시 시도해주세요.' });
     }
   };
 

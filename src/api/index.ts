@@ -40,6 +40,8 @@ export const reservationApi = {
   getWaiting: () => apiClient.get('/api/reservations/waiting'),
   getManagerSchedules: () => apiClient.get('/api/reservations/manager/me'),
   createProxy: (id: number, data: any) => apiClient.post(`/api/reservations/${id}/proxy`, data),
+  submitReview: (id: number, data: { rating: number; comment: string }) => 
+    apiClient.post(`/api/reservations/${id}/reviews`, data),
 };
 
 // ==========================================
@@ -62,6 +64,29 @@ export const adminApi = {
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
   rejectManagerApp: (id: number, data: { rejectionReason: string }) => 
     apiClient.post(`/api/members/manager-applications/${id}/reject`, data),
+
+  // 전체 회원 조회
+  getAllMembers: (page: number = 0, role?: string) => 
+    apiClient.get(`/api/members/all?page=${page}${role ? `&role=${role}` : ''}`),
+  
+  // 예약 상태 및 키워드 검색
+  searchReservations: (keyword: string, status?: string, page: number = 0) => {
+    let url = `/api/reservations/search?page=${page}`;
+    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+    if (status) url += `&status=${status}`;
+    return apiClient.get(url);
+  },
+
+  // 리뷰 및 리포트 모니터링
+  getAllReviews: (page: number = 0) => apiClient.get(`/api/reservations/reviews/all?page=${page}`),
+  deleteReview: (reviewId: number) => apiClient.delete(`/api/reservations/reviews/${reviewId}`),
+  
+  // 계정 상태 업데이트 (status: true면 정지 해제, false면 정지)
+  updateMemberStatus: (memberId: number, activate: boolean) => 
+    apiClient.patch(`/api/members/${memberId}/status`, { activate }),
+    
+  changeMemberRole: (memberId: number, role: string) => 
+    apiClient.patch(`/api/members/${memberId}/role`, { role }),
 };
 
 export const categoryApi = {
