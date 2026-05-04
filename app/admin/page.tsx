@@ -449,7 +449,7 @@ export default function AdminDashboardPage() {
         <div className="px-6 py-8 border-b border-slate-800/80 flex flex-col gap-1">
           <Link href="/" className="text-2xl font-black text-white tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity">
             <div className="bg-blue-600 p-1.5 rounded-lg text-white"><LayoutDashboard className="w-5 h-5" /></div>
-            YesCare
+            Ye'sCare
           </Link>
           <p className="text-slate-400 text-[11px] font-medium tracking-wide pl-10">통합 관리 시스템</p>
         </div>
