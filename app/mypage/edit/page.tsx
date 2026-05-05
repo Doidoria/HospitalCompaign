@@ -7,6 +7,14 @@ import Swal from 'sweetalert2';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import { authApi } from '@/src/api/index';
 
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2000,
+  timerProgressBar: true,
+});
+
 export default function MyInfoEditPage() {
   const router = useRouter();
   const [isVerified, setIsVerified] = useState(false); // 진입 비밀번호 통과 여부
@@ -71,7 +79,7 @@ export default function MyInfoEditPage() {
     e.preventDefault();
     try {
       await authApi.updateMe(formData);
-      await Swal.fire({ icon: 'success', title: '수정 완료', text: '모든 정보가 성공적으로 변경되었습니다.', confirmButtonColor: '#1e3a8a' });
+      Toast.fire({ icon: 'success', title: '모든 정보가 성공적으로 변경되었습니다.' });
       router.push('/mypage');
     } catch (error) {
       Swal.fire('오류', '정보 수정에 실패했습니다.', 'error');
@@ -90,29 +98,29 @@ export default function MyInfoEditPage() {
     setIsOpenPost(false);
   };
 
-  // 🌟 SMS 발송 핸들러
+  // SMS 발송 핸들러
   const handleSendSms = async () => {
     try {
       await authApi.sendSms(formData.phoneNumber);
       setSmsSent(true);
-      Swal.fire('발송 완료', '인증번호가 전송되었습니다.', 'success');
+      Toast.fire({ icon: 'success', title: '인증번호가 전송되었습니다.' });
     } catch (err) {
       Swal.fire('실패', 'SMS 발송 중 오류가 발생했습니다.', 'error');
     }
   };
 
-  // 🌟 SMS 인증 확인 핸들러
+  // SMS 인증 확인 핸들러
   const handleVerifySms = async () => {
     try {
       await authApi.verifySms(formData.phoneNumber, smsCode);
       setIsPhoneVerified(true);
-      Swal.fire('인증 성공', '이제 비밀번호를 변경할 수 있습니다.', 'success');
+      Toast.fire({ icon: 'success', title: '이제 비밀번호를 변경할 수 있습니다.' });
     } catch (err) {
       Swal.fire('인증 실패', '인증번호가 올바르지 않습니다.', 'error');
     }
   };
 
-  // 🌟 비밀번호 변경 핸들러
+  // 비밀번호 변경 핸들러
   const handlePasswordChange = async () => {
     if (!passwordRegex.test(newPassword)) {
       return Swal.fire('알림', '비밀번호 형식이 올바르지 않습니다.', 'warning');
@@ -124,7 +132,7 @@ export default function MyInfoEditPage() {
     try {
       // api/index.ts에 만들어둔 changePassword 호출
       await authApi.changePassword(newPassword);
-      Swal.fire('변경 완료', '비밀번호가 성공적으로 변경되었습니다.', 'success');
+      Toast.fire({ icon: 'success', title: '비밀번호가 성공적으로 변경되었습니다.' });
       setNewPassword(''); setConfirmPassword(''); 
     } catch (err) {
       Swal.fire('오류', '비밀번호 변경에 실패했습니다.', 'error');

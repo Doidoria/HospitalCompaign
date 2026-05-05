@@ -13,7 +13,7 @@ export default function ApplyPage() {
   const router = useRouter();
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
 
-  // 🌟 통합 데이터 관리 보관함
+  // 통합 데이터 관리 보관함
   const [formData, setFormData] = useState({
     date: '', 
     time: '', 
@@ -116,7 +116,7 @@ export default function ApplyPage() {
     }
   };
 
-  // 🌟 Framer Motion 애니메이션 설정 복원
+  // Framer Motion 애니메이션 설정 복원
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -148,7 +148,7 @@ export default function ApplyPage() {
 
       <main className="max-w-2xl mx-auto px-6 pt-12">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3 mb-10">
-          <button onClick={() => router.back()} className="p-2 hover:bg-gray-200 rounded-full transition-colors bg-white shadow-sm border border-gray-100">
+          <button onClick={() => router.back()} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
           <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">서비스 예약 신청</h2>
@@ -162,7 +162,7 @@ export default function ApplyPage() {
           animate="visible"
         >
           
-          {/* 🌟 1. 일정 및 장소 선택 */}
+          {/* 1. 일정 및 장소 선택 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3 border-b border-gray-50 pb-4">
               <div className="p-2.5 bg-blue-50 rounded-xl"><Calendar className="w-6 h-6 text-blue-600" /></div>
@@ -191,7 +191,7 @@ export default function ApplyPage() {
             </div>
           </motion.div>
 
-          {/* 🌟 2. 기본 정보 입력 */}
+          {/* 2. 기본 정보 입력 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3 border-b border-gray-50 pb-4">
               <div className="p-2.5 bg-emerald-50 rounded-xl"><User className="w-6 h-6 text-emerald-600" /></div>
@@ -221,7 +221,7 @@ export default function ApplyPage() {
             </div>
           </motion.div>
 
-          {/* 🌟 3. 동행 기본 정보 */}
+          {/* 3. 동행 기본 정보 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3 border-b border-gray-50 pb-4">
               <div className="p-2.5 bg-orange-50 rounded-xl"><MapPin className="w-6 h-6 text-orange-600" /></div>
@@ -251,7 +251,7 @@ export default function ApplyPage() {
                         <Search className="w-5 h-5" />
                       </button>
                       
-                      {/* ✨ 병원 주소 가져오기 버튼 */}
+                      {/* 병원 주소 가져오기 버튼 */}
                       <button 
                         type="button" 
                         onClick={() => {
@@ -293,7 +293,7 @@ export default function ApplyPage() {
             </div>
           </motion.div>
 
-          {/* 🌟 4. 검사 상세 정보 */}
+          {/* 4. 검사 상세 정보 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3 border-b border-gray-50 pb-4">
               <div className="p-2.5 bg-rose-50 rounded-xl"><Stethoscope className="w-6 h-6 text-rose-600" /></div>

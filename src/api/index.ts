@@ -89,6 +89,26 @@ export const adminApi = {
     apiClient.patch(`/api/members/${memberId}/role`, { role }),
 };
 
+export const managerApi = {
+  // 매니저 상세 프로필 정보 가져오기
+  getManagerProfile: (managerId: number) => 
+    apiClient.get(`/api/members/managers/${managerId}/profile`),
+
+  // 매니저가 자신의 프로필을 수정/저장
+  updateManagerProfile: (data: { introduction: string; career: string; certifications: string }) => 
+    apiClient.put(`/api/members/managers/profile`, data),
+};
+
+export const reviewApi = {
+  // 리뷰 목록 조회
+  getReviews: (page = 0, size = 10) => 
+    apiClient.get(`/api/reviews?page=${page}&size=${size}`),
+
+  // 리뷰 작성 (URL에 reservationId 포함)
+  createReview: (reservationId: number, data: { rating: number; comment: string }) => 
+    apiClient.post(`/api/reviews/${reservationId}`, data),
+};
+
 export const categoryApi = {
   // 서비스 카테고리 전체 목록 조회
   getAll: () => apiClient.get('/api/categories'), 

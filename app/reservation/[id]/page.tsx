@@ -1,12 +1,53 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, Loader2, FileText, MessageSquare, HelpCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, FileText, MessageSquare, HelpCircle, ChevronRight, Navigation } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { reservationApi, authApi } from '@/src/api/index';
+
+// TypeScript 인터페이스
+interface Manager {
+  id: string;
+  name: string;
+  license: string;
+  rating: string;
+}
+
+interface Payment {
+  baseFee: number;
+  extraFee: number;
+  totalFee: number;
+}
+
+interface Reservation {
+  id: string;
+  status: string;
+  date: string;
+  time: string;
+  hospital: string;
+  patientName: string;
+  patientPhone: string;
+  memo: string;
+  manager: Manager | null;
+  payment: Payment;
+  category: string;
+  detailedContent: string;
+  doctorInquiry: string;
+  meetingPoint: string;
+  patientAddress: string;
+}
+
+// 가벼운 Toast 알림 설정
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+});
 
 export default function ReservationDetailPage() {
   const params = useParams();
@@ -14,25 +55,23 @@ export default function ReservationDetailPage() {
   
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState("");
-  const [reservation, setReservation] = useState({
-    id: '',
-    status: '', 
-    date: '',
-    time: '',
-    hospital: '',
-    patientName: '',
-    patientPhone: '010-0000-0000',
-    memo: '안전한 동행 부탁드립니다.',
-    manager: null as any,
-    payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 },
-    category: '진료',
-    detailedContent: '',
-    doctorInquiry: '',
-    meetingPoint: '',  // 만나는 장소
-    patientAddress: '' // 자택 주소 (지도 검색용)
+  const [reservation, setReservation] = useState<Reservation>({
+    id: '', status: '', date: '', time: '', hospital: '',
+    patientName: '', patientPhone: '', memo: '',
+    manager: null, payment: { baseFee: 0, extraFee: 0, totalFee: 0 },
+    category: '', detailedContent: '', doctorInquiry: '', meetingPoint: '', patientAddress: ''
   });
 
+  // 주소의 '///' 기호를 공백으로 예쁘게 치환해주는 포맷 함수
+  const formatAddress = (address: string) => {
+    if (!address) return '장소 정보 없음';
+    // '///'를 띄어쓰기로 변경하고, 혹시 모를 다중 공백을 하나로 압축
+    return address.split('///').join(' ').replace(/\s+/g, ' ').trim();
+  };
+
   useEffect(() => {
+    let isMounted = true; 
+
     const fetchDetail = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) {
@@ -46,6 +85,8 @@ export default function ReservationDetailPage() {
           reservationApi.getDetail(params.id as string)
         ]);
         
+        if (!isMounted) return;
+
         setUserEmail(userRes.data.email);
         const apiData = resDetail.data;
 
@@ -53,8 +94,7 @@ export default function ReservationDetailPage() {
         const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
         const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
-        setReservation(prev => ({
-          ...prev,
+        setReservation({
           id: apiData.id,
           status: apiData.status === 'WAITING' ? '매칭 대기' : apiData.status,
           date: dateStr,
@@ -62,48 +102,45 @@ export default function ReservationDetailPage() {
           hospital: apiData.hospitalName,
           patientName: apiData.patientName,
           patientPhone: apiData.patientPhone || '연락처 없음', 
-          memo: apiData.requirements || '요청사항 없음',
-          manager: apiData.managerName && apiData.managerName !== '-' 
-            ? { name: apiData.managerName, license: '자격증 검증 완료', rating: '5.0' } 
+          memo: apiData.requirements || '',
+          manager: apiData.managerId 
+            ? { id: apiData.managerId, name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
             : null,
+          payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 }, 
           category: apiData.category || '진료',
           detailedContent: apiData.detailedContent || '',
           doctorInquiry: apiData.doctorInquiry || '',
           meetingPoint: apiData.meetingPoint || '자택',
           patientAddress: apiData.patientAddress || ''
-        }));
+        });
 
       } catch (error) {
         console.error('로딩 에러:', error);
-        Swal.fire({ icon: 'error', title: '오류', text: '예약 내역을 불러올 수 없습니다.' });
-        router.push('/mypage');
+        if (isMounted) {
+          Toast.fire({ icon: 'error', title: '예약 내역을 불러올 수 없습니다.' });
+          router.push('/mypage');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchDetail();
+
+    return () => { isMounted = false; };
   }, [params.id, router]);
 
-  // 결제 버튼 로직 (원본 유지)
-  const handlePayment = () => {
-    alert('결제창으로 이동합니다.');
+  const handlePayment = useCallback(() => {
+    Toast.fire({ icon: 'info', title: '결제창으로 이동합니다.' });
     setReservation(prev => ({ ...prev, status: '예약 확정' }));
-  };
+  }, []);
 
-  // 예약 취소 로직 (비밀번호 확인 추가)
-  const handleCancel = async () => {
-    // 1. 상태 체크 (매칭 대기 상태에서만 가능)
+  const handleCancel = useCallback(async () => {
     if (reservation.status !== '매칭 대기') {
-      Swal.fire({
-        icon: 'error',
-        title: '취소 불가',
-        text: '매칭 대기 상태에서만 직접 취소가 가능합니다. 그 외 상태는 고객센터로 문의해 주세요.'
-      });
+      Toast.fire({ icon: 'warning', title: '매칭 대기 상태에서만 취소가 가능합니다.' });
       return;
     }
 
-    // 2. 비밀번호 입력 (보안)
     const { value: password } = await Swal.fire({
       title: '예약 취소 본인 확인',
       text: '보안을 위해 계정 비밀번호를 한 번 더 입력해 주세요.',
@@ -111,23 +148,27 @@ export default function ReservationDetailPage() {
       inputPlaceholder: '비밀번호 입력',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      confirmButtonText: '비밀번호 확인 및 취소',
-      cancelButtonText: '닫기'
+      confirmButtonText: '취소 진행',
+      cancelButtonText: '닫기',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl font-bold',
+        cancelButton: 'rounded-xl font-bold'
+      }
     });
 
     if (password) {
       try {
-        // 3. 비밀번호 검증 후 삭제 진행
-        await authApi.login({ email: userEmail, password: password });
+        await authApi.login({ email: userEmail, password });
         await reservationApi.cancel(reservation.id); 
 
-        await Swal.fire({ icon: 'success', title: '취소 완료', text: '예약이 정상적으로 취소되었습니다.' });
+        Toast.fire({ icon: 'success', title: '예약이 정상적으로 취소되었습니다.' });
         router.push('/mypage');
       } catch (error) {
-        Swal.fire({ icon: 'error', title: '인증 실패', text: '비밀번호가 일치하지 않거나 서버 오류가 발생했습니다.' });
+        Toast.fire({ icon: 'error', title: '비밀번호가 일치하지 않거나 오류가 발생했습니다.' });
       }
     }
-  };
+  }, [reservation.status, reservation.id, userEmail, router]);
 
   const pageVariants: Variants = {
     hidden: { opacity: 0, y: 15 },
@@ -141,216 +182,256 @@ export default function ReservationDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case '매칭 대기': return 'bg-orange-100 text-orange-700';
-      case '결제 대기': return 'bg-blue-100 text-blue-700';
-      case '예약 확정': return 'bg-emerald-100 text-emerald-700';
-      case '취소됨': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case '매칭 대기': return 'bg-orange-50 text-orange-600 border-orange-200';
+      case '결제 대기': return 'bg-blue-50 text-blue-600 border-blue-200';
+      case '예약 확정': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+      case '취소됨': return 'bg-red-50 text-red-600 border-red-200';
+      default: return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-900 w-8 h-8" /></div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 max-w-2xl mx-auto px-4 pt-6 space-y-6">
+        <div className="bg-white rounded-[28px] p-7 shadow-sm border border-slate-100 animate-pulse">
+          <div className="flex justify-between items-start mb-6">
+            <div className="h-6 bg-slate-200 rounded-md w-1/4"></div>
+            <div className="h-8 bg-slate-200 rounded-full w-24"></div>
+          </div>
+          <div className="h-8 bg-slate-200 rounded-md w-2/3 mb-6"></div>
+          <div className="space-y-4">
+            <div className="h-16 bg-slate-50 rounded-2xl w-full"></div>
+            <div className="h-16 bg-slate-50 rounded-2xl w-full"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      <motion.main className="max-w-2xl mx-auto px-4 pt-6 space-y-6" initial="hidden" animate="visible" variants={pageVariants}>
-        {/* 1. 상태 및 기본 정보 카드 */}
-        <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
-            <span className={`text-sm font-bold px-3 py-1 rounded-full ${getStatusColor(reservation.status)}`}>
-              {reservation.status}
-            </span>
-            <span className="text-sm text-gray-400">예약번호: {reservation.id}</span>
-          </div>
-          <div className="space-y-4">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24">
+      {/* 상단 네비게이션바 느낌의 헤더 */}
+      <header className="max-w-2xl mx-auto px-4 py-5 flex items-center gap-3">
+        <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-slate-200/50 rounded-full transition-colors text-slate-600">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <h1 className="text-lg font-bold text-slate-800">예약 상세내역</h1>
+      </header>
+
+      <motion.main className="max-w-2xl mx-auto px-4 space-y-5" initial="hidden" animate="visible" variants={pageVariants}>
+        
+        {/* 1. 메인 예약 정보 카드 */}
+        <motion.section variants={itemVariants} className="bg-white rounded-[28px] p-6 sm:p-8 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <span className={`inline-block px-2.5 py-1 mb-2 rounded-md text-xs font-bold ${
-                reservation.category === '검사' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                {reservation.category}
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold mb-3 ${
+                reservation.category === '검사' ? 'bg-purple-50 text-purple-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                {reservation.category} 목적
               </span>
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-extrabold text-gray-800">{reservation.hospital}</h2>
-                <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(reservation.hospital)}`, '_blank')}
-                  className="px-2.5 py-1 bg-[#FEE500] text-[#191919] text-[11px] font-bold rounded-md hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm">
-                  카카오맵
-                </button>
-              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                {reservation.hospital}
+              </h2>
             </div>
-            
-            {/* 기본 정보 그리드 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
-              <div className="flex items-center gap-2.5">
-                <Calendar className="w-5 h-5 text-gray-400" />
-                <span>{reservation.date}</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Clock className="w-5 h-5 text-gray-400" />
-                <span>{reservation.time}</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <User className="w-5 h-5 text-gray-400" />
-                <span>환자: {reservation.patientName}</span>
-              </div>
-              
-              {/* 만나는 장소 (클릭 시 카카오맵 연동) */}
-              <div className="flex items-center gap-2.5">
+            <div className={`flex flex-col items-end`}>
+              <span className={`px-4 py-1.5 rounded-full text-sm font-bold border ${getStatusColor(reservation.status)}`}>
+                {reservation.status}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-2 font-medium">No. {reservation.id}</span>
+            </div>
+          </div>
+
+          {/* 주요 정보 요약 박스 */}
+          <div className="bg-slate-50 rounded-2xl p-5 grid grid-cols-2 gap-y-5 gap-x-4 mb-6">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> 예약일
+              </p>
+              <p className="font-bold text-slate-800">{reservation.date}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> 시간
+              </p>
+              <p className="font-bold text-slate-800">{reservation.time}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" /> 동행 대상 (환자)
+              </p>
+              <p className="font-bold text-slate-800">{reservation.patientName} <span className="text-slate-500 font-normal ml-1">({reservation.patientPhone})</span></p>
+            </div>
+          </div>
+
+          {/* 만나는 장소 */}
+          <button 
+            onClick={() => {
+              const searchTarget = reservation.meetingPoint === '자택' ? reservation.patientAddress : reservation.meetingPoint;
+              if (!searchTarget || searchTarget === '자택') {
+                Toast.fire({ icon: 'warning', title: '정확한 주소 정보가 없습니다.' });
+                return;
+              }
+              window.open(`https://map.kakao.com/link/search/${encodeURIComponent(formatAddress(searchTarget))}`, '_blank');
+            }}
+            className="w-full flex items-center justify-between bg-white border border-slate-100 shadow-sm rounded-2xl p-4 sm:p-5 group hover:border-orange-200 hover:shadow-md hover:bg-orange-50/30 transition-all text-left"
+          >
+            <div className="flex gap-3 sm:gap-4 items-center">
+              <div className="bg-orange-50 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
                 <MapPin className="w-5 h-5 text-orange-500" />
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-gray-700">장소:</span>
-                  <button onClick={() => {
-                      // '자택'이면 회원 정보의 상세 주소로, 아니면 입력한 장소로 검색
-                      const searchTarget = reservation.meetingPoint === '자택' ? reservation.patientAddress : reservation.meetingPoint;
-                      if (!searchTarget || searchTarget === '자택') {
-                        Swal.fire({ icon: 'warning', title: '주소 확인 불가', text: '등록된 정확한 주소가 없습니다.' });
-                        return;
-                      }
-                      window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
-                    }}
-                    className="text-blue-600 font-bold hover:text-blue-800 hover:underline decoration-blue-300 underline-offset-4 transition-colors">
-                    {reservation.meetingPoint}
-                  </button>
-                </div>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-orange-500 mb-0.5 sm:mb-1">매니저와 만나는 장소</p>
+                <p className="font-extrabold text-slate-800 text-sm sm:text-[15px] leading-snug group-hover:text-orange-700 transition-colors">
+                  {formatAddress(reservation.meetingPoint)}
+                </p>
               </div>
             </div>
-            
-            <div className="mt-6 space-y-3 border-t border-gray-100 pt-5">
-              {/* 1. 보호자 요청사항 */}
+            <div className="bg-slate-50 p-2.5 rounded-full text-slate-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-all shrink-0">
+              <Navigation className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+            </div>
+          </button>
+
+          {/* 텍스트 요청사항 섹션들 */}
+          {(reservation.memo || reservation.detailedContent || reservation.doctorInquiry) && (
+            <div className="mt-8 space-y-3">
               {reservation.memo && (
-                <div className="p-4 bg-gray-50 rounded-2xl flex items-start gap-3 border border-gray-100/80">
-                  <FileText className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+                <div className="p-4 bg-slate-50/80 rounded-2xl flex gap-3 border border-slate-100">
+                  <FileText className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-xs font-extrabold text-gray-500 block mb-1.5">보호자 특별 요청사항</span>
-                    <p className="text-sm text-gray-700 leading-relaxed">{reservation.memo}</p>
+                    <span className="text-xs font-bold text-slate-500 block mb-1">보호자 특별 요청사항</span>
+                    <p className="text-sm text-slate-700 leading-relaxed">{reservation.memo}</p>
                   </div>
                 </div>
               )}
 
-              {/* 2. 상세 내역 (가독성 개선 버전) */}
               {reservation.detailedContent && (
-                <div className="p-4 bg-blue-50/50 rounded-2xl flex items-start gap-3 border border-blue-100/60">
-                  <MessageSquare className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                <div className="p-4 bg-indigo-50/50 rounded-2xl flex gap-3 border border-indigo-100/50">
+                  <MessageSquare className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
                   <div className="w-full">
-                    <span className="text-xs font-extrabold text-blue-600 block mb-2">상세 진료 및 검사 내용</span>
-                    <div className="space-y-1.5">
+                    <span className="text-xs font-bold text-indigo-600 block mb-2">진료/검사 상세 내역</span>
+                    <div className="space-y-1">
                       {reservation.detailedContent.split('\n').map((line, index) => (
-                        <div key={index} className="flex items-start gap-1.5">
-                          {/* 항목 앞에 작은 점(dot)을 찍어 리스트 느낌 강조 */}
-                          <div className="w-1 h-1 rounded-full bg-blue-300 mt-2 shrink-0" />
-                          <p className="text-sm text-gray-700 leading-relaxed font-medium">
-                            {line.replace('- ', '')} {/* 앞에 붙은 '- ' 기호는 제거하고 출력 */}
-                          </p>
-                        </div>
+                        <p key={index} className="text-sm text-slate-700 leading-relaxed flex gap-2">
+                          <span className="text-indigo-300">•</span> {line.replace('- ', '')}
+                        </p>
                       ))}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 3. 의사 선생님께 드릴 질문 (제일 중요하므로 눈에 띄게 강조!) */}
               {reservation.doctorInquiry && (
-                <div className="p-4 bg-amber-50 rounded-2xl flex items-start gap-3 border border-amber-200/60 shadow-sm">
+                <div className="p-4 bg-amber-50/50 rounded-2xl flex gap-3 border border-amber-100/50">
                   <HelpCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-xs font-extrabold text-amber-600 block mb-1.5">의사 선생님께 꼭 여쭤봐야 할 질문</span>
+                    <span className="text-xs font-bold text-amber-600 block mb-1">의사 선생님께 꼭 여쭤볼 질문</span>
                     <p className="text-sm text-amber-900 leading-relaxed font-medium">{reservation.doctorInquiry}</p>
                   </div>
                 </div>
               )}
-              
             </div>
-          </div>
+          )}
         </motion.section>
 
         {/* 2. 매니저 정보 카드 */}
         {reservation.manager && reservation.status !== '취소됨' && (
-          <motion.section variants={itemVariants} className="bg-emerald-50 rounded-[24px] p-6 shadow-sm border border-emerald-100">
-            <h3 className="font-bold text-emerald-900 mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
-              배정된 매니저 정보
+          <motion.section variants={itemVariants}>
+            <h3 className="text-sm font-bold text-slate-500 mb-3 ml-2 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" /> 동행 매니저 정보
             </h3>
-            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">
-                {reservation.manager.name.charAt(0)}
+            {reservation.manager.id ? (
+              <Link href={`/manager/profile/${reservation.manager.id}`} className="block group">
+                <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex items-center justify-between group-hover:border-emerald-200 group-hover:shadow-md transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xl shrink-0 border border-emerald-100">
+                      {reservation.manager.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-slate-800 text-lg group-hover:text-emerald-600 transition-colors">
+                        {reservation.manager.name} <span className="font-medium text-sm text-slate-500">매니저</span>
+                      </p>
+                      <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-2">
+                        <span>{reservation.manager.license}</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span className="text-amber-500 font-bold flex items-center">⭐ {reservation.manager.rating}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                </div>
+              </Link>
+            ) : (
+              <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm">
+                <p className="text-sm font-bold text-slate-400 text-center py-2">아직 매니저가 배정되지 않았습니다.</p>
               </div>
-              <div>
-                <p className="font-extrabold text-gray-800">{reservation.manager.name} 매니저</p>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {reservation.manager.license} | 평점 ⭐ {reservation.manager.rating}
-                </p>
-              </div>
-            </div>
+            )}
           </motion.section>
         )}
 
         {/* 3. 결제 정보 카드 */}
-        <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-gray-500" />
-            결제 정보
+        <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+          <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-slate-400" /> 결제 정보
           </h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between text-gray-600">
-              <span>기본 서비스 요금 (2시간)</span>
-              <span>{reservation.payment.baseFee.toLocaleString()}원</span>
+          <div className="space-y-4 text-sm px-1">
+            <div className="flex justify-between text-slate-500">
+              <span>기본 동행 요금 (2시간)</span>
+              <span className="font-medium text-slate-700">{reservation.payment.baseFee.toLocaleString()}원</span>
             </div>
-            <div className="flex justify-between text-gray-600">
-              <span>추가 요금 / 할증</span>
-              <span>{reservation.payment.extraFee.toLocaleString()}원</span>
-            </div>
-            <div className="border-t border-gray-100 pt-3 mt-3 flex justify-between items-center">
-              <span className="font-bold text-gray-800">총 결제 금액</span>
-              <span className="text-xl font-extrabold text-blue-950">
+            {reservation.payment.extraFee > 0 && (
+              <div className="flex justify-between text-slate-500">
+                <span>추가 요금 / 할증</span>
+                <span className="font-medium text-slate-700">{reservation.payment.extraFee.toLocaleString()}원</span>
+              </div>
+            )}
+            <div className="border-t border-dashed border-slate-200 pt-4 mt-2 flex justify-between items-center">
+              <span className="font-extrabold text-slate-800">총 결제 금액</span>
+              <span className="text-2xl font-extrabold text-indigo-600">
                 {reservation.payment.totalFee.toLocaleString()}원
               </span>
             </div>
           </div>
         </motion.section>
 
-        {/* 4. 취소 규정 안내 */}
-        {reservation.status !== '취소됨' && (
-          <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 flex gap-3 items-start border border-gray-200">
-            <AlertCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
-            <p className="text-xs text-gray-500 leading-relaxed">
-              서비스 이용 24시간 전까지는 위약금 없이 무료 취소가 가능합니다. 그 이후 취소 시 규정에 따라 위약금이 발생할 수 있습니다. 
-              <Link href="/guide" className="text-blue-600 underline ml-1">상세 보기</Link>
-            </p>
-          </motion.div>
-        )}
-
-        {/* 5. 하단 액션 버튼 */}
-        <motion.div variants={itemVariants} className="pt-4 flex gap-3">
-          {reservation.status === '결제 대기' && (
-            <button onClick={handlePayment} className="flex-1 bg-blue-900 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors">
-              결제하기
-            </button>
+        {/* 4. 취소 안내 & 액션 버튼 영역 */}
+        <motion.div variants={itemVariants} className="pt-2 space-y-4">
+          {/* 4. 취소 규정 안내 */}
+          {reservation.status !== '취소됨' && (
+            <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 flex gap-3 items-start border border-gray-200">
+              <AlertCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <p className="text-xs text-gray-500 leading-relaxed">
+                서비스 이용 24시간 전까지는 위약금 없이 무료 취소가 가능합니다. 그 이후 취소 시 규정에 따라 위약금이 발생할 수 있습니다. 
+                <Link href="/guide" className="text-blue-600 underline ml-1">상세 보기</Link>
+              </p>
+            </motion.div>
           )}
-
-          {/* 오직 '매칭 대기' 일 때만 취소 버튼 활성화 */}
-          {reservation.status === '매칭 대기' ? (
-            <div className="w-full flex gap-3">
-              <button 
-                onClick={() => router.push(`/reservation/edit/${reservation.id}`)}
-                className="flex-1 bg-white border border-blue-200 text-blue-600 font-bold py-4 rounded-2xl hover:bg-blue-50 transition-colors"
-              >
-                예약 수정
+          <div className="flex gap-3">
+            {reservation.status === '결제 대기' && (
+              <button onClick={handlePayment} className="flex-1 bg-indigo-600 text-white font-bold py-4.5 rounded-[20px] shadow-[0_4px_20px_rgba(79,70,229,0.3)] hover:bg-indigo-700 transition-all active:scale-[0.98]">
+                결제 진행하기
               </button>
-              <button 
-                onClick={handleCancel}
-                className="flex-1 bg-white border border-gray-200 text-gray-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2"
-              >
-                <XCircle className="w-5 h-5" />
-                <span>예약 취소</span>
-              </button>
-            </div>
-          ) : (
-            reservation.status !== '결제 대기' && (
-              <div className="w-full bg-gray-100 text-gray-400 text-sm font-bold py-4 rounded-2xl text-center">
-                현재 상태에서는 직접 수정 및 취소가 불가합니다
-              </div>
-            )
-          )}
+            )}
+            {reservation.status === '매칭 대기' ? (
+              <>
+                <button onClick={() => router.push(`/reservation/edit/${reservation.id}`)}
+                  className="flex-1 bg-white border-2 border-indigo-100 text-indigo-600 font-bold py-4 rounded-[20px] hover:bg-indigo-50 transition-all active:scale-[0.98]"
+                >
+                  예약 수정
+                </button>
+                <button onClick={handleCancel}
+                  className="flex-1 bg-white border-2 border-slate-100 text-slate-600 font-bold py-4 rounded-[20px] hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <XCircle className="w-5 h-5" /> 예약 취소
+                </button>
+              </>
+            ) : (
+              reservation.status !== '결제 대기' && (
+                <div className="w-full bg-slate-100/50 text-slate-400 text-sm font-semibold py-4.5 rounded-[20px] text-center border border-slate-100">
+                  현재 상태에서는 예약 수정 및 취소가 불가합니다
+                </div>
+              )
+            )}
+          </div>
         </motion.div>
-
       </motion.main>
     </div>
   );

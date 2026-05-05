@@ -1,12 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { reportApi, reservationApi } from '@/src/api/index';
+import { reportApi } from '@/src/api/index';
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+});
 
 export default function ReportDetailPage() {
   const params = useParams();
@@ -19,13 +27,15 @@ export default function ReportDetailPage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchReportData = async () => {
       try {
-        // 🌟 1. 리포트 데이터 가져오기
         const res = await reportApi.getDetail(params.id as string);
         const data = res.data;
 
-        // 🌟 2. 날짜 가공 (예: 2026. 04. 15 (수))
+        if (!isMounted) return;
+
         const dateObj = new Date(data.date);
         const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
 
@@ -36,131 +46,166 @@ export default function ReportDetailPage() {
         });
       } catch (error) {
         console.error('리포트 로딩 에러:', error);
-        Swal.fire({ icon: 'error', title: '조회 실패', text: '아직 작성된 리포트가 없거나 오류가 발생했습니다.' });
-        router.push('/mypage');
+        if (isMounted) {
+          Toast.fire({ icon: 'error', title: '아직 작성된 리포트가 없거나 오류가 발생했습니다.' });
+          router.push('/mypage');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchReportData();
+
+    return () => { isMounted = false; };
   }, [params.id, router]);
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = useCallback(async () => {
     if (!reportRef.current) return;
-      setIsGeneratingPdf(true);
+    setIsGeneratingPdf(true);
 
     try {
       const { toPng } = await import('html-to-image');
       const { default: jsPDF } = await import('jspdf');
 
+      Toast.fire({ icon: 'info', title: 'PDF 파일을 생성하고 있습니다...' });
+
       const imgData = await toPng(reportRef.current, {
         quality: 0.95,
-        backgroundColor: '#f9fafb', // Tailwind bg-gray-50 색상 유지
+        backgroundColor: '#f8fafc', // 배경색을 명시적으로 주어 투명해지는 현상 방지 (slate-50)
         cacheBust: true,
       });
 
-      // 2. 이미지를 PDF 규격으로 변환
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (reportRef.current.offsetHeight * pdfWidth) / reportRef.current.offsetWidth;
 
-      // 3. PDF에 이미지 추가 및 브라우저 다운로드 실행
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`예스케어_리포트_${reportData.patientName}님.pdf`);
+      pdf.save(`예스케어_케어리포트_${reportData.patientName}님.pdf`);
+      
+      Toast.fire({ icon: 'success', title: 'PDF 다운로드가 완료되었습니다.' });
 
     } catch (error) {
       console.error('PDF 생성 에러:', error);
-      Swal.fire('오류', 'PDF를 생성하는 중 문제가 발생했습니다.', 'error');
+      Toast.fire({ icon: 'error', title: 'PDF를 생성하는 중 문제가 발생했습니다.' });
     } finally {
       setIsGeneratingPdf(false);
     }
-  };
+  }, [reportData]);
 
-  const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-  const itemVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } } };
+  const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+  const itemVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } } };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-10 h-10 text-blue-900 animate-spin" /></div>;
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 pt-6 pb-24 max-w-2xl mx-auto space-y-6">
+        <div className="h-10 w-32 bg-slate-200 rounded-lg animate-pulse mb-6" />
+        <div className="h-48 bg-slate-200 rounded-3xl animate-pulse" />
+        <div className="space-y-4">
+          <div className="h-32 bg-slate-200 rounded-[24px] animate-pulse" />
+          <div className="h-24 bg-slate-200 rounded-[24px] animate-pulse" />
+          <div className="h-24 bg-slate-200 rounded-[24px] animate-pulse" />
+          <div className="h-32 bg-slate-200 rounded-[24px] animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   if (!reportData) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-      <motion.main className="max-w-2xl mx-auto px-4 pt-6" initial="hidden" animate="visible" variants={containerVariants}>
-        <div ref={reportRef} className="pb-4">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24">
+      
+      {/* 상단 네비게이션 헤더 */}
+      <header className="max-w-2xl mx-auto px-4 py-5 flex items-center gap-3 relative z-10">
+        <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-slate-200/50 rounded-full transition-colors text-slate-600">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <h1 className="text-lg font-bold text-slate-800">케어 리포트</h1>
+      </header>
+
+      <motion.main className="max-w-2xl mx-auto px-4" initial="hidden" animate="visible" variants={containerVariants}>
+        
+        {/* PDF 캡처 대상 영역 */}
+        <div ref={reportRef} className="pb-4 bg-slate-50"> 
           
-          {/* 헤더 카드 */}
-          <motion.div variants={itemVariants} className="bg-blue-950 text-white rounded-3xl p-6 mb-6 shadow-md relative overflow-hidden">
+          {/* 1. 헤더 카드 (디자인 고도화) */}
+          <motion.div variants={itemVariants} className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-[28px] p-7 sm:p-8 mb-6 shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none -mr-10 -mt-10"></div>
+            
             <div className="relative z-10">
-              <div className="inline-block bg-blue-800/50 text-blue-200 text-xs font-semibold px-2.5 py-1 rounded-lg mb-3">
-                진료 동행 완료
+              <div className="inline-flex items-center gap-1.5 bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-xs font-bold px-3 py-1.5 rounded-xl mb-4 backdrop-blur-sm">
+                <CheckCircle2 className="w-3.5 h-3.5" /> 진료 동행 완료
               </div>
-              <h2 className="text-2xl font-extrabold mb-1">{reportData.hospitalName}</h2>
-              <p className="text-blue-200">{reportData.department} | {reportData.formattedDate}</p>
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-1.5 tracking-tight">{reportData.hospitalName}</h2>
+              <p className="text-indigo-200 text-sm font-medium">{reportData.department} | {reportData.formattedDate}</p>
               
-              <div className="flex items-center gap-4 mt-5 pt-5 border-t border-blue-800/50 text-sm">
-                <div className="flex items-center gap-1.5">
-                  <User className="w-4 h-4 text-blue-300" />
-                  <span>환자: <strong>{reportData.patientName}</strong>님</span>
+              <div className="flex items-center gap-5 mt-6 pt-6 border-t border-white/10 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-white/10 rounded-lg"><User className="w-4 h-4 text-indigo-300" /></div>
+                  <span className="text-slate-200">환자: <strong className="text-white ml-0.5">{reportData.patientName}</strong> 님</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Heart className="w-4 h-4 text-emerald-400" />
-                  <span>담당 매니저: <strong>{reportData.managerName}</strong></span>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-500/20 rounded-lg"><Heart className="w-4 h-4 text-emerald-400" /></div>
+                  <span className="text-slate-200">매니저: <strong className="text-white ml-0.5">{reportData.managerName}</strong></span>
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2 bg-blue-900/50 p-3 rounded-xl border border-blue-800/50">
-                <span className="text-blue-200 text-sm font-semibold">당일 환자 컨디션:</span>
-                {reportData.patientCondition === 'good' && <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">😊 좋음</span>}
-                {reportData.patientCondition === 'normal' && <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">😐 보통</span>}
-                {reportData.patientCondition === 'bad' && <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">😥 저하</span>}
-              </div>
-            <FileText className="absolute -bottom-6 -right-6 w-32 h-32 text-blue-900 opacity-50" />
+
+            {/* 컨디션 뱃지 개선 */}
+            <div className="mt-5 flex items-center gap-2.5 bg-black/20 p-3.5 rounded-2xl border border-white/5 backdrop-blur-md relative z-10">
+              <span className="text-indigo-200 text-sm font-bold ml-1">당일 환자 컨디션</span>
+              {reportData.patientCondition === 'good' && <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-100">😊 좋음</span>}
+              {reportData.patientCondition === 'normal' && <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-200">😐 보통</span>}
+              {reportData.patientCondition === 'bad' && <span className="bg-red-50 text-red-700 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-red-100">😥 저하</span>}
+            </div>
+            
+            <FileText className="absolute -bottom-6 -right-6 w-32 h-32 text-indigo-900 opacity-40 pointer-events-none" />
           </motion.div>
 
           <div className="space-y-4">
-            {/* 진료 요약 및 의사 소견 */}
-            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><Stethoscope className="w-5 h-5" /></div>
-                <h3 className="font-bold text-lg text-gray-800">진료 요약 및 의사 소견</h3>
+            {/* 2. 진료 요약 및 의사 소견 */}
+            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600"><Stethoscope className="w-5 h-5" /></div>
+                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">진료 요약 및 의사 소견</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed break-keep text-sm md:text-base bg-gray-50 p-4 rounded-2xl whitespace-pre-wrap">
+              <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] bg-slate-50/50 p-5 rounded-2xl whitespace-pre-wrap border border-slate-100">
                 {reportData.doctorOpinion}
               </p>
             </motion.section>
 
-            {/* 다음 일정 및 안내 */}
-            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-orange-50 p-2 rounded-xl text-orange-500"><CalendarClock className="w-5 h-5" /></div>
-                <h3 className="font-bold text-lg text-gray-800">다음 일정 및 안내</h3>
+            {/* 3. 처방 및 복약 안내 */}
+            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="bg-emerald-50 p-2.5 rounded-xl text-emerald-600"><Pill className="w-5 h-5" /></div>
+                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">처방 및 복약 안내</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed break-keep text-sm md:text-base">
-                {reportData.nextSchedule || '다음 일정 없음'}
-              </p>
-            </motion.section>
-
-            {/* 처방 및 복약 안내 */}
-            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600"><Pill className="w-5 h-5" /></div>
-                <h3 className="font-bold text-lg text-gray-800">처방 및 복약 안내</h3>
-              </div>
-              <p className="text-gray-600 leading-relaxed break-keep text-sm md:text-base whitespace-pre-wrap">
+              <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] whitespace-pre-wrap px-1">
                 {reportData.prescription || '특이사항 없음'}
               </p>
             </motion.section>
 
-            {/* 매니저 동행 코멘트 */}
-            <motion.section variants={itemVariants} className="bg-emerald-50 rounded-[24px] p-6 shadow-sm border border-emerald-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-white p-2 rounded-xl text-emerald-600 shadow-sm"><User className="w-5 h-5" /></div>
-                <h3 className="font-bold text-lg text-emerald-900">매니저 동행 코멘트</h3>
+            {/* 4. 다음 일정 및 안내 */}
+            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="bg-orange-50 p-2.5 rounded-xl text-orange-500"><CalendarClock className="w-5 h-5" /></div>
+                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">다음 진료 일정</h3>
               </div>
-              <p className="text-emerald-800 leading-relaxed break-keep text-sm md:text-base whitespace-pre-wrap">
+              <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] px-1 font-medium">
+                {reportData.nextSchedule ? (
+                  <span className="text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded-md">{reportData.nextSchedule}</span>
+                ) : '다음 일정 없음'}
+              </p>
+            </motion.section>
+
+            {/* 5. 매니저 동행 코멘트 */}
+            <motion.section variants={itemVariants} className="bg-emerald-50/80 rounded-[24px] p-6 shadow-sm border border-emerald-100/80">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="bg-white p-2.5 rounded-xl text-emerald-600 shadow-sm"><User className="w-5 h-5" /></div>
+                <h3 className="font-extrabold text-lg text-emerald-900 tracking-tight">매니저 동행 코멘트</h3>
+              </div>
+              <p className="text-emerald-800 leading-relaxed break-keep text-sm md:text-[15px] whitespace-pre-wrap px-1 font-medium">
                 {reportData.managerComment}
               </p>
             </motion.section>
@@ -172,16 +217,15 @@ export default function ReportDetailPage() {
           <button 
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
-            className="flex-1 bg-white border border-gray-200 text-gray-700 font-bold py-4 rounded-2xl shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-100 disabled:text-gray-400"
+            className="w-full bg-slate-800 text-white font-bold py-4.5 rounded-[20px] shadow-lg hover:bg-slate-900 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
           >
             {isGeneratingPdf ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> 생성 중...</>
+              <><Loader2 className="w-5 h-5 animate-spin" /> 리포트 생성 중...</>
             ) : (
-              <><Download className="w-5 h-5" /> PDF 다운로드</>
+              <><Download className="w-5 h-5" /> 리포트 PDF 저장하기</>
             )}
           </button>
         </motion.div>
-
       </motion.main>
     </div>
   );

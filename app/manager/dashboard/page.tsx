@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { 
   CalendarDays, Activity, CheckCircle2, MapPin, FileText, X, CalendarPlus, XCircle, Star,
-  Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight
+  Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight, UserCog, AlertCircle 
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,6 +17,7 @@ export default function ManagerDashboard() {
   const [availableRequests, setAvailableRequests] = useState<any[]>([]);
   const [mySchedules, setMySchedules] = useState<any[]>([]);
   const [managerName, setManagerName] = useState('매니저');
+  const [managerId, setManagerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +65,7 @@ export default function ManagerDashboard() {
         return;
       }
       setManagerName(meRes.data.name);
+      setManagerId(meRes.data.id);
 
       const [waitingRes, mySchedulesRes] = await Promise.all([
         reservationApi.getWaiting(),
@@ -260,7 +262,8 @@ export default function ManagerDashboard() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-24 relative selection:bg-emerald-100 selection:text-emerald-900">
       <main className="max-w-4xl mx-auto px-5 pt-8">
-        <div className="mb-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-7 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center justify-between relative overflow-hidden">
+        <div className="mb-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-7 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex 
+        items-center justify-between relative overflow-hidden">
           {/* 장식용 빛망울 효과 */}
           <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -273,14 +276,25 @@ export default function ManagerDashboard() {
             <p className="text-slate-300 text-sm font-medium">오늘도 따뜻한 동행을 부탁드립니다 ✨</p>
           </div>
           
-          <button 
-            onClick={() => fetchDashboardData(false)}
-            disabled={isRefreshing}
-            title="목록 새로고침"
-            className="relative z-10 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all active:scale-95 disabled:opacity-50 border border-white/10 shadow-lg"
-          >
-            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-emerald-300' : ''}`}/>
-          </button>
+          <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto">
+            {managerId && (
+              <Link href={`/manager/profile/${managerId}/edit`} className="w-full md:w-auto">
+                <button className="w-full md:w-auto px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-[16px] backdrop-blur-md transition-all active:scale-95 border border-white/10 shadow-lg flex items-center justify-center gap-2.5 text-sm">
+                  <UserCog className="w-4 h-4 text-emerald-300" />
+                  내 프로필 관리
+                </button>
+              </Link>
+            )}
+            
+            <button 
+              onClick={() => fetchDashboardData(false)}
+              disabled={isRefreshing}
+              title="목록 새로고침"
+              className="shrink-0 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-[16px] flex items-center justify-center text-white backdrop-blur-md 
+              transition-all active:scale-95 disabled:opacity-50 border border-white/10 shadow-lg">
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-emerald-300' : ''}`}/>
+            </button>
+          </div>
         </div>
 
         {/* Glassmorphism Sticky Header */}
@@ -586,11 +600,11 @@ export default function ManagerDashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  {selectedRequest.memo && (
+                  {selectedRequest.requirements && (
                     <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
                       <h4 className="text-xs font-bold text-slate-400 mb-2 tracking-wide flex items-center gap-1">특별 요청사항</h4>
                       <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-medium">
-                        {selectedRequest.memo}
+                        {selectedRequest.requirements}
                       </div>
                     </div>
                   )}

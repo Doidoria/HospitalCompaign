@@ -26,7 +26,7 @@ export default function ReportWritePage() {
     managerComment: ''
   });
 
-  // 1. 작성할 예약 원본 데이터 불러오기
+  // 작성할 예약 원본 데이터 불러오기
   useEffect(() => {
     const fetchReservation = async () => {
       try {
@@ -42,9 +42,41 @@ export default function ReportWritePage() {
     fetchReservation();
   }, [params.id, router]);
 
+  // 컴포넌트 마운트 시 임시 저장된 리포트 데이터 불러오기
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(`draft_care_report_${params.id}`);
+    if (savedDraft) {
+      try {
+        const parsedDraft = JSON.parse(savedDraft);
+        setFormData(parsedDraft);
+        if (parsedDraft.nextSchedule === '') {
+          setNoNextSchedule(true);
+        }
+      } catch (error) {
+        console.error('임시 저장 데이터 파싱 오류:', error);
+      }
+    }
+  }, [params.id]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updatedData = { ...prev, [name]: value };
+      localStorage.setItem(`draft_care_report_${params.id}`, JSON.stringify(updatedData));
+      return updatedData;
+    });
+  };
+
+  const handleNoNextScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    setNoNextSchedule(isChecked);
+    
+    setFormData(prev => {
+      // 체크박스 선택 시 nextSchedule 값을 비움
+      const updatedData = { ...prev, nextSchedule: isChecked ? '' : prev.nextSchedule };
+      localStorage.setItem(`draft_care_report_${params.id}`, JSON.stringify(updatedData));
+      return updatedData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,6 +120,7 @@ export default function ReportWritePage() {
       const res = await reportApi.createWithPdf(payload);
 
       if (res.status === 200 || res.status === 201) {
+        localStorage.removeItem(`draft_care_report_${params.id}`);
         Swal.fire({ icon: 'success', title: '리포트 작성 완료', text: '보호자에게 알림이 전송되었습니다.' });
         router.push('/manager/dashboard');
       }
@@ -143,7 +176,7 @@ export default function ReportWritePage() {
                 ].map((item) => (
                   <motion.label 
                     key={item.id} 
-                    whileTap={{ scale: 0.95 }} // 터치 시 살짝 눌리는 애니메이션
+                    whileTap={{ scale: 0.95 }}
                     className={`relative flex flex-col items-center justify-center py-4 rounded-2xl cursor-pointer transition-all duration-200 border-2
                       ${formData.patientCondition === item.id 
                         ? `bg-${item.color}-50 border-${item.color}-500 shadow-sm` 
@@ -187,7 +220,7 @@ export default function ReportWritePage() {
                     text-base text-gray-800 placeholder:text-gray-400 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" />
                   <div className="flex justify-end mt-2.5 mr-1">
                     <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer hover:text-slate-700 transition-colors">
-                      <input type="checkbox" checked={noNextSchedule} onChange={(e) => setNoNextSchedule(e.target.checked)} 
+                      <input type="checkbox" checked={noNextSchedule} onChange={handleNoNextScheduleChange}
                       className="w-4 h-4 accent-orange-500 rounded-sm cursor-pointer" />다음 예약 일정 없음
                     </label>
                   </div>
