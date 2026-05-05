@@ -125,7 +125,6 @@ export default function MyPage() {
     }
   };
 
-  // ✅ (복구) 로그아웃 함수
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     router.push('/login');
@@ -215,7 +214,7 @@ export default function MyPage() {
                   </div>
                 </Link>
 
-                {/* ✅ (요청 반영) 연두색(Emerald) 매니저 카드 */}
+                {/* 매니저 카드 */}
                 {upcomingReservation.managerId && (
                   <div className="mt-6 pt-6 border-t border-slate-100 relative z-10">
                     <Link href={`/manager/profile/${upcomingReservation.managerId}`}>
@@ -235,7 +234,7 @@ export default function MyPage() {
                   </div>
                 )}
                 
-                {/* ✅ (복구) 배경 장식용 애니메이션 로고 */}
+                {/* 배경 장식용 애니메이션 로고 */}
                 <Activity className="absolute -bottom-10 -right-10 w-56 h-56 text-indigo-50/60 pointer-events-none transition-transform group-hover:scale-110 duration-500 z-0" />
               </div>
             ) : (
@@ -302,7 +301,6 @@ export default function MyPage() {
 
                       <div className="pl-1 mb-2">
                         <h4 className="text-base font-extrabold text-slate-900 truncate mb-1">{record.hospital}</h4>
-                        {/* ✅ (복구) 환자명 표시 */}
                         <p className="text-[13px] text-slate-500 mt-1 flex items-center gap-1.5 font-medium">
                           <User className="w-3.5 h-3.5" /> {record.patientName} 님 동행
                         </p>

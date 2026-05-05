@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Save, MapPin, Calendar, FileText, Search, MessageSquare, HelpCircle } from 'lucide-react';
+import { 
+  ArrowLeft, Save, MapPin, Calendar, FileText, Search, 
+  MessageSquare, HelpCircle, Car, Accessibility, Building2, X 
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import { reservationApi } from '@/src/api/index';
@@ -11,8 +14,11 @@ export default function ReservationEditPage() {
   const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [isOpenPost, setIsOpenPost] = useState(false);
+  
+  // 🌟 주소 검색 타겟 상태 ('none' | 'hospital' | 'meeting')
+  const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
 
+  // 일정 및 상세 정보 보관함
   const [formData, setFormData] = useState({
     hospitalName: '', 
     date: '', 
@@ -22,9 +28,18 @@ export default function ReservationEditPage() {
     doctorInquiry: ''     // 의사 질의
   });
 
+  // 🌟 동행 기본 정보 보관함 추가
+  const [basicExtraData, setBasicExtraData] = useState({
+    meetingType: '자택',
+    meetingAddress: '',
+    meetingDetail: '',
+    transportation: '택시 이용',
+    mobility: '도보'
+  });
+
   const Toast = Swal.mixin({
     toast: true,
-    position: 'top-end', // 혹은 'bottom'
+    position: 'top-end',
     showConfirmButton: false,
     timer: 2000,
     timerProgressBar: true,
@@ -45,10 +60,32 @@ export default function ReservationEditPage() {
           hospitalName: data.hospitalName,
           date: datePart,
           time: timePart.substring(0, 5),
-          requirements: data.requirements || data.memo || '', // 백엔드 필드 매핑
+          requirements: data.requirements || data.memo || '',
           detailedContent: data.detailedContent || '',
           doctorInquiry: data.doctorInquiry || ''
         });
+
+        // 🌟 백엔드에서 온 만나는 장소 파싱 (자택 vs 직접 지정)
+        let mType = '자택';
+        let mAddr = '';
+        let mDetail = '';
+        
+        if (data.meetingPoint && data.meetingPoint !== '자택') {
+          mType = '직접 지정';
+          const parts = data.meetingPoint.split('///');
+          mAddr = parts[0]?.trim() || '';
+          mDetail = parts[1]?.trim() || '';
+        }
+
+        // 🌟 동행 기본 정보 세팅
+        setBasicExtraData({
+          meetingType: mType,
+          meetingAddress: mAddr,
+          meetingDetail: mDetail,
+          transportation: data.transportation || '택시 이용',
+          mobility: data.mobility || '독립 보행 가능'
+        });
+
       })
       .catch(err => {
         console.error(err);
@@ -62,26 +99,42 @@ export default function ReservationEditPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // 🌟 검색 완료 시 병원/만나는장소 분기 처리
   const handleCompletePost = (data: any) => {
     let fullAddress = data.address;
     if (data.buildingName) fullAddress += ` (${data.buildingName})`;
-    setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
-    setIsOpenPost(false);
+    
+    if (postTarget === 'hospital') {
+      setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
+    } else if (postTarget === 'meeting') {
+      setBasicExtraData(prev => ({ ...prev, meetingAddress: fullAddress }));
+    }
+    setPostTarget('none');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const formattedTime = `${formData.date}T${formData.time}:00`;
+      
+      // 🌟 만나는 장소 문자열 조합 (직접 지정 시 /// 로 구분)
+      const finalMeetingPoint = basicExtraData.meetingType === '자택' 
+        ? '자택' 
+        : `${basicExtraData.meetingAddress} /// ${basicExtraData.meetingDetail}`.trim();
+
       const requestData = {
         hospitalName: formData.hospitalName,
         reservationTime: formattedTime,
         requirements: formData.requirements,
         detailedContent: formData.detailedContent,
-        doctorInquiry: formData.doctorInquiry
+        doctorInquiry: formData.doctorInquiry,
+        meetingPoint: finalMeetingPoint,             // 🌟 추가됨
+        transportation: basicExtraData.transportation, // 🌟 추가됨
+        mobility: basicExtraData.mobility            // 🌟 추가됨
       };
+      
       await reservationApi.update(id as string, requestData); 
-      Toast.fire({ icon: 'success', title: '예약 정보가 수정되었습니다.' });
+      Toast.fire({ icon: 'success', title: '예약 정보가 성공적으로 수정되었습니다.' });
       router.push(`/reservation/${id}`);
       
     } catch (error) {
@@ -95,15 +148,17 @@ export default function ReservationEditPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900">
       
-      {/* 주소 검색 모달 */}
-      {isOpenPost && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md overflow-hidden relative shadow-2xl">
-            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-gray-800">병원 주소 검색</h3>
-              <button onClick={() => setIsOpenPost(false)} className="text-gray-500 font-bold px-2 hover:text-red-500 transition-colors">X</button>
+      {/* 🌟 주소 검색 모달 */}
+      {postTarget !== 'none' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-bold text-gray-800 text-lg">주소 검색</h3>
+              <button onClick={() => setPostTarget('none')} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="h-[400px]">
+            <div className="h-[450px]">
               <DaumPostcodeEmbed onComplete={handleCompletePost} style={{ height: '100%' }} />
             </div>
           </div>
@@ -126,7 +181,7 @@ export default function ReservationEditPage() {
               <div className="bg-emerald-100 p-2 rounded-xl text-emerald-700">
                 <Calendar className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800">일정 및 병원 수정</h3>
+              <h3 className="text-xl font-bold text-gray-800">1. 일정 및 병원 수정</h3>
             </div>
 
             <div className="space-y-5">
@@ -143,8 +198,8 @@ export default function ReservationEditPage() {
                   <MapPin className="w-4 h-4 text-gray-400" /> 병원 위치
                 </label>
                 <div className="flex gap-2">
-                  <input type="text" name="hospitalName" value={formData.hospitalName} readOnly placeholder="검색 버튼을 눌러주세요" onClick={() => setIsOpenPost(true)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 outline-none cursor-pointer" required />
-                  <button type="button" onClick={() => setIsOpenPost(true)} className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap shadow-sm">
+                  <input type="text" name="hospitalName" value={formData.hospitalName} readOnly placeholder="검색 버튼을 눌러주세요" onClick={() => setPostTarget('hospital')} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 outline-none cursor-pointer" required />
+                  <button type="button" onClick={() => setPostTarget('hospital')} className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap shadow-sm">
                     <Search className="w-4 h-4 mr-1.5" /> 검색
                   </button>
                 </div>
@@ -152,13 +207,88 @@ export default function ReservationEditPage() {
             </div>
           </div>
 
-          {/* 2. 3단 분할 상세 내용 수정 */}
+          {/* 🌟 2. 동행 기본 정보 수정 (추가된 부분) */}
+          <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+              <div className="p-2.5 bg-orange-50 rounded-xl">
+                <MapPin className="w-6 h-6 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">2. 동행 기본 정보 수정</h3>
+            </div>
+            
+            <div className="space-y-8">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3 ml-1">매니저와 만나는 장소</label>
+                <div className="flex gap-3 mb-4">
+                  {['자택', '직접 지정'].map((type) => (
+                    <button 
+                      key={type} 
+                      type="button" 
+                      onClick={() => setBasicExtraData({...basicExtraData, meetingType: type})} 
+                      className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border-2 ${basicExtraData.meetingType === type ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'border-gray-100 bg-white text-gray-400 hover:bg-gray-50'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                {basicExtraData.meetingType === '직접 지정' && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex gap-2">
+                      <input type="text" value={basicExtraData.meetingAddress} readOnly placeholder="장소를 검색하세요" className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none text-gray-800" />
+                      <button type="button" onClick={() => setPostTarget('meeting')} className="px-5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-sm flex items-center justify-center">
+                        <Search className="w-4 h-4" />
+                      </button>
+                      
+                      {/* 병원 주소 가져오기 버튼 */}
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if(!formData.hospitalName) return Swal.fire('알림', '먼저 1번 항목에서 방문 병원을 입력해주세요.', 'warning');
+                          setBasicExtraData({...basicExtraData, meetingAddress: formData.hospitalName});
+                        }} 
+                        className="px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap flex items-center gap-1"
+                      >
+                        <Building2 className="w-4 h-4"/> 병원
+                      </button>
+                    </div>
+                    <input type="text" placeholder="상세 위치를 입력하세요 (예: 본관 1층 로비 키오스크 앞)" value={basicExtraData.meetingDetail} onChange={(e) => setBasicExtraData({...basicExtraData, meetingDetail: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3 ml-1">이동 수단</label>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {['택시 이용', '자차 이용', '도보/대중교통'].map((item) => (
+                      <button key={item} type="button" onClick={() => setBasicExtraData({...basicExtraData, transportation: item})} className={`py-3 px-4 rounded-xl font-bold text-[14px] transition-all text-left flex items-center justify-between border-2 ${basicExtraData.transportation === item ? 'border-slate-800 bg-slate-800 text-white shadow-sm' : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'}`}>
+                        {item} {basicExtraData.transportation === item && <Car className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3 ml-1">환자 거동 상태</label>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {['독립 보행 가능', '부축 필요', '휠체어'].map((item) => (
+                      <button key={item} type="button" onClick={() => setBasicExtraData({...basicExtraData, mobility: item})} className={`py-3 px-4 rounded-xl font-bold text-[14px] transition-all text-left flex items-center justify-between border-2 ${basicExtraData.mobility === item ? 'border-slate-800 bg-slate-800 text-white shadow-sm' : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'}`}>
+                        {item} {basicExtraData.mobility === item && <Accessibility className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. 3단 분할 상세 내용 수정 */}
           <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
               <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
                 <FileText className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800">상세 요청사항 수정</h3>
+              <h3 className="text-xl font-bold text-gray-800">3. 상세 요청사항 수정</h3>
             </div>
 
             <div className="space-y-6">

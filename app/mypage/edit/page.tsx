@@ -130,10 +130,16 @@ export default function MyInfoEditPage() {
     }
 
     try {
-      // api/index.ts에 만들어둔 changePassword 호출
       await authApi.changePassword(newPassword);
-      Toast.fire({ icon: 'success', title: '비밀번호가 성공적으로 변경되었습니다.' });
-      setNewPassword(''); setConfirmPassword(''); 
+      Toast.fire({ icon: 'success', title: '비밀번호가 성공적으로 변경되었습니다. 다시 인증해주세요.' });
+      
+      setNewPassword(''); 
+      setConfirmPassword(''); 
+      setPassword(''); // 기존 비밀번호 입력값도 초기화
+      setIsVerified(false); // 인증 상태를 해제하여 재확인 화면으로 돌려보냄
+      setIsPhoneVerified(false);
+      setSmsSent(false);
+      setSmsCode('');
     } catch (err) {
       Swal.fire('오류', '비밀번호 변경에 실패했습니다.', 'error');
     }
@@ -179,8 +185,8 @@ export default function MyInfoEditPage() {
 
         ) : (
           <div className="space-y-8">
-            {/* 📝 기본 정보 수정 폼 */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form id="edit-form" onSubmit={handleSubmit} className="space-y-6">
+              
               <div className="bg-white p-8 rounded-[24px] shadow-sm border border-gray-100">
                 <h3 className="text-lg font-bold text-gray-800 mb-5 border-b border-gray-100 pb-3 flex items-center gap-2">
                   <User className="w-5 h-5 text-blue-600"/> 본인 기본 정보
@@ -229,12 +235,9 @@ export default function MyInfoEditPage() {
                 </div>
               </div>
 
-              <button type="submit" className="w-full bg-blue-900 text-white font-bold text-lg py-5 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-5 h-5" /> 모든 변경사항 저장하기
-              </button>
             </form>
 
-            {/* 🔐 비밀번호 변경 (휴대폰 인증 필수) */}
+            {/* 2. 비밀번호 변경 폼 */}
             <div className="bg-white p-8 rounded-[24px] shadow-sm border border-orange-100 bg-orange-50/10">
               <h3 className="text-lg font-bold mb-5 flex items-center gap-2 text-orange-600">
                 <ShieldCheck className="w-5 h-5"/> 비밀번호 변경
@@ -264,7 +267,6 @@ export default function MyInfoEditPage() {
                     <CheckCircle2 className="w-4 h-4"/> 휴대폰 인증이 완료되었습니다.
                   </div>
                   
-                  {/* 새 비밀번호 입력 */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">새 비밀번호 (영문+숫자+특수문자 8자 이상)</label>
                     <input 
@@ -277,7 +279,6 @@ export default function MyInfoEditPage() {
                     {newPassword && !passwordRegex.test(newPassword) && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> 형식이 맞지 않습니다.</p>}
                   </div>
 
-                  {/* 비밀번호 확인 */}
                   <div>
                     <input 
                       type="password" 
@@ -301,6 +302,15 @@ export default function MyInfoEditPage() {
                 </div>
               )}
             </div>
+
+            <button 
+              type="submit" 
+              form="edit-form" 
+              className="w-full bg-blue-900 text-white font-bold text-lg py-5 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-5 h-5" /> 모든 변경사항 저장하기
+            </button>
+            
           </div>
         )}
       </main>

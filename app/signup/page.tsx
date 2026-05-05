@@ -379,24 +379,24 @@ export default function SignupPage() {
             </div>
 
             {/* 상세 약관 동의 */}
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 mt-6 space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer border-b border-slate-200 pb-3">
-                <input type="checkbox" checked={allAgreed} onChange={(e) => setAgreements({ age: e.target.checked, terms: e.target.checked, privacy: e.target.checked })} className="w-5 h-5 accent-blue-600 rounded cursor-pointer" />
-                <span className="font-bold text-slate-800 text-sm">전체 필수 약관에 동의합니다.</span>
+            <div className="pl-1 space-y-3 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={agreements.age} onChange={(e) => setAgreements({...agreements, age: e.target.checked})} className="w-4 h-4 accent-blue-600 cursor-pointer" />
+                <span className="text-xs text-slate-600">[필수] 만 14세 이상 이용자입니다.</span>
               </label>
-              <div className="pl-1 space-y-3 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={agreements.age} onChange={(e) => setAgreements({...agreements, age: e.target.checked})} className="w-4 h-4 accent-blue-600 cursor-pointer" />
-                  <span className="text-xs text-slate-600">[필수] 만 14세 이상 이용자입니다.</span>
-                </label>
+              <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={agreements.terms} onChange={(e) => setAgreements({...agreements, terms: e.target.checked})} className="w-4 h-4 accent-blue-600 cursor-pointer" />
                   <span className="text-xs text-slate-600">[필수] 예스케어 서비스 이용약관 동의</span>
                 </label>
+                <Link href="/terms" target="_blank" className="text-xs text-blue-600 underline hover:text-blue-800 font-medium">보기</Link>
+              </div>
+              <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={agreements.privacy} onChange={(e) => setAgreements({...agreements, privacy: e.target.checked})} className="w-4 h-4 accent-blue-600 cursor-pointer" />
                   <span className="text-xs text-slate-600">[필수] 개인정보 수집 및 이용 동의</span>
                 </label>
+                <Link href="/privacy" target="_blank" className="text-xs text-blue-600 underline hover:text-blue-800 font-medium">보기</Link>
               </div>
             </div>
             {/* 에러 메시지 UI*/}

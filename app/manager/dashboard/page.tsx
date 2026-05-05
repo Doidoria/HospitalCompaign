@@ -89,8 +89,17 @@ export default function ManagerDashboard() {
 
   // 동행 수락 로직
   const handleAcceptRequest = async (reservationId: number, patientName: string) => {
-    const isConfirm = window.confirm(`${patientName} 환자님의 동행 요청을 수락하시겠습니까?`);
-    if (!isConfirm) return;
+    const result = await Swal.fire({
+      title: '동행 수락',
+      text: `${patientName} 환자님의 동행 요청을 수락하시겠습니까?`,
+      showCancelButton: true,
+      confirmButtonColor: '#059669', // 수락
+      cancelButtonColor: '#94a3b8',  // 취소
+      confirmButtonText: '수락하기',
+      cancelButtonText: '닫기',
+      customClass: { popup: 'rounded-[24px]' }
+    });
+    if (!result.isConfirmed) return;
 
     try {
       await reservationApi.accept(reservationId);
@@ -278,7 +287,7 @@ export default function ManagerDashboard() {
           
           <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto">
             {managerId && (
-              <Link href={`/manager/profile/${managerId}/edit`} className="w-full md:w-auto">
+              <Link href={`/manager/profile/edit`} className="w-full md:w-auto">
                 <button className="w-full md:w-auto px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-[16px] backdrop-blur-md transition-all active:scale-95 border border-white/10 shadow-lg flex items-center justify-center gap-2.5 text-sm">
                   <UserCog className="w-4 h-4 text-emerald-300" />
                   내 프로필 관리
@@ -549,7 +558,7 @@ export default function ManagerDashboard() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 10 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
-              className="bg-white rounded-[32px] w-full max-w-lg shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[85vh] border border-slate-100"
+              className="bg-white rounded-[32px] w-full max-w-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[85vh] border border-slate-100"
             >
               <div className="px-6 py-5 flex justify-between items-center bg-white border-b border-slate-100 relative">
                 <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 relative z-10">
@@ -576,7 +585,7 @@ export default function ManagerDashboard() {
                       </button>
                     </div>
                     <div className="flex items-center gap-2 py-1">
-                      <span className="font-semibold text-slate-400 w-16 shrink-0">만나는 장소</span> 
+                      <span className="font-semibold text-slate-400 w-16 shrink-0 whitespace-nowrap">만나는 장소</span> 
                       <div className="flex flex-wrap gap-2 items-center">
                         <span className="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-md">
                           {selectedRequest.meetingPoint ? selectedRequest.meetingPoint.replace(' /// ', ' ') : '자택 앞 (연락 요망)'}
@@ -595,6 +604,10 @@ export default function ManagerDashboard() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-400 w-16 shrink-0">이동 수단</span> 
                       <span className="font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded-md">{selectedRequest.transportation}</span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-3 border-t border-slate-50">
+                      <span className="font-semibold text-slate-400 w-16 shrink-0">거동 상태</span> 
+                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md">{selectedRequest.mobility || '독립 보행 가능'}</span>
                     </div>
                   </div>
                 </div>

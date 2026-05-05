@@ -38,10 +38,11 @@ export default function ManagerProfileEditPage() {
 
         const profileRes = await managerApi.getManagerProfile(meRes.data.id);
         if (isMounted && profileRes.data) {
+          const { introduction, career, certifications } = profileRes.data;
           setProfileForm({
-            introduction: profileRes.data.introduction || '',
-            career: profileRes.data.career || '',
-            certifications: profileRes.data.certifications || ''
+            introduction: introduction === '인사말이 없습니다.' ? '' : (introduction || ''),
+            career: career === '경력 정보가 없습니다.' ? '' : (career || ''),
+            certifications: certifications === '자격증 정보 없음' ? '' : (certifications || '')
           });
         }
       } catch (error) {
@@ -108,7 +109,15 @@ export default function ManagerProfileEditPage() {
           <h1 className="text-xl font-bold text-slate-800">프로필 편집</h1>
         </div>
         <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div 
+            className={`w-2.5 h-2.5 rounded-full transition-colors duration-500 ${
+              completeness === 100 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : // 100% (초록색 + 빛남)
+              completeness >= 75 ? 'bg-blue-500' :   // 75% ~ 99% (파란색)
+              completeness >= 50 ? 'bg-amber-500' :  // 50% ~ 74% (노란색/주황색)
+              completeness >= 25 ? 'bg-red-400' :    // 25% ~ 49% (빨간색)
+              'bg-slate-300'                         // 0% ~ 24% (회색)
+            }`} 
+          />
           <span className="text-xs font-bold text-slate-600">완성도 {completeness}%</span>
         </div>
       </header>

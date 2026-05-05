@@ -92,11 +92,11 @@ export const adminApi = {
 export const managerApi = {
   // 매니저 상세 프로필 정보 가져오기
   getManagerProfile: (managerId: number) => 
-    apiClient.get(`/api/members/managers/${managerId}/profile`),
+    apiClient.get(`/api/managers/${managerId}/profile`),
 
-  // 매니저가 자신의 프로필을 수정/저장
+  // 2. 매니저가 자신의 프로필을 수정/저장
   updateManagerProfile: (data: { introduction: string; career: string; certifications: string }) => 
-    apiClient.put(`/api/members/managers/profile`, data),
+    apiClient.put(`/api/managers/profile`, data),
 };
 
 export const reviewApi = {

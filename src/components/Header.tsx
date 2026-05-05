@@ -86,7 +86,9 @@ export default function Header() {
               <Link href="/guide" className={`transition duration-300 ${isActive('/guide') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
                 서비스 안내
               </Link>
-              
+              <Link href="/support/faq" className={`transition duration-300 ${isActive('/support/faq') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+                고객센터
+              </Link>
               {userRole !== 'ADMIN' && userRole !== 'MANAGER' && (
                 <Link href="/manager" className={`transition duration-300 ${isActive('/manager') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
                   매니저 교육신청
@@ -192,7 +194,9 @@ export default function Header() {
                 <Link href="/apply" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/apply') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
                   동행 예약하기 <ChevronRight className={`w-5 h-5 ${isActive('/apply') ? 'text-blue-400' : 'text-gray-300'}`} />
                 </Link>
-                
+                <Link href="/support/faq" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/support/faq') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
+                  고객센터(FAQ) <ChevronRight className={`w-5 h-5 ${isActive('/support/faq') ? 'text-blue-400' : 'text-gray-300'}`} />
+                </Link>
                 {userRole !== 'ADMIN' && userRole !== 'MANAGER' && (
                   <Link href="/manager" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/manager') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
                     매니저 교육신청 <ChevronRight className={`w-5 h-5 ${isActive('/manager') ? 'text-blue-400' : 'text-gray-300'}`} />

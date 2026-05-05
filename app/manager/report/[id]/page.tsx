@@ -7,6 +7,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
 import Swal from 'sweetalert2';
 
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500,
+  timerProgressBar: true,
+});
+
 export default function ReportWritePage() {
   const params = useParams();
   const router = useRouter();
@@ -15,7 +23,7 @@ export default function ReportWritePage() {
   const [targetReservation, setTargetReservation] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const [noNextSchedule, setNoNextSchedule] = useState(false); // 다음 에약 일정 없음 체크 여부
+  const [noNextSchedule, setNoNextSchedule] = useState(false); 
 
   const [formData, setFormData] = useState({
     department: '',
@@ -72,7 +80,6 @@ export default function ReportWritePage() {
     setNoNextSchedule(isChecked);
     
     setFormData(prev => {
-      // 체크박스 선택 시 nextSchedule 값을 비움
       const updatedData = { ...prev, nextSchedule: isChecked ? '' : prev.nextSchedule };
       localStorage.setItem(`draft_care_report_${params.id}`, JSON.stringify(updatedData));
       return updatedData;
@@ -100,7 +107,6 @@ export default function ReportWritePage() {
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const pdfBlob = pdf.output('blob');
 
-      // 2. 백엔드 전송용 FormData 조립 (정석 방식)
       const payload = new FormData();
       const requestData = {
         reservationId: Number(params.id),
@@ -116,7 +122,6 @@ export default function ReportWritePage() {
       payload.append('request', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
       payload.append('pdfFile', pdfBlob, `케어리포트_${params.id}.pdf`);
 
-      // 3. 백엔드 API 전송
       const res = await reportApi.createWithPdf(payload);
 
       if (res.status === 200 || res.status === 201) {
@@ -159,10 +164,11 @@ export default function ReportWritePage() {
           </p>
         </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pb-28">
+        {/* 🌟 수정: form의 pb-28 제거 (하단 고정을 풀었으므로 불필요한 공백 제거) */}
+        <form onSubmit={handleSubmit} className="space-y-6 pb-8">
           <div ref={reportRef} className="space-y-5 bg-gray-50 pb-4">
             
-            {/* 1. 당일 환자 컨디션 (터치 피드백 & 탭 애니메이션 강화) */}
+            {/* 1. 당일 환자 컨디션 */}
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
               <label className="block text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <div className="p-1.5 bg-blue-50 rounded-lg"><User className="w-4 h-4 text-blue-500" /></div>
@@ -192,7 +198,7 @@ export default function ReportWritePage() {
               </div>
             </motion.div>
 
-            {/* 2. 진료 요약 및 처방 (iOS 자동 확대 방지 & 포커스 디자인) */}
+            {/* 2. 진료 요약 및 처방 */}
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-6">
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
@@ -241,18 +247,16 @@ export default function ReportWritePage() {
             </motion.div>
           </div>
 
-          {/* 4. 하단 고정(Sticky) */}
-          <motion.div variants={itemVariants} 
-            className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 pb-safe z-40 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-            <div className="max-w-2xl mx-auto flex items-center gap-3">
-              <button type="submit" disabled={isSubmitting} 
-                className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
-                active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
-                {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
-                {isSubmitting ? '전송 중...' : '보호자에게 전송하기'}
-              </button>
-            </div>
+          {/* 4. 전송 버튼 (하단 고정 풀고 매니저 코멘트 바로 밑에 자연스럽게 배치) */}
+          <motion.div variants={itemVariants} className="pt-2">
+            <button type="submit" disabled={isSubmitting} 
+              className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
+              active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
+              {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
+              {isSubmitting ? '전송 중...' : '보호자에게 전송하기'}
+            </button>
           </motion.div>
+          
         </form>
       </motion.main>
     </div>

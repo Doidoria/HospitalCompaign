@@ -38,6 +38,8 @@ interface Reservation {
   doctorInquiry: string;
   meetingPoint: string;
   patientAddress: string;
+  transportation: string;
+  mobility: string;
 }
 
 // 가벼운 Toast 알림 설정
@@ -59,7 +61,8 @@ export default function ReservationDetailPage() {
     id: '', status: '', date: '', time: '', hospital: '',
     patientName: '', patientPhone: '', memo: '',
     manager: null, payment: { baseFee: 0, extraFee: 0, totalFee: 0 },
-    category: '', detailedContent: '', doctorInquiry: '', meetingPoint: '', patientAddress: ''
+    category: '', detailedContent: '', doctorInquiry: '', meetingPoint: '', patientAddress: '',
+    transportation: '', mobility: ''
   });
 
   // 주소의 '///' 기호를 공백으로 예쁘게 치환해주는 포맷 함수
@@ -111,7 +114,9 @@ export default function ReservationDetailPage() {
           detailedContent: apiData.detailedContent || '',
           doctorInquiry: apiData.doctorInquiry || '',
           meetingPoint: apiData.meetingPoint || '자택',
-          patientAddress: apiData.patientAddress || ''
+          patientAddress: apiData.patientAddress || '',
+          transportation: apiData.transportation || '택시 이용',
+          mobility: apiData.mobility || '독립 보행 가능'
         });
 
       } catch (error) {
@@ -233,7 +238,7 @@ export default function ReservationDetailPage() {
               </h2>
             </div>
             <div className={`flex flex-col items-end`}>
-              <span className={`px-4 py-1.5 rounded-full text-sm font-bold border ${getStatusColor(reservation.status)}`}>
+              <span className={`px-4 py-1.5 rounded-full text-sm font-bold border ${getStatusColor(reservation.status)} whitespace-nowrap`}>
                 {reservation.status}
               </span>
               <span className="text-[11px] text-slate-400 mt-2 font-medium">No. {reservation.id}</span>
@@ -262,33 +267,56 @@ export default function ReservationDetailPage() {
             </div>
           </div>
 
-          {/* 만나는 장소 */}
-          <button 
-            onClick={() => {
-              const searchTarget = reservation.meetingPoint === '자택' ? reservation.patientAddress : reservation.meetingPoint;
-              if (!searchTarget || searchTarget === '자택') {
-                Toast.fire({ icon: 'warning', title: '정확한 주소 정보가 없습니다.' });
-                return;
-              }
-              window.open(`https://map.kakao.com/link/search/${encodeURIComponent(formatAddress(searchTarget))}`, '_blank');
-            }}
-            className="w-full flex items-center justify-between bg-white border border-slate-100 shadow-sm rounded-2xl p-4 sm:p-5 group hover:border-orange-200 hover:shadow-md hover:bg-orange-50/30 transition-all text-left"
-          >
-            <div className="flex gap-3 sm:gap-4 items-center">
-              <div className="bg-orange-50 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
-                <MapPin className="w-5 h-5 text-orange-500" />
+          {/* 동행 기본 정보 */}
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-orange-100 mb-6 bg-orange-50/20">
+            <h4 className="text-sm font-bold text-slate-800 mb-5 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-orange-500" /> 동행 기본 정보
+            </h4>
+            
+            <div className="space-y-3">
+              {/* 만나는 장소 */}
+              <div className="flex items-start gap-4 border-b border-slate-100/50 pb-4">
+                <span className="text-sm font-semibold text-slate-500 w-20 shrink-0 mt-2">만나는 장소</span>
+                <div className="flex-1 flex items-center gap-3 text-left">
+                  <span className="text-sm font-bold text-slate-800 break-keep mt-0.5">
+                    {reservation.meetingPoint.includes('///') 
+                      ? reservation.meetingPoint.split('///').map((line, i) => <React.Fragment key={i}>{line}<br/></React.Fragment>)
+                      : reservation.meetingPoint}
+                  </span>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const searchTarget = reservation.meetingPoint === '자택' ? reservation.patientAddress : reservation.meetingPoint.split('///')[0];
+                      if (!searchTarget || searchTarget === '자택') {
+                        Toast.fire({ icon: 'warning', title: '정확한 주소 정보가 없습니다.' });
+                        return;
+                      }
+                      window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget.trim())}`, '_blank');
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-[#FEE500] text-[#191919] text-[11px] font-bold rounded-lg hover:bg-[#FADA0A] transition-all shadow-sm"
+                  >
+                    <Navigation className="w-3 h-3" /> 카카오맵
+                  </button>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-orange-500 mb-0.5 sm:mb-1">매니저와 만나는 장소</p>
-                <p className="font-extrabold text-slate-800 text-sm sm:text-[15px] leading-snug group-hover:text-orange-700 transition-colors">
-                  {formatAddress(reservation.meetingPoint)}
-                </p>
+
+              {/* 이동 수단 */}
+              <div className="flex items-center gap-4 border-b border-slate-100/50 pb-4">
+                <span className="text-sm font-semibold text-slate-500 w-20 shrink-0">이동 수단</span>
+                <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">
+                  {reservation.transportation}
+                </span>
+              </div>
+
+              {/* 환자 거동 상태 */}
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-slate-500 w-20 shrink-0">거동 상태</span>
+                <span className="text-sm font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">
+                  {reservation.mobility}
+                </span>
               </div>
             </div>
-            <div className="bg-slate-50 p-2.5 rounded-full text-slate-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-all shrink-0">
-              <Navigation className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-            </div>
-          </button>
+          </div>
 
           {/* 텍스트 요청사항 섹션들 */}
           {(reservation.memo || reservation.detailedContent || reservation.doctorInquiry) && (
