@@ -1,0 +1,55 @@
+server:
+  port: 8081
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  
+  datasource:
+    # MySQL 드라이버 설정
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 데이터베이스 연결 주소 (방금 만든 yescare_db 연결)
+    url: jdbc:mysql://localhost:3306/yescare_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    # DB 계정 정보
+    username: root
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      # 서버 실행 시 엔티티를 보고 테이블을 자동으로 업데이트 (개발 환경 표준)
+      ddl-auto: update
+    properties:
+      hibernate:
+        # 실행되는 SQL 쿼리를 콘솔창에 예쁘게 보여줌
+        format_sql: true
+        show_sql: true
+    # DB 방언 설정 (MySQL 8.0 이상 기준)
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+jwt:
+  # 💡 비밀 도장 (실무에서는 절대 외부에 노출하면 안 됩니다!)
+  # 최소 256비트(32글자) 이상이어야 안전합니다.
+  secret: yescare-hospital-reservation-system-secret-key-2026-very-secure
+
+  # 토큰 유효 시간 (단위: 밀리초) / 1000 * 60 * 60 * 24 = 24시간
+  expiration_time: 86400000
+
+coolsms:
+  api:
+    key: ${COOLSMS_API_KEY}
+    secret: ${COOLSMS_API_SECRET}
+  sender: ${COOLSMS_SENDER}
