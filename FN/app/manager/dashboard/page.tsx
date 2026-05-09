@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { 
   CalendarDays, Activity, CheckCircle2, MapPin, FileText, X, CalendarPlus, XCircle, Star,
-  Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight, UserCog, AlertCircle 
+  Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight, UserCog 
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,6 @@ import { reservationApi, authApi } from '@/src/api/index';
 
 export default function ManagerDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'available' | 'my-schedule'>('available');
-  const [availableRequests, setAvailableRequests] = useState<any[]>([]);
   const [mySchedules, setMySchedules] = useState<any[]>([]);
   const [managerName, setManagerName] = useState('매니저');
   const [managerId, setManagerId] = useState<number | null>(null);
@@ -27,13 +25,6 @@ export default function ManagerDashboard() {
   const ITEMS_PER_PAGE = 5;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 검색 및 필터가 적용된 데이터 계산 로직
-  const filteredAvailable = useMemo(() => {
-    return availableRequests.filter(req => 
-      req.patientName.includes(searchQuery) || req.hospitalName.includes(searchQuery)
-    );
-  }, [availableRequests, searchQuery]);
-
   const filteredMySchedules = useMemo(() => {
     return mySchedules.filter(req => {
       const matchesSearch = req.patientName.includes(searchQuery) || req.hospitalName.includes(searchQuery);
@@ -44,11 +35,11 @@ export default function ManagerDashboard() {
     });
   }, [mySchedules, searchQuery, myScheduleFilter]);
 
-  const activeData = activeTab === 'available' ? filteredAvailable : filteredMySchedules;
+  const activeData = filteredMySchedules;
   const totalPages = Math.max(1, Math.ceil(activeData.length / ITEMS_PER_PAGE));
   const currentItems = activeData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  useEffect(() => { setCurrentPage(1); }, [activeTab, searchQuery, myScheduleFilter]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, myScheduleFilter]);
 
   const fetchDashboardData = async (showMainLoading = true) => {
     if (showMainLoading) setLoading(true);
@@ -67,13 +58,9 @@ export default function ManagerDashboard() {
       setManagerName(meRes.data.name);
       setManagerId(meRes.data.id);
 
-      const [waitingRes, mySchedulesRes] = await Promise.all([
-        reservationApi.getWaiting(),
-        reservationApi.getManagerSchedules()
-      ]);
-
-      setAvailableRequests(waitingRes.data);
+      const mySchedulesRes = await reservationApi.getManagerSchedules();
       setMySchedules(mySchedulesRes.data);
+      
     } catch (error) {
       console.error('대시보드 로딩 에러:', error);
       if (showMainLoading) router.push('/login');
@@ -87,38 +74,7 @@ export default function ManagerDashboard() {
     fetchDashboardData(true);
   }, [router]);
 
-  // 동행 수락 로직
-  const handleAcceptRequest = async (reservationId: number, patientName: string) => {
-    const result = await Swal.fire({
-      title: '동행 수락',
-      text: `${patientName} 환자님의 동행 요청을 수락하시겠습니까?`,
-      showCancelButton: true,
-      confirmButtonColor: '#059669', // 수락
-      cancelButtonColor: '#94a3b8',  // 취소
-      confirmButtonText: '수락하기',
-      cancelButtonText: '닫기',
-      customClass: { popup: 'rounded-[24px]' }
-    });
-    if (!result.isConfirmed) return;
-
-    try {
-      await reservationApi.accept(reservationId);
-      Swal.fire({ icon: 'success', title: '배정 완료', text: '나의 일정에 추가되었습니다.', confirmButtonColor: '#059669' });
-      
-      const acceptedReq = availableRequests.find(r => r.id === reservationId);
-      if (acceptedReq) {
-        acceptedReq.status = 'CONFIRMED';
-        setAvailableRequests(prev => prev.filter(r => r.id !== reservationId));
-        setMySchedules(prev => [acceptedReq, ...prev]);
-      }
-    } catch (error: any) {
-      const errorMsg = error.response?.data || '서버 오류가 발생했습니다.';
-      Swal.fire({ icon: 'warning', title: '배정 실패', text: errorMsg, confirmButtonColor: '#ea580c' });
-      setAvailableRequests(prev => prev.filter(r => r.id !== reservationId));
-    }
-  };
-
-  // 재방문 대리 신청 팝업 (기존 로직 동일)
+  // 재방문 대리 신청 팝업
   const handleProxyReservation = async (req: any) => {
     const { value: formValues } = await Swal.fire({
       title: '재방문 대리 신청',
@@ -273,7 +229,6 @@ export default function ManagerDashboard() {
       <main className="max-w-4xl mx-auto px-5 pt-8">
         <div className="mb-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-7 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex 
         items-center justify-between relative overflow-hidden">
-          {/* 장식용 빛망울 효과 */}
           <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
           
@@ -310,7 +265,7 @@ export default function ManagerDashboard() {
         <div className="sticky top-0 z-30 bg-[#F8FAFC]/85 backdrop-blur-xl pt-3 pb-5 -mx-2 px-2 shadow-[0_10px_15px_-10px_rgba(0,0,0,0.03)] border-b border-slate-200/50 mb-6">
           
           {/* 검색창 및 필터 */}
-          <div className="mb-4 flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
               <input 
@@ -322,235 +277,132 @@ export default function ManagerDashboard() {
               />
             </div>
 
-            {/* 상태 필터 (나의 일정 탭일때만) */}
-            {activeTab === 'my-schedule' && (
-              <div className="bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_10px_rgb(0,0,0,0.02)] flex shrink-0 h-[52px] items-center">
-                {(['all', 'confirmed', 'completed'] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setMyScheduleFilter(f)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                      myScheduleFilter === f 
-                        ? 'bg-slate-800 text-white shadow-md' 
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                    }`}
-                  >
-                    {f === 'all' ? '전체' : f === 'confirmed' ? '예약확정' : '이용완료'}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 메인 탭 버튼 */}
-          <div className="flex gap-2.5">
-            <button onClick={() => setActiveTab('available')}
-              className={`flex-1 py-3.5 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 border whitespace-nowrap ${
-                activeTab === 'available' 
-                ? 'bg-slate-800 border-slate-800 text-white shadow-[0_8px_20px_rgb(15,23,42,0.15)]' 
-                : 'bg-white border-slate-200/80 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
-              }`}>
-              <Activity className="w-4 h-4 shrink-0" /> 
-              <span>신규 동행 요청</span>
-              <span className={`ml-0.5 px-2 py-0.5 rounded-md text-[10px] ${activeTab === 'available' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                {availableRequests.length}
-              </span>
-            </button>
-            <button onClick={() => setActiveTab('my-schedule')}
-              className={`flex-1 py-3.5 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 border whitespace-nowrap ${
-                activeTab === 'my-schedule' 
-                ? 'bg-slate-800 border-slate-800 text-white shadow-[0_8px_20px_rgb(15,23,42,0.15)]' 
-                : 'bg-white border-slate-200/80 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
-              }`}>
-              <CalendarDays className="w-4 h-4 shrink-0" /> 
-              <span>나의 일정</span>
-              <span className={`ml-0.5 px-2 py-0.5 rounded-md text-[10px] ${activeTab === 'my-schedule' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                {mySchedules.length}
-              </span>
-            </button>
+            <div className="bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_10px_rgb(0,0,0,0.02)] flex shrink-0 h-[52px] items-center overflow-x-auto">
+              {(['all', 'confirmed', 'completed'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setMyScheduleFilter(f)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    myScheduleFilter === f 
+                      ? 'bg-slate-800 text-white shadow-md' 
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                  }`}
+                >
+                  {f === 'all' ? '전체 일정' : f === 'confirmed' ? '예약 확정' : '이용 완료'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* 탭 1: 신규 요청 목록 */}
-        {activeTab === 'available' && (
-          <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-4">
-            {currentItems.length === 0 ? (
-              <div className="bg-white rounded-[24px] p-12 text-center border border-slate-200/60 shadow-sm flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <Activity className="w-8 h-8 text-slate-300" />
-                </div>
-                <h3 className="text-slate-800 font-bold text-lg mb-1">요청 내역이 없습니다</h3>
-                <p className="text-slate-500 text-sm">현재 대기 중인 신규 동행 요청이 없습니다.</p>
+        {/* 탭 2(나의 일정) 렌더링 부분을 조건 없이 바로 노출 */}
+        <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-4">
+          {/* 상단 타이틀 (선택 사항 - 나의 일정이란 걸 명시) */}
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <CalendarDays className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-lg font-bold text-slate-800">나의 배정 일정 <span className="text-emerald-600 ml-1">{mySchedules.length}</span>건</h2>
+          </div>
+
+          {currentItems.length === 0 ? (
+            <div className="bg-white rounded-[24px] p-12 text-center border border-slate-200/60 shadow-sm flex flex-col items-center justify-center">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                <CalendarDays className="w-8 h-8 text-slate-300" />
               </div>
-            ) : (
-              currentItems.map((req) => {
-                const { date, time } = formatDateTime(req.reservationTime);
-                return (
-                  <motion.div key={req.id} variants={itemVariants} 
-                    className="bg-white rounded-[24px] p-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-slate-200/60 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 group">
-                    
-                    {/* 뱃지 영역 */}
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      <span className="px-3 py-1.5 bg-orange-50 text-orange-600 border border-orange-100/50 text-[11px] font-bold rounded-lg tracking-wide">매칭 대기</span>
-                      <span className={`px-3 py-1.5 border text-[11px] font-bold rounded-lg tracking-wide ${req.category === '정밀 검사' ? 'bg-purple-50 text-purple-600 border-purple-100/50' : 'bg-blue-50 text-blue-600 border-blue-100/50'}`}>
-                        {req.category || '일반 진료'}
-                      </span>
-                      <span className={`px-3 py-1.5 border text-[11px] font-bold rounded-lg tracking-wide ${req.mobility === '독립 보행 가능' ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50' : 'bg-red-50 text-red-600 border-red-100/50'}`}>
-                        {req.mobility || '거동 정보 없음'}
-                      </span>
-                      <span className="px-3 py-1.5 bg-slate-50 text-slate-500 border border-slate-100/50 text-[11px] font-bold rounded-lg tracking-wide">
-                        {req.transportation || '이동 수단 미정'}
-                      </span>
-                    </div>
+              <h3 className="text-slate-800 font-bold text-lg mb-1">일정이 없습니다</h3>
+              <p className="text-slate-500 text-sm">조건에 맞는 배정 일정이 없습니다.</p>
+            </div>
+          ) : (
+            currentItems.map((req) => {
+              const { date, time } = formatDateTime(req.reservationTime);
+              const isCompleted = req.status === 'COMPLETED' || req.status === '이용 완료';
+              
+              return (
+                <motion.div key={req.id} variants={itemVariants} 
+                  className={`bg-white rounded-[24px] p-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 border relative overflow-hidden ${
+                    isCompleted ? 'border-slate-200/60 opacity-85' : 'border-emerald-100'
+                  }`}>
+                  
+                  {/* 예약 확정일 경우 좌측에 살짝 포인트 컬러 바 */}
+                  {!isCompleted && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>}
 
-                    {/* 핵심 정보 */}
-                    <div className="flex justify-between items-start mb-5">
-                      <div>
-                        <h3 className="text-xl font-extrabold text-slate-800 mb-1 group-hover:text-emerald-600 transition-colors">{req.patientName} 환자님</h3>
-                      </div>
-                      <div className="text-right bg-slate-50 px-3 py-2 rounded-xl border border-slate-100/50">
-                        <p className="text-[11px] font-semibold text-slate-400 mb-0.5">예약 일시</p>
-                        <p className="font-bold text-slate-700 text-sm">{date} <span className="text-emerald-600">{time}</span></p>
-                      </div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className={`inline-block px-3 py-1.5 text-[11px] font-bold rounded-lg tracking-wide mb-3 border ${
+                        isCompleted ? 'bg-slate-50 text-slate-500 border-slate-200/60' : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                      }`}>
+                        {isCompleted ? '이용 완료' : '예약 확정'}
+                      </span>
+                      <h3 className="text-xl font-extrabold text-slate-800">{req.patientName} 환자님</h3>
                     </div>
-                    
-                    {/* 위치 및 상세 버튼 */}
-                    <div className="space-y-2 mb-6">
-                      <div className="flex items-center gap-3 text-sm text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100/50">
-                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0">
-                          <MapPin className="w-4 h-4 text-emerald-500" />
-                        </div>
-                        <div className="flex justify-between items-center w-full">
-                          <p className="font-medium text-slate-700 truncate mr-2">{req.hospitalName}</p>
-                          <button onClick={(e) => { e.stopPropagation(); window.open(`https://map.kakao.com/link/search/${encodeURIComponent(req.hospitalName)}`, '_blank'); }}
-                            className="text-[11px] bg-[#FEE500] border border-[#FEE500] px-2.5 py-1.5 rounded-lg text-[#191919] hover:bg-[#FADA0A] transition-all font-bold shadow-sm shrink-0 flex items-center gap-1">
-                            카카오맵
-                          </button>
-                        </div>
-                      </div>
-
-                      <button onClick={() => { setSelectedRequest(req); setIsModalOpen(true); }}
-                        className="w-full text-sm text-blue-600 bg-blue-50/40 border border-blue-100/50 py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
-                        상세 요청사항 및 미팅 장소 확인하기 <ChevronRight className="w-4 h-4" />
-                      </button>
+                    <div className="text-right bg-slate-50 px-3 py-2 rounded-xl border border-slate-100/50">
+                      <p className="font-bold text-slate-700 text-sm">{date}</p>
+                      <p className={`font-bold ${isCompleted ? 'text-slate-500' : 'text-emerald-600'}`}>{time}</p>
                     </div>
-
-                    {/* 수락 버튼 */}
-                    <button onClick={() => handleAcceptRequest(req.id, req.patientName)}
-                      className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(16,185,129,0.3)]">
-                      <CheckCircle2 className="w-5 h-5" /> 이 동행 수락하기
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-5 text-sm text-slate-600 font-medium">
+                    <div className="p-1.5 bg-slate-100 rounded-md shrink-0"><MapPin className="w-4 h-4 text-slate-500" /></div>
+                    <span className="truncate">{req.hospitalName}</span>
+                  </div>
+                  
+                  <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
+                    <button onClick={() => { setSelectedRequest(req); setIsModalOpen(true); }}
+                      className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-slate-200/60 shadow-[0_2px_4px_rgb(0,0,0,0.02)]">
+                      상세 정보 보기
                     </button>
-                  </motion.div>
-                );
-              })
-            )}
-          </motion.div>
-        )}
-
-        {/* 탭 2: 나의 일정 목록 */}
-        {activeTab === 'my-schedule' && (
-          <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-4">
-            {currentItems.length === 0 ? (
-              <div className="bg-white rounded-[24px] p-12 text-center border border-slate-200/60 shadow-sm flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <CalendarDays className="w-8 h-8 text-slate-300" />
-                </div>
-                <h3 className="text-slate-800 font-bold text-lg mb-1">일정이 없습니다</h3>
-                <p className="text-slate-500 text-sm">해당하는 동행 일정이 없습니다.</p>
-              </div>
-            ) : (
-              currentItems.map((req) => {
-                const { date, time } = formatDateTime(req.reservationTime);
-                const isCompleted = req.status === 'COMPLETED' || req.status === '이용 완료';
-                
-                return (
-                  <motion.div key={req.id} variants={itemVariants} 
-                    className={`bg-white rounded-[24px] p-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 border relative overflow-hidden ${
-                      isCompleted ? 'border-slate-200/60 opacity-85' : 'border-emerald-100'
-                    }`}>
                     
-                    {/* 예약 확정일 경우 좌측에 살짝 포인트 컬러 바 */}
-                    {!isCompleted && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>}
-
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <span className={`inline-block px-3 py-1.5 text-[11px] font-bold rounded-lg tracking-wide mb-3 border ${
-                          isCompleted ? 'bg-slate-50 text-slate-500 border-slate-200/60' : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
-                        }`}>
-                          {isCompleted ? '이용 완료' : '예약 확정'}
-                        </span>
-                        <h3 className="text-xl font-extrabold text-slate-800">{req.patientName} 환자님</h3>
-                      </div>
-                      <div className="text-right bg-slate-50 px-3 py-2 rounded-xl border border-slate-100/50">
-                        <p className="font-bold text-slate-700 text-sm">{date}</p>
-                        <p className={`font-bold ${isCompleted ? 'text-slate-500' : 'text-emerald-600'}`}>{time}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-5 text-sm text-slate-600 font-medium">
-                      <div className="p-1.5 bg-slate-100 rounded-md shrink-0"><MapPin className="w-4 h-4 text-slate-500" /></div>
-                      <span className="truncate">{req.hospitalName}</span>
-                    </div>
-                    
-                    <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
-                      <button onClick={() => { setSelectedRequest(req); setIsModalOpen(true); }}
-                        className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-slate-200/60 shadow-[0_2px_4px_rgb(0,0,0,0.02)]">
-                        상세 정보 보기
+                    {!isCompleted ? (
+                      <Link href={`/manager/report/${req.id}`} 
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-[0_2px_4px_rgb(59,130,246,0.1)] flex items-center justify-center gap-1.5">
+                        <FileText className="w-4 h-4" /> 케어 리포트 작성
+                      </Link>
+                    ) : req.noRevisit ? (
+                      <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                        <XCircle className="w-4 h-4" /> 재방문 없음
                       </button>
-                      
-                      {!isCompleted ? (
-                        <Link href={`/manager/report/${req.id}`} 
-                          className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-[0_2px_4px_rgb(59,130,246,0.1)] flex items-center justify-center gap-1.5">
-                          <FileText className="w-4 h-4" /> 케어 리포트 작성
-                        </Link>
-                      ) : req.noRevisit ? (
-                        <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                          <XCircle className="w-4 h-4" /> 재방문 없음
-                        </button>
-                      ) : req.hasProxy ? (
-                        <button disabled className="flex-1 bg-emerald-50 text-emerald-600 opacity-70 font-bold py-3.5 rounded-xl text-center text-sm border border-emerald-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                          <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
-                        </button>
-                      ) : (
-                        <button onClick={() => handleProxyReservation(req)}
-                          className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
-                          <CalendarPlus className="w-4 h-4" /> 재방문 대리 신청
-                        </button>
-                      )}
-                      
-                      {/* 리뷰 별점 버튼 */}
-                      {req.reviewRating && (
-                        <button 
-                          onClick={() => {
-                            Swal.fire({
-                              title: '고객님의 소중한 후기',
-                              html: `
-                                <div style="margin-top: -5px;">
-                                  <div style="font-size: 32px; color: #f59e0b; font-weight: 900; margin-bottom: 20px; text-align: center; letter-spacing: -1px;">
-                                    ⭐ ${req.reviewRating}.0
-                                  </div>
-                                  <div style="box-sizing: border-box; background-color: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: left; font-size: 15px; color: #334155; white-space: pre-wrap; line-height: 1.6; word-break: keep-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-                                    ${req.reviewComment ? req.reviewComment : '<span style="color: #94a3b8;">작성된 상세 후기 내용이 없습니다.</span>'}
-                                  </div>
+                    ) : req.hasProxy ? (
+                      <button disabled className="flex-1 bg-emerald-50 text-emerald-600 opacity-70 font-bold py-3.5 rounded-xl text-center text-sm border border-emerald-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                        <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
+                      </button>
+                    ) : (
+                      <button onClick={() => handleProxyReservation(req)}
+                        className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
+                        <CalendarPlus className="w-4 h-4" /> 재방문 대리 신청
+                      </button>
+                    )}
+                    
+                    {/* 리뷰 별점 버튼 */}
+                    {req.reviewRating && (
+                      <button 
+                        onClick={() => {
+                          Swal.fire({
+                            title: '고객님의 소중한 후기',
+                            html: `
+                              <div style="margin-top: -5px;">
+                                <div style="font-size: 32px; color: #f59e0b; font-weight: 900; margin-bottom: 20px; text-align: center; letter-spacing: -1px;">
+                                  ⭐ ${req.reviewRating}.0
                                 </div>
-                              `,
-                              confirmButtonText: '확인',
-                              confirmButtonColor: '#1e293b', // 고급스러운 어두운 색상
-                              customClass: { popup: 'rounded-[32px]' }
-                            });
-                          }}
-                          className="flex-1 sm:flex-none sm:w-28 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-amber-200/60 shadow-[0_2px_4px_rgb(245,158,11,0.1)] flex items-center justify-center gap-1.5 active:scale-[0.98]"
-                        >
-                          <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {req.reviewRating}.0
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })
-            )}
-          </motion.div>
-        )}
+                                <div style="box-sizing: border-box; background-color: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: left; font-size: 15px; color: #334155; white-space: pre-wrap; line-height: 1.6; word-break: keep-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                                  ${req.reviewComment ? req.reviewComment : '<span style="color: #94a3b8;">작성된 상세 후기 내용이 없습니다.</span>'}
+                                </div>
+                              </div>
+                            `,
+                            confirmButtonText: '확인',
+                            confirmButtonColor: '#1e293b',
+                            customClass: { popup: 'rounded-[32px]' }
+                          });
+                        }}
+                        className="flex-1 sm:flex-none sm:w-28 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-amber-200/60 shadow-[0_2px_4px_rgb(245,158,11,0.1)] flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                      >
+                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {req.reviewRating}.0
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </motion.div>
 
         {/* 상세 정보 모달창 */}
         {isModalOpen && selectedRequest && (

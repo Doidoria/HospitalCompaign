@@ -1,7 +1,10 @@
 package com.yescare.api.service;
 
 import com.yescare.api.domain.*;
-import com.yescare.api.dto.*;
+import com.yescare.api.dto.ManagerAppResponse;
+import com.yescare.api.dto.ManagerApplyRequest;
+import com.yescare.api.dto.ManagerProfileResponse;
+import com.yescare.api.dto.ManagerProfileUpdateRequest;
 import com.yescare.api.repository.ManagerApplicationRepository;
 import com.yescare.api.repository.ManagerRepository;
 import com.yescare.api.repository.MemberRepository;
@@ -101,7 +104,7 @@ public class ManagerService {
         managerApplicationRepository.findByMember(member).ifPresent(app -> {
             app.approve();
             if (managerRepository.findByMemberId(member.getId()).isEmpty()) {
-                Manager newManager = new Manager(member, app.getMotivation(), app.getExperience(), app.getLicenseName());
+                Manager newManager = new Manager(member, app.getMotivation(), app.getExperience(), app.getLicenseName(), app.getAvailableDays(), app.getAvailableTime());
                 managerRepository.save(newManager);
             }
         });
@@ -116,7 +119,7 @@ public class ManagerService {
         Manager manager = managerRepository.findByMemberId(member.getId())
                 .orElseThrow(() -> new IllegalArgumentException("매니저 프로필 정보가 존재하지 않습니다."));
 
-        manager.updateProfile(request.getIntroduction(), request.getCareer(), request.getCertifications());
+        manager.updateProfile(request.getIntroduction(), request.getCareer(), request.getCertifications(), request.getAvailableDays(), request.getAvailableTime());
     }
 
     @Transactional(readOnly = true)
@@ -125,7 +128,7 @@ public class ManagerService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 매니저입니다."));
 
         Manager manager = managerRepository.findByMemberId(managerId)
-                .orElse(new Manager(managerMember, "인사말이 없습니다.", "경력 정보가 없습니다.", "자격증 정보 없음"));
+                .orElse(new Manager(managerMember, "인사말이 없습니다.", "경력 정보가 없습니다.", "자격증 정보 없음", "미지정", "미지정"));
 
         List<Review> reviews = reviewRepository.findByReservation_ManagerId(managerId);
         double averageRating = reviews.isEmpty() ? 0.0 : reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);

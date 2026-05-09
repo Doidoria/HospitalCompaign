@@ -11,6 +11,8 @@ import com.yescare.api.repository.MemberRepository;
 import com.yescare.api.repository.ReservationRepository;
 import com.yescare.api.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,8 +20,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -121,18 +121,37 @@ public class ReservationService {
     }
 
     @Transactional
-    public void acceptReservation(Long reservationId, String managerEmail) {
+    public void assignManagerByAdmin(Long reservationId, String managerEmail) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
-        Member manager = memberRepository.findByEmail(managerEmail)
-                .orElseThrow(() -> new IllegalArgumentException("매니저 정보를 찾을 수 없습니다."));
 
-        if (reservation.getManager() != null || reservation.getStatus() != ReservationStatus.WAITING) {
-            throw new IllegalStateException("이미 다른 매니저가 배정되었거나 취소된 예약입니다.");
+        Member manager = memberRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("매니저 정보를 찾을 수 없습니다. (이메일 확인 필요)"));
+
+        // 대기 중인 상태에서만 배정 가능하도록 체크
+        if (reservation.getStatus() != ReservationStatus.WAITING) {
+            throw new IllegalStateException("매칭 대기 중인 예약만 매니저를 배정할 수 있습니다.");
         }
 
-        // 3. 매니저 배정
+        // 매니저 배정 및 상태 변경 (CONFIRMED)
         reservation.assignManager(manager);
+        reservation.updateStatus(ReservationStatus.CONFIRMED);
+    }
+
+    // 관리자 전용 매니저 강제 배정 취소 로직
+    @Transactional
+    public void cancelManagerAssignByAdmin(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        // 예약 확정(CONFIRMED) 상태인 경우에만 취소 가능하도록 체크
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new IllegalStateException("예약 확정(배정 완료) 상태인 건만 배정을 취소할 수 있습니다.");
+        }
+
+        // 매니저 배정 해제 (null 처리) 및 상태를 다시 대기(WAITING)로 변경
+        reservation.assignManager(null);
+        reservation.updateStatus(ReservationStatus.WAITING);
     }
 
     @Transactional

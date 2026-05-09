@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,9 @@ public class Member {
 
     @Column(nullable = false)
     private boolean isActive = true; // 기본값은 활성(true)
+
+    @OneToOne(mappedBy = "member", fetch = FetchType.LAZY)
+    private Manager manager;
 
     @Builder
     public Member(String email, String password, String name, String phoneNumber, String address, String detailAddress,

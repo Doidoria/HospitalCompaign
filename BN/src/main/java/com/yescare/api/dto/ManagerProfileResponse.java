@@ -19,6 +19,8 @@ public class ManagerProfileResponse {
     private String introduction;
     private double averageRating; // 평균 평점
     private int reviewCount;      // 리뷰 개수
+    private String availableDays;
+    private String availableTime;
 
     public ManagerProfileResponse(Manager manager) {
         this.id = manager.getId();
@@ -28,11 +30,13 @@ public class ManagerProfileResponse {
         this.introduction = manager.getIntroduction();
         this.averageRating = 0.0; // 당장 에러를 막기 위해 기본값 0 처리
         this.reviewCount = 0;     // 당장 에러를 막기 위해 기본값 0 처리
+        this.availableDays = manager.getAvailableDays();
+        this.availableTime = manager.getAvailableTime();
     }
 
     // Entity들을 받아 DTO로 변환하는 정적 메서드
     public static ManagerProfileResponse of(Member manager, String certifications, String career, String introduction,
-                                            double avgRating, int reviewCount) {
+                                            double avgRating, int reviewCount, String availableDays, String availableTime) {
         return ManagerProfileResponse.builder()
                 .id(manager.getId())
                 .name(manager.getName())
@@ -41,6 +45,8 @@ public class ManagerProfileResponse {
                 .introduction(introduction)
                 .averageRating(Math.round(avgRating * 10.0) / 10.0)
                 .reviewCount(reviewCount)
+                .availableDays(availableDays)
+                .availableTime(availableTime)
                 .build();
     }
 }

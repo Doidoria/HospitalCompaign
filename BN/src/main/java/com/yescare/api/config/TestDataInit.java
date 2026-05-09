@@ -30,7 +30,7 @@ public class TestDataInit implements CommandLineRunner {
         }
 
         // ==========================================
-        // 1. 테스트용 계정 생성 (비밀번호는 모두 1234, 윤태현님 제외)
+        // 1. 테스트용 계정 생성 (최고 관리자 및 고객)
         // ==========================================
 
         // [최고 관리자]
@@ -56,7 +56,20 @@ public class TestDataInit implements CommandLineRunner {
                 .build();
         memberRepository.save(user1);
 
-        // [일반 고객 2 - 윤태현님]
+        // [일반 고객 2] - 추가된 고객
+        Member user2 = Member.builder()
+                .email("new_user@yescare.com")
+                .password(passwordEncoder.encode("1234"))
+                .name("이단골")
+                .phoneNumber("010-5555-6666")
+                .guardianName("이보호")
+                .guardianPhone("010-6666-7777")
+                .address("경기도 성남시 분당구 판교역로 456")
+                .role(Role.USER)
+                .build();
+        memberRepository.save(user2);
+
+        // [일반 고객 3 - 윤태현님]
         Member yoonUser = Member.builder()
                 .email("shth15926@gmail.com")
                 .password(passwordEncoder.encode("shth1234!!"))
@@ -70,6 +83,11 @@ public class TestDataInit implements CommandLineRunner {
                 .role(Role.USER)
                 .build();
         memberRepository.save(yoonUser);
+
+
+        // ==========================================
+        // 2. 매니저 계정 생성 (요일 및 시간 데이터 포함)
+        // ==========================================
 
         // [매니저 1] - 베테랑 요양보호사
         Member managerMember1 = Member.builder()
@@ -85,6 +103,8 @@ public class TestDataInit implements CommandLineRunner {
                 .introduction("환자를 내부모님처럼 모시겠습니다. 편안하고 안전한 동행을 약속드립니다.")
                 .career("대학병원 간호조무사 5년, 요양병원 3년 근무")
                 .certifications("요양보호사 1급, 간호조무사, 사회복지사 2급")
+                .availableDays("월, 수, 금") // ✅ 추가됨
+                .availableTime("09:00 - 18:00") // ✅ 추가됨
                 .build());
 
         // [매니저 2] - 친절한 동행 매니저
@@ -101,16 +121,54 @@ public class TestDataInit implements CommandLineRunner {
                 .introduction("밝은 미소로 병원 가는 길을 즐겁게 만들어 드립니다!")
                 .career("예스케어 전속 동행 매니저 2년 차 (누적 동행 500회 이상)")
                 .certifications("요양보호사, 응급처치(CPR) 수료")
+                .availableDays("화, 목, 토") // ✅ 추가됨
+                .availableTime("08:00 - 15:00") // ✅ 추가됨
+                .build());
+
+        // [매니저 3] - 추가된 평일 전담 매니저
+        Member managerMember3 = Member.builder()
+                .email("manager3@yescare.com")
+                .password(passwordEncoder.encode("1234"))
+                .name("김케어")
+                .phoneNumber("010-7777-8888")
+                .role(Role.MANAGER)
+                .build();
+        memberRepository.save(managerMember3);
+        managerRepository.save(Manager.builder()
+                .member(managerMember3)
+                .introduction("정확하고 신속한 병원 행정 처리를 도와드립니다.")
+                .career("종합병원 원무과 7년 근무")
+                .certifications("병원행정관리사, 요양보호사")
+                .availableDays("월, 화, 수, 목, 금") // ✅ 평일 풀타임
+                .availableTime("10:00 - 19:00")
+                .build());
+
+        // [매니저 4] - 추가된 주말 전담 매니저
+        Member managerMember4 = Member.builder()
+                .email("manager4@yescare.com")
+                .password(passwordEncoder.encode("1234"))
+                .name("최안심")
+                .phoneNumber("010-8888-9999")
+                .role(Role.MANAGER)
+                .build();
+        memberRepository.save(managerMember4);
+        managerRepository.save(Manager.builder()
+                .member(managerMember4)
+                .introduction("주말에도 안심하고 맡겨주세요. 꼼꼼하게 챙기겠습니다.")
+                .career("재활치료센터 3년 근무")
+                .certifications("물리치료사, 사회복지사 1급")
+                .availableDays("토, 일") // ✅ 주말 전담
+                .availableTime("09:00 - 13:00")
                 .build());
 
 
         // ==========================================
-        // 2. 예약 데이터 생성 (과거 완료, 현재 진행, 대기 등)
+        // 3. 예약 데이터 생성 (다양한 상태 및 풍부한 리스트)
         // ==========================================
         LocalDateTime now = LocalDateTime.now();
 
         // 🟢 [예약 1] 매칭 대기 (WAITING) - 내일 예약
-        Reservation waitingRes = Reservation.builder()
+        Reservation waitingRes1 = Reservation.builder()
                 .member(user1)
                 .patientName("김테스트")
                 .patientPhone("010-1111-2222")
@@ -128,10 +186,10 @@ public class TestDataInit implements CommandLineRunner {
                 .doctorInquiry("물리치료를 병행해도 되는지 여쭤봐주세요.")
                 .status(ReservationStatus.WAITING)
                 .build();
-        reservationRepository.save(waitingRes);
+        reservationRepository.save(waitingRes1);
 
-        // 🟢 [예약 2] 예약 확정 (CONFIRMED) - 매니저 1 배정됨 (모레 예약)
-        Reservation confirmedRes = Reservation.builder()
+        // 🟢 [예약 2] 예약 확정 (CONFIRMED) - 매니저 1 배정됨
+        Reservation confirmedRes1 = Reservation.builder()
                 .member(user1)
                 .patientName("김테스트")
                 .patientPhone("010-1111-2222")
@@ -145,10 +203,10 @@ public class TestDataInit implements CommandLineRunner {
                 .detailedContent("- 검사 종류: 위/대장 수면 내시경\n- 금식: 밤 10시 이후 금식 완료")
                 .status(ReservationStatus.CONFIRMED)
                 .build();
-        confirmedRes.assignManager(managerMember1);
-        reservationRepository.save(confirmedRes);
+        confirmedRes1.assignManager(managerMember1);
+        reservationRepository.save(confirmedRes1);
 
-        // 🟢 [예약 3] 예약 취소 (CANCELLED) - 고객 변심
+        // 🟢 [예약 3] 예약 취소 (CANCELLED)
         Reservation cancelledRes = Reservation.builder()
                 .member(user1)
                 .patientName("김테스트")
@@ -160,7 +218,40 @@ public class TestDataInit implements CommandLineRunner {
                 .build();
         reservationRepository.save(cancelledRes);
 
-        // 🟢 [예약 4] 이용 완료 (COMPLETED) - 매니저 2 배정, 3일 전 완료 (리포트/리뷰 존재)
+        // 🟢 [예약 4] 매칭 대기 (WAITING) - 신규 고객
+        Reservation waitingRes2 = Reservation.builder()
+                .member(user2)
+                .patientName("이단골")
+                .patientPhone("010-5555-6666")
+                .hospitalName("분당서울대학교병원")
+                .reservationTime(now.plusDays(3).withHour(13).withMinute(0))
+                .category("처방약 대리수령")
+                .meetingPoint("자택")
+                .transportation("도보")
+                .mobility("독립 보행 가능")
+                .requirements("약만 대신 타주시면 됩니다.")
+                .detailedContent("- 진료 과목: 내분비내과\n- 약국: 병원 앞 대형약국")
+                .status(ReservationStatus.WAITING)
+                .build();
+        reservationRepository.save(waitingRes2);
+
+        // 🟢 [예약 5] 예약 확정 (CONFIRMED) - 매니저 3 배정됨
+        Reservation confirmedRes2 = Reservation.builder()
+                .member(user2)
+                .patientName("이단골")
+                .patientPhone("010-5555-6666")
+                .hospitalName("차병원")
+                .reservationTime(now.plusDays(6).withHour(11).withMinute(0))
+                .category("정밀 검사")
+                .meetingPoint("자택")
+                .transportation("대중교통")
+                .mobility("지팡이 이용")
+                .status(ReservationStatus.CONFIRMED)
+                .build();
+        confirmedRes2.assignManager(managerMember3);
+        reservationRepository.save(confirmedRes2);
+
+        // 🟢 [예약 6] 이용 완료 (COMPLETED) - 매니저 2 배정, 리포트/리뷰 포함
         Reservation completedRes1 = Reservation.builder()
                 .member(user1)
                 .patientName("김테스트")
@@ -190,9 +281,37 @@ public class TestDataInit implements CommandLineRunner {
                 .build();
         reviewRepository.save(review1);
 
+        // 🟢 [예약 7] 이용 완료 (COMPLETED) - 매니저 4 배정, 리포트/리뷰 포함
+        Reservation completedRes2 = Reservation.builder()
+                .member(user2)
+                .patientName("이단골")
+                .hospitalName("분당제생병원")
+                .reservationTime(now.minusDays(10).withHour(15).withMinute(0))
+                .category("일반 진료")
+                .meetingPoint("자택")
+                .status(ReservationStatus.COMPLETED)
+                .build();
+        completedRes2.assignManager(managerMember4);
+        reservationRepository.save(completedRes2);
+
+        Report report2 = Report.builder()
+                .reservation(completedRes2).department("신경과")
+                .patientCondition("bad")
+                .doctorOpinion("혈당 수치가 조금 높습니다. 식단 조절이 필요합니다.")
+                .prescription("당뇨약 한 달 치 처방")
+                .managerComment("비가 와서 이동에 신경을 많이 썼습니다. 안전하게 귀가하셨습니다.")
+                .build();
+        reportRepository.save(report2);
+
+        Review review2 = Review.builder()
+                .reservation(completedRes2).rating(4)
+                .comment("비가 오는데도 우산 씌워주시면서 고생 많으셨습니다. 감사합니다.")
+                .build();
+        reviewRepository.save(review2);
+
 
         // ==========================================
-        // 3. 윤태현님 특화 데이터 세팅
+        // 4. 윤태현님 특화 데이터 세팅 (유지)
         // ==========================================
 
         // [윤태현 예약 1] 이용 완료 (COMPLETED) - 대리 신청(hasProxy) 테스트용
@@ -251,9 +370,13 @@ public class TestDataInit implements CommandLineRunner {
 
         System.out.println("✅ [YesCare] 대규모 테스트용 더미 데이터가 성공적으로 생성(업데이트) 되었습니다!");
         System.out.println("   - Admin: admin@yescare.com (pw: 1234)");
-        System.out.println("   - Manager 1: manager1@yescare.com (pw: 1234)");
-        System.out.println("   - Manager 2: manager2@yescare.com (pw: 1234)");
+        System.out.println("   - Manager 1 (월수금): manager1@yescare.com (pw: 1234)");
+        System.out.println("   - Manager 2 (화목토): manager2@yescare.com (pw: 1234)");
+        System.out.println("   - Manager 3 (평일풀): manager3@yescare.com (pw: 1234)");
+        System.out.println("   - Manager 4 (주말풀): manager4@yescare.com (pw: 1234)");
         System.out.println("   - User 1: test_user@yescare.com (pw: 1234)");
-        System.out.println("   - User 2 (Yoon): shth15926@gmail.com (pw: shth1234!!)");
+        System.out.println("   - User 2: new_user@yescare.com (pw: 1234)");
+        System.out.println("   - User 3 (Yoon): shth15926@gmail.com (pw: shth1234!!)");
+        System.out.println("   ▶ 예약 데이터 총 9건 세팅 완료 (대기, 확정, 취소, 완료 및 리뷰 포함)");
     }
 }

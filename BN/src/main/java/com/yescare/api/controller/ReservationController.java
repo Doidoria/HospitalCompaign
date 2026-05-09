@@ -4,16 +4,14 @@ import com.yescare.api.dto.*;
 import com.yescare.api.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import java.security.Principal;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
-import com.yescare.api.dto.ReviewResponse;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -52,12 +50,23 @@ public class ReservationController {
         return ResponseEntity.ok("예약 번호 " + id + "번이 성공적으로 취소(삭제)되었습니다.");
     }
 
-    @PatchMapping("/{id}/accept")
-    @PreAuthorize("hasRole('MANAGER')") // 매니저만 동행 수락 가능
-    public ResponseEntity<String> acceptReservation(@PathVariable Long id, Principal principal) {
-        if (principal == null) return ResponseEntity.status(403).body("로그인이 필요합니다.");
-        reservationService.acceptReservation(id, principal.getName());
+    @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> assignManagerByAdmin(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String managerEmail = request.get("managerEmail");
+        if (managerEmail == null || managerEmail.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("매니저 이메일이 누락되었습니다.");
+        }
+        reservationService.assignManagerByAdmin(id, managerEmail);
         return ResponseEntity.ok("매니저 배정이 완료되었습니다.");
+    }
+
+    // 관리자 전용 매니저 배정 취소 API
+    @PatchMapping("/{id}/cancel-assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> cancelManagerAssignByAdmin(@PathVariable Long id) {
+        reservationService.cancelManagerAssignByAdmin(id);
+        return ResponseEntity.ok("매니저 배정이 취소되고 대기 상태로 변경되었습니다.");
     }
 
     @PutMapping("/{id}")
@@ -120,7 +129,7 @@ public class ReservationController {
             @RequestParam(required = false) String status,
             @PageableDefault(size = 10, sort = "reservationTime", direction = Sort.Direction.DESC) Pageable pageable) {
 
-         return ResponseEntity.ok(reservationService.searchReservations(keyword, status, pageable));
+        return ResponseEntity.ok(reservationService.searchReservations(keyword, status, pageable));
     }
 
     // 어드민용 전체 리뷰 조회 API

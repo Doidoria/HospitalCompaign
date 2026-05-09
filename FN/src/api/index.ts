@@ -58,7 +58,8 @@ export const reportApi = {
 // ==========================================
 export const adminApi = {
   getReservations: (page: number) => reservationApi.getAll(page),
-  getPendingManagers: () => apiClient.get('/api/members/manager-applications'),
+  getPendingManagers: (status: string = 'WAITING') => 
+    apiClient.get(`/api/members/manager-applications?status=${status}`),
   approveManager: (memberId: number) => apiClient.patch(`/api/members/${memberId}/approve`),
   rejectManager: (applicationId: number) => apiClient.delete(`/api/members/manager-applications/${applicationId}`),
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
@@ -87,6 +88,13 @@ export const adminApi = {
     
   changeMemberRole: (memberId: number, role: string) => 
     apiClient.patch(`/api/members/${memberId}/role`, { role }),
+
+  // 매니저 강제 배정/취소
+  assignManager: (reservationId: number, managerEmail: string) => 
+    apiClient.patch(`/api/reservations/${reservationId}/assign`, { managerEmail }),
+    
+  cancelAssignManager: (reservationId: number) => 
+    apiClient.patch(`/api/reservations/${reservationId}/cancel-assign`),
 };
 
 export const managerApi = {

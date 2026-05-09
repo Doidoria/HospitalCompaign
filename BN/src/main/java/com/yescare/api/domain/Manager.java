@@ -28,17 +28,27 @@ public class Manager {
     @Column
     private String certifications;
 
+    @Column(name = "available_days")
+    private String availableDays;
+
+    @Column(name = "available_time")
+    private String availableTime;
+
     @Builder
-    public Manager(Member member, String introduction, String career, String certifications) {
+    public Manager(Member member, String introduction, String career, String certifications, String availableDays, String availableTime) {
         this.member = member;
         this.introduction = introduction;
         this.career = career;
         this.certifications = certifications;
+        this.availableDays = availableDays;
+        this.availableTime = availableTime;
     }
 
-    public void updateProfile(String introduction, String career, String certifications) {
+    public void updateProfile(String introduction, String career, String certifications, String availableDays, String availableTime) {
         this.introduction = introduction;
         this.career = career;
         this.certifications = certifications;
+        this.availableDays = availableDays;
+        this.availableTime = availableTime;
     }
 }

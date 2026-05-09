@@ -1,7 +1,7 @@
 package com.yescare.api.dto;
 
-import com.yescare.api.domain.Member;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.yescare.api.domain.Member;
 import lombok.Getter;
 
 @Getter
@@ -16,6 +16,8 @@ public class MemberResponse {
     private String detailAddress;
     private String guardianName;
     private String guardianPhone;
+    private String availableDays;
+    private String availableTime;
 
     @JsonProperty("isActive")
     private boolean isActive;
@@ -32,5 +34,11 @@ public class MemberResponse {
         this.guardianName = member.getGuardianName();
         this.guardianPhone = member.getGuardianPhone();
         this.isActive = member.isActive();
+
+        // 매니저 정보가 있는 회원이면 요일/시간 세팅
+        if (member.getManager() != null) {
+            this.availableDays = member.getManager().getAvailableDays();
+            this.availableTime = member.getManager().getAvailableTime();
+        }
     }
 }
