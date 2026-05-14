@@ -29,6 +29,7 @@ public class Inquiry extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Column(nullable = false)
     private boolean isPrivate;
 
     private String password;

@@ -382,7 +382,7 @@ export default function ManagerDashboard() {
                                 <div style="font-size: 32px; color: #f59e0b; font-weight: 900; margin-bottom: 20px; text-align: center; letter-spacing: -1px;">
                                   ⭐ ${req.reviewRating}.0
                                 </div>
-                                <div style="box-sizing: border-box; background-color: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: left; font-size: 15px; color: #334155; white-space: pre-wrap; line-height: 1.6; word-break: keep-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                                <div style="box-sizing: border-box; background-color: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: left; font-size: 15px; color: #334155; line-height: 1.6; word-break: keep-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
                                   ${req.reviewComment ? req.reviewComment : '<span style="color: #94a3b8;">작성된 상세 후기 내용이 없습니다.</span>'}
                                 </div>
                               </div>

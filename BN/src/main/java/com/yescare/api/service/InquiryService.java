@@ -181,6 +181,7 @@ public class InquiryService {
                 .authorEmail(inq.getMember().getEmail())
                 .status(inq.getStatus().name())
                 .createdAt(inq.getCreatedDate())
+                .isPrivate(inq.isPrivate())
                 .build());
     }
 
@@ -192,5 +193,22 @@ public class InquiryService {
 
         // 엔티티 내부에 만들어둔 비즈니스 메서드 호출 (더티 체킹으로 자동 UPDATE 쿼리 발생)
         inquiry.addAnswer(answer);
+    }
+
+    // 비밀번호 확인 로직
+    @Transactional(readOnly = true)
+    public void checkInquiryPassword(Long id, String password) {
+        Inquiry inquiry = inquiryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 문의입니다."));
+
+        // 비밀글이 아니면 애초에 검사할 필요 없음
+        if (!inquiry.isPrivate()) {
+            return;
+        }
+
+        // 비밀번호가 틀리면 예외 발생 (프론트에서 catch 블록으로 빠짐)
+        if (inquiry.getPassword() == null || !inquiry.getPassword().equals(password)) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
     }
 }

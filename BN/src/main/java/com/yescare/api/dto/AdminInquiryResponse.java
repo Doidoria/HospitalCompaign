@@ -15,4 +15,5 @@ public class AdminInquiryResponse {
     private String authorEmail; // 작성자 이메일
     private String status;
     private LocalDateTime createdAt;
+    private boolean isPrivate;
 }

@@ -2,14 +2,18 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { inquiryApi } from '@/src/api/index';
+import { inquiryApi, noticeApi } from '@/src/api/index';
 import { PhoneCall } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
   ChevronDown, MessageCircleQuestion, Bell, Headphones, Search, ChevronLeft, 
-  ChevronRight, PenSquare
+  ChevronRight, PenSquare, Lock
 } from 'lucide-react';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content'; 
 import Link from 'next/link';
+
+const MySwal = withReactContent(Swal) as any;
 
 const faqs = [
   { q: "예약 취소 수수료는 어떻게 되나요?", a: "서비스 시작 24시간 전까지는 100% 무료 취소가 가능합니다. 12시간 전 취소 시 50% 수수료가 부과됩니다." },
@@ -20,15 +24,6 @@ const faqs = [
   { q: "동행 중 식사 시간은 어떻게 처리되나요?", a: "식사 시간도 서비스 이용 시간에 포함되며, 매니저의 식대는 고객님께서 부담하지 않으셔도 됩니다." },
 ];
 
-const notices = [
-  { id: 6, title: "[공지] 추석 연휴 고객센터 운영 안내", date: "2024.08.20", important: true },
-  { id: 5, title: "[공지] 서비스 이용 약관 개정 안내", date: "2024.05.20", important: true },
-  { id: 4, title: "대구 지역 서비스 확장 안내", date: "2024.05.15", important: false },
-  { id: 3, title: "가정의 달 기념 할인 이벤트", date: "2024.05.01", important: false },
-  { id: 2, title: "시스템 정기 점검 안내 (05/22)", date: "2024.04.28", important: false },
-  { id: 1, title: "예스케어 서비스 런칭 공지", date: "2024.04.01", important: false },
-];
-
 type TabType = 'faq' | 'notice' | 'inquiry';
 type InquiryStatusType = 'PENDING' | 'ANSWERED';
 
@@ -37,6 +32,7 @@ interface InquiryType {
   title: string;
   status: InquiryStatusType;
   date: string;
+  isPrivate: boolean;
 }
 
 export default function CustomerSupportPage() {
@@ -46,7 +42,7 @@ export default function CustomerSupportPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState(''); 
   const [myInquiries, setMyInquiries] = useState<InquiryType[]>([]);
-
+  const [notices, setNotices] = useState<any[]>([]);
 
   useEffect(() => {
     if (activeTab === 'inquiry') {
@@ -59,8 +55,8 @@ export default function CustomerSupportPage() {
             id: item.id,
             title: item.title,
             status: item.status,
-            date: item.createdAt ? item.createdAt.substring(0, 10).replace(/-/g, '.') : '날짜 없음' 
-            // 예: 2024-05-24T... -> 2024.05.24 로 변환
+            date: item.createdAt ? item.createdAt.substring(0, 10).replace(/-/g, '.') : '날짜 없음', // 예: 2024-05-24T... -> 2024.05.24 로 변환
+            isPrivate: item.private
           }));
           // 응답 데이터가 배열이라고 가정하고 상태 업데이트
           setMyInquiries(formattedData);
@@ -72,6 +68,26 @@ export default function CustomerSupportPage() {
       fetchMyInquiries();
     }
   }, [activeTab]); // activeTab이 변경될 때마다 실행
+
+  useEffect(() => {
+    const loadNotices = async () => {
+      try {
+        const res = await noticeApi.getNotices(); // API 호출
+        setNotices(res.data.content);
+      } catch (e) { console.error("공지 로드 실패", e); }
+    };
+    loadNotices();
+  }, []);
+
+  // 7일 이내 작성된 공지인지 확인하는 함수
+  const isNewNotice = (dateString: string) => {
+    if (!dateString) return false;
+    const noticeDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - noticeDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
   
   const itemsPerPage = 5;
 
@@ -96,6 +112,33 @@ export default function CustomerSupportPage() {
     setCurrentPage(1);
     setOpenIndex(null);
     setSearchQuery('');
+  };
+
+  // 비밀글 비밀번호 확인 핸들러
+  const handleCheckPassword = async (id: number) => {
+    const { value: password } = await MySwal.fire({
+      title: '비밀번호 입력',
+      input: 'password',
+      inputLabel: '이 문의글에 설정한 비밀번호를 입력해주세요.',
+      inputPlaceholder: '비밀번호',
+      showCancelButton: true,
+      confirmButtonText: '확인',
+      cancelButtonText: '취소',
+      inputValidator: (value: string) => {
+        if (!value) return '비밀번호를 입력해야 합니다!';
+      }
+    });
+
+    if (password) {
+      try {
+        // 백엔드 비밀번호 검증 API 호출 (사전에 api/index.ts에 추가 필요)
+        await inquiryApi.checkPassword(id, password); 
+        // 성공하면 상세 페이지로 이동
+        router.push(`/support/inquiry/${id}`);
+      } catch (error) {
+        Swal.fire('오류', '비밀번호가 일치하지 않습니다.', 'error');
+      }
+    }
   };
 
   return (
@@ -176,15 +219,17 @@ export default function CustomerSupportPage() {
                      <p className="text-center text-gray-400 py-10">검색 결과가 없습니다.</p>
                   ) : (
                     (currentData as typeof notices).map((notice) => (
-                      <div key={notice.id} className="py-4 flex items-center justify-between group cursor-pointer">
+                      <div key={notice.id} onClick={() => router.push(`/support/notice/${notice.id}`)}
+                        className="py-4 flex items-center justify-between group cursor-pointer hover:bg-gray-50 px-2 -mx-2 rounded-xl transition-colors">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             {notice.important && <span className="bg-red-50 text-red-500 text-[10px] font-bold px-2 py-0.5 rounded-full">중요</span>}
+                            {isNewNotice(notice.createdAt) && <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full">NEW</span>}
                             <span className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{notice.title}</span>
                           </div>
-                          <span className="text-sm text-gray-400">{notice.date}</span>
+                          <span className="text-sm text-gray-400">{notice.createdAt?.substring(0, 10) || notice.date}</span>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-400" />
+                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-400 transition-colors" />
                       </div>
                     ))
                   )}
@@ -226,16 +271,22 @@ export default function CustomerSupportPage() {
 
                     <div className="divide-y divide-gray-100 border-t">
                       {myInquiries.map((inq) => (
-                        <div key={inq.id} onClick={() => router.push(`/support/inquiry/${inq.id}`)}
-                        className="py-4 flex justify-between items-center group cursor-pointer hover:bg-gray-50 px-2 -mx-2 rounded-xl transition-colors">
+                        <div key={inq.id} onClick={() => {
+                            if (inq.isPrivate) {
+                              handleCheckPassword(inq.id); 
+                            } else {
+                              router.push(`/support/inquiry/${inq.id}`);
+                            }
+                          }} className="py-4 flex justify-between items-center group cursor-pointer hover:bg-gray-50 px-2 -mx-2 rounded-xl transition-colors">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                inq.status === 'ANSWERED' ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-600'
-                              }`}>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${inq.status === 'ANSWERED' ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-600'}`}>
                                 {inq.status === 'ANSWERED' ? '답변완료' : '접수완료'}
                               </span>
-                              <span className="font-semibold text-gray-800">{inq.title}</span>
+                              <span className="font-semibold text-gray-800 flex items-center gap-1">
+                                {inq.isPrivate && <Lock className="w-3.5 h-3.5 text-gray-400" />}
+                                {inq.title}
+                              </span>
                             </div>
                             <span className="text-xs text-gray-400 pl-1">{inq.date}</span>
                           </div>

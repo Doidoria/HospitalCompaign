@@ -9,23 +9,34 @@ import Image from 'next/image';
 
 export default function InquiryCreatePage() {
   const router = useRouter();
-  
-  // 텍스트 데이터 상태
-  const [formData, setFormData] = useState({
-    category: '',
-    title: '',
-    content: '',
-    isPrivate: true, // 기본값을 비공개로 설정
-    password: ''     // 비밀번호 상태
-  });
+
+  // 사용자 문의 기본 작성란
+  const INQUIRY_TEMPLATE = `[문의 상세 내용]
+(예약 관련 문의라면 예약하신 날짜와 환자 성함을 꼭 적어주세요.)
+ - 예약 날짜 : 
+ - 환자 성함 : 
+ - 내용 : 
+
+
+[환자 특이사항 (선택)]
+(휠체어 이용 여부, 거동 상태 등 매니저가 알아야 할 사항이 있다면 적어주세요.)
+ - `;
 
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const MAX_IMAGES = 3;
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  // 텍스트 데이터 상태
+  const [formData, setFormData] = useState({
+    category: '',
+    title: '',
+    content: INQUIRY_TEMPLATE,
+    isPrivate: true, // 기본값을 비공개로 설정
+    password: ''     // 비밀번호 상태
+  });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
@@ -147,17 +158,19 @@ export default function InquiryCreatePage() {
               placeholder="문의 제목을 입력해주세요"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-gray-900 placeholder:text-gray-400"
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all 
+              text-gray-900 placeholder:text-gray-400"
             />
           </div>
 
           {/* 내용 입력 */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">내용 <span className="text-red-500">*</span></label>
-            <textarea required rows={6} placeholder="문의하실 내용을 자세히 적어주세요. (개인정보는 포함하지 않도록 주의해주세요)"
+            <textarea required rows={15} placeholder="문의하실 내용을 자세히 적어주세요. (개인정보는 포함하지 않도록 주의해주세요)"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all resize-none text-gray-900 placeholder:text-gray-400"
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all 
+              resize-none text-gray-900 placeholder:text-gray-400"
             />
           </div>
 
@@ -167,7 +180,8 @@ export default function InquiryCreatePage() {
             <div className="flex flex-wrap gap-3">
               {/* 첨부 버튼 */}
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={files.length >= MAX_IMAGES}
-                className="w-20 h-20 flex flex-col items-center justify-center gap-1 bg-gray-50 border border-dashed border-gray-300 rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-500"
+                className="w-20 h-20 flex flex-col items-center justify-center gap-1 bg-gray-50 border border-dashed border-gray-300 rounded-xl hover:bg-gray-100 
+                transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-500"
               >
                 <ImagePlus className="w-6 h-6" />
                 <span className="text-xs font-medium">{files.length}/{MAX_IMAGES}</span>
@@ -189,8 +203,8 @@ export default function InquiryCreatePage() {
               ))}
             </div>
           </div>
-
-          {/* 공개/비공개 설정 및 비밀번호 */}
+          
+          {/* 공개/비공개 설정 및 비밀번호 
           <div className="pt-4 border-t border-gray-100">
             <label className="block text-sm font-semibold text-gray-700 mb-3">공개 설정</label>
             <div className="flex gap-6 mb-4">
@@ -213,7 +227,7 @@ export default function InquiryCreatePage() {
               </label>
             </div>
 
-            {/* 비공개일 때만 나타나는 비밀번호 입력란 */}
+            {//* 비공개일 때만 나타나는 비밀번호 입력란
             {formData.isPrivate && (
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="relative w-full md:w-1/2">
@@ -228,7 +242,7 @@ export default function InquiryCreatePage() {
                   />
                 </div>
                 
-                {/* 비밀번호 보이기 체크박스 */}
+                {//* 비밀번호 보이기 체크박스
                 <label className="inline-flex items-center gap-2 mt-3 cursor-pointer">
                   <input type="checkbox" checked={showPassword}
                     onChange={(e) => setShowPassword(e.target.checked)}
@@ -238,7 +252,7 @@ export default function InquiryCreatePage() {
                 </label>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* 하단 버튼 */}
           <div className="pt-4">

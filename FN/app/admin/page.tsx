@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   LayoutDashboard, Users, CalendarDays, Activity, Search, CheckCircle2, XCircle, UserPlus,
-  FileText, MapPin, X, UserCog, Star, Loader2, Inbox, Send, UserMinus, MessageCircleQuestion, PenSquare
+  FileText, MapPin, X, UserCog, Star, Loader2, Inbox, Send, UserMinus, MessageCircleQuestion, 
+  PenSquare, Megaphone, Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -13,7 +14,7 @@ import { adminApi, inquiryApi, reservationApi } from '@/src/api/index';
 
 const MySwal = withReactContent(Swal) as any;
 
-type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries';
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices';
 
 // 전역 Toast 알림 설정
 const Toast = Swal.mixin({
@@ -186,6 +187,28 @@ export default function AdminDashboardPage() {
   const [answerInput, setAnswerInput] = useState('');
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
 
+  // 공지사항 페이지네이션용 상태
+  const [noticePage, setNoticePage] = useState(0);
+  const [noticeTotalPages, setNoticeTotalPages] = useState(0);
+
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  const [notices, setNotices] = useState<any[]>([]); // 실데이터 저장
+  const [selectedNotice, setSelectedNotice] = useState<any>(null); // 수정 시 사용
+  const [noticeForm, setNoticeForm] = useState({ title: '', content: '', important: false });
+
+  // 공지 기본 작성란
+  const NOTICE_TEMPLATE = `■ 주요 안내 사항
+ - (공지하고자 하는 핵심 내용을 상세히 적어주세요.)
+
+  
+■ 적용 일시
+ - 2024년 00월 00일 (요일) 00:00 부터 적용 예정
+
+
+■ 기타 문의
+ - 고객센터: 1588-0000 (운영시간: 평일 09:00 ~ 18:00)
+ - 1:1 문의 게시판을 이용해 주시면 순차적으로 답변해 드리겠습니다.`;
+
   const handleError = useCallback((error: any, defaultMsg: string) => {
     const serverMsg = error.response?.data?.message || error.response?.data;
     Swal.fire('요청 실패', serverMsg || defaultMsg, 'error');
@@ -211,6 +234,7 @@ export default function AdminDashboardPage() {
       case 'managers': return '매니저 승인 관리';
       case 'members': return '전체 회원 관리';
       case 'reviews': return '리뷰 및 리포트 모니터링';
+      case 'notices': return '공지사항 관리';
       case 'inquiries': return '고객센터 관리';
       default: return '관리자 시스템';
     }
@@ -310,31 +334,57 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // 답변 작성 및 상태 변경 핸들러
-  const handleAnswerInquiry = async (inquiryId: number, title: string) => {
-    const { value: answerContent } = await MySwal.fire({
-      title: '문의 답변 작성',
-      input: 'textarea',
-      inputLabel: `'${title}' 문의에 대한 답변을 입력하세요.`,
-      inputPlaceholder: '답변 내용을 상세히 적어주세요...',
-      showCancelButton: true,
-      confirmButtonText: '답변 등록',
-      cancelButtonText: '취소',
-      confirmButtonColor: '#2563eb',
-      inputValidator: (value: string) => {
-        if (!value) return '답변 내용을 입력해야 합니다!';
-      }
-    });
+  // 공지사항 로드
+  const fetchNotices = useCallback(async (page: number = 0) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAllNotices(page);
+      setNotices(res.data.content);
+      setNoticeTotalPages(res.data.totalPages);
+    } finally { setLoading(false); }
+  }, []);
 
-    if (answerContent) {
-      try {
-        await adminApi.answerInquiry(inquiryId, answerContent);
-        Toast.fire({ icon: 'success', title: '답변이 성공적으로 등록되었습니다.' });
-        fetchInquiries(inquiryPage, inquiryStatusFilter); // 리스트 갱신
-      } catch (error) {
-        Swal.fire('오류', '답변 등록 중 문제가 발생했습니다.', 'error');
+  // 공지사항 저장 (등록/수정 공용)
+  const handleSaveNotice = async () => {
+    if(!noticeForm.title || !noticeForm.content) return Toast.fire({ icon: 'warning', title: '제목과 내용을 입력해주세요.' });
+    
+    try {
+      if (selectedNotice) {
+        await adminApi.updateNotice(selectedNotice.id, noticeForm);
+        Toast.fire({ icon: 'success', title: '공지사항이 수정되었습니다.' });
+      } else {
+        await adminApi.createNotice(noticeForm);
+        Toast.fire({ icon: 'success', title: '새 공지가 등록되었습니다.' });
       }
+      setIsNoticeModalOpen(false);
+      fetchNotices();
+    } catch (error) { Swal.fire('오류', '처리에 실패했습니다.', 'error'); }
+  };
+
+  // 공지사항 삭제 핸들러
+  const handleDeleteNotice = async (id: number) => {
+    const result = await Swal.fire({
+      title: '공지 삭제', text: '정말 삭제하시겠습니까?', icon: 'warning',
+      showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: '삭제'
+    });
+    if (result.isConfirmed) {
+      try {
+        await adminApi.deleteNotice(id);
+        Toast.fire({ icon: 'success', title: '삭제되었습니다.' });
+        fetchNotices(0);
+      } catch (error) { Swal.fire('오류', '삭제에 실패했습니다.', 'error'); }
     }
+  };
+
+  // 공지사항 당일 기준으로 7일 이내에 작성된 글인지 확인 함수
+  const isNewNotice = (dateString: string) => {
+    if (!dateString) return false;
+    const noticeDate = new Date(dateString);
+    const today = new Date();
+    // 시간 차이를 일(day) 단위로 계산
+    const diffTime = Math.abs(today.getTime() - noticeDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
   };
 
   useEffect(() => {
@@ -371,6 +421,7 @@ export default function AdminDashboardPage() {
     if (activeTab === 'members') fetchMembers(memberPage, memberRoleFilter);
     if (activeTab === 'reviews') fetchReviews(reviewPage);
     if (activeTab === 'managers') fetchManagerApplications(mgrAppStatus);
+    if (activeTab === 'notices') fetchNotices(noticePage);
     if (activeTab === 'inquiries') fetchInquiries(inquiryPage, inquiryStatusFilter);
   }, [activeTab, fetchMembers, fetchReviews, fetchManagerApplications, fetchInquiries, memberPage, memberRoleFilter, reviewPage, mgrAppStatus, inquiryPage, inquiryStatusFilter]);
 
@@ -661,6 +712,12 @@ export default function AdminDashboardPage() {
           { title: '만점(5점) 리뷰', value: `${reviews.filter(r => r.rating === 5).length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
           { title: '주의(2점 이하) 리뷰', value: `${reviews.filter(r => r.rating <= 2).length}건`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
         ];
+      case 'notices':
+        return [
+          { title: '전체 공지', value: `${notices.length}건`, icon: <Megaphone className="w-6 h-6 text-red-500" /> },
+          { title: '중요 공지', value: `${notices.filter(n => n.important).length}건`, icon: <Activity className="w-6 h-6 text-red-600" /> },
+          { title: '일반 공지', value: `${notices.filter(n => !n.important).length}건`, icon: <FileText className="w-6 h-6 text-slate-500" /> },
+        ];
       case 'inquiries':
         return [
           { title: '전체 문의', value: `${inquiries.length}건`, icon: <MessageCircleQuestion className="w-6 h-6 text-blue-500" /> },
@@ -759,6 +816,54 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+        {/* 탭 5: 공지사항 작성 및 수정 모달 */}
+        {isNoticeModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden flex flex-col shadow-2xl border border-slate-100">
+              
+              <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-red-50/30">
+                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-red-600" /> 
+                  {selectedNotice ? '공지사항 수정' : '새 공지사항 작성'}
+                </h3>
+                <button onClick={() => setIsNoticeModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5 bg-white">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
+                  <input type="text" value={noticeForm.title} onChange={(e) => setNoticeForm({...noticeForm, title: e.target.value})}
+                    placeholder="공지사항 제목을 입력하세요"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm font-medium" />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">내용</label>
+                  <textarea value={noticeForm.content} onChange={(e) => setNoticeForm({...noticeForm, content: e.target.value})}
+                    placeholder="공지사항 내용을 상세히 작성해주세요."
+                    className="w-full h-100 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm leading-relaxed resize-none" />
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 p-3 rounded-xl w-fit hover:bg-red-50 transition-colors">
+                  <input type="checkbox" checked={noticeForm.important} onChange={(e) => setNoticeForm({...noticeForm, important: e.target.checked})}
+                    className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500" />
+                  <span className="text-sm font-bold text-slate-700">중요 공지</span>
+                </label>
+              </div>
+
+              <div className="p-5 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/50">
+                <button onClick={() => setIsNoticeModalOpen(false)} className="px-5 py-2 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">취소</button>
+                <button onClick={handleSaveNotice} className="px-5 py-2 bg-red-600 text-white font-bold text-sm rounded-xl hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> {selectedNotice ? '수정 완료' : '등록하기'}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -863,6 +968,7 @@ export default function AdminDashboardPage() {
             { id: 'managers', icon: UserPlus, label: '매니저 승인 관리', badge: pendingManagers.length },
             { id: 'members', icon: UserCog, label: '전체 회원 관리' },
             { id: 'reviews', icon: Star, label: '리뷰 모니터링' },
+            { id: 'notices', icon: Megaphone, label: '공지사항 관리' },
             { id: 'inquiries', icon: MessageCircleQuestion, label: '고객센터 관리' }
           ].map((item) => (
             <button 
@@ -1411,7 +1517,100 @@ export default function AdminDashboardPage() {
                 )}
                </motion.div>
             )}
-            {/* 탭 5: 고객센터(1:1 문의) 관리 */}
+            {/* 탭 5: 공지사항 관리 */}
+            {activeTab === 'notices' && (
+              <motion.div key="notices" variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
+                
+                {/* 상단 헤더 및 버튼 */}
+                <div className="p-5 border-b border-slate-100 bg-red-50/30 flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Megaphone className="w-5 h-5 text-red-600" /> 공지사항 관리
+                  </h2>
+                  <button onClick={() => { setSelectedNotice(null); setNoticeForm({title:'', content: NOTICE_TEMPLATE, important:false}); setIsNoticeModalOpen(true); }}
+                    className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-700 transition-all shadow-md shadow-red-200">
+                    + 새 공지 작성
+                  </button>
+                </div>
+                
+                {/* 공지사항 리스트 테이블 */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
+                      <tr>
+                        <th className="p-4 pl-6">구분</th>
+                        <th className="p-4">제목</th>
+                        <th className="p-4">작성일</th>
+                        <th className="p-4 text-center pr-6">관리</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm">
+                      {loading && notices.length === 0 ? (
+                        <tr><td colSpan={4} className="p-16 text-center"><Loader2 className="w-8 h-8 text-red-500 animate-spin mx-auto" /></td></tr>
+                      ) : notices.length > 0 ? notices.map((n) => {
+                        
+                        // 날짜 포맷팅 및 수정 여부 체크
+                        const createdDate = n.createdAt?.substring(0, 10);
+                        const updatedDate = n.updatedAt?.substring(0, 10);
+                        // 생성일과 수정일이 다르면 '수정됨'으로 간주
+                        const isModified = updatedDate && createdDate !== updatedDate;
+
+                        return (
+                          <tr key={n.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                            {/* 구분(배지) 영역 */}
+                            <td className="p-4 pl-6">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {n.important ? (
+                                  <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">중요</span>
+                                ) : (
+                                  <span className="text-slate-400 text-[10px] font-bold px-2 py-0.5 border border-slate-200 rounded whitespace-nowrap">일반</span>
+                                )}
+                                {isNewNotice(n.createdAt) && (
+                                  <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shadow-sm">NEW</span>
+                                )}
+                              </div>
+                            </td>
+                            
+                            {/* 제목 영역 */}
+                            <td className="p-4 font-bold text-slate-800">{n.title}</td>
+                            
+                            {/* 작성일 및 수정일 영역 */}
+                            <td className="p-4">
+                              <span className="text-slate-500 text-xs font-medium">{createdDate}</span>
+                              {isModified && (
+                                <span className="text-[10px] text-slate-400 ml-1.5 block sm:inline">
+                                  (수정: {updatedDate})
+                                </span>
+                              )}
+                            </td>
+                            
+                            {/* 관리(버튼) 영역 */}
+                            <td className="p-4 pr-6 text-center">
+                              <div className="flex justify-center gap-3">
+                                <button onClick={() => { setSelectedNotice(n); setNoticeForm({title:n.title, content:n.content, important:n.important}); setIsNoticeModalOpen(true); }} className="text-blue-600 hover:text-blue-800 font-bold text-xs transition-colors">수정</button>
+                                <button onClick={() => handleDeleteNotice(n.id)} className="text-red-500 hover:text-red-700 font-bold text-xs transition-colors">삭제</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }) : <EmptyState message="등록된 공지사항이 없습니다." />}
+                    </tbody>
+                  </table>
+                </div>
+
+                {noticeTotalPages > 0 && (
+                  <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+                    <button disabled={noticePage === 0} onClick={() => setNoticePage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+                    {[...Array(noticeTotalPages)].map((_, i) => (
+                      <button key={i} onClick={() => setNoticePage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${noticePage === i ? 'bg-red-600 text-white shadow-md shadow-red-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>
+                        {i + 1}
+                      </button>
+                    ))}
+                    <button disabled={noticePage >= noticeTotalPages - 1} onClick={() => setNoticePage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+            {/* 탭 6: 고객센터(1:1 문의) 관리 */}
             {activeTab === 'inquiries' && (
               <motion.div key="inquiries" variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
                 <div className="p-5 border-b border-slate-100 bg-blue-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1454,9 +1653,13 @@ export default function AdminDashboardPage() {
                             </div>
                           </td>
                           <td className="p-4">
-                          <p className="font-bold text-slate-800 cursor-pointer hover:underline" onClick={() => handleOpenInquiryDetail(inq.id)}>{inq.title}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{inq.authorName} ({inq.authorEmail})</p>
-                        </td>
+                            <p className="font-bold text-slate-800 cursor-pointer hover:underline flex items-center gap-1.5" 
+                              onClick={() => handleOpenInquiryDetail(inq.id)}>
+                              {inq.isPrivate && <Lock className="w-4 h-4 text-slate-400" />}
+                              {inq.title}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-0.5">{inq.authorName} ({inq.authorEmail})</p>
+                          </td>
                           <td className="p-4">
                             <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
                               {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}

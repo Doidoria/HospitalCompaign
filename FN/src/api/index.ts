@@ -102,10 +102,17 @@ export const adminApi = {
     if (status) url += `&status=${status}`;
     return apiClient.get(url);
   },
-
   // 1:1 문의에 답변 달기 및 상태 변경
   answerInquiry: (inquiryId: number, answer: string) =>
     apiClient.patch(`/api/admin/inquiries/${inquiryId}/answer`, { answer }),
+
+  // 공지사항 관리
+  getAllNotices: (page: number = 0) => apiClient.get(`/api/admin/notices?page=${page}`),
+  createNotice: (data: { title: string; content: string; important: boolean }) => 
+    apiClient.post('/api/admin/notices', data),
+  updateNotice: (id: number, data: { title: string; content: string; important: boolean }) => 
+    apiClient.put(`/api/admin/notices/${id}`, data),
+  deleteNotice: (id: number) => apiClient.delete(`/api/admin/notices/${id}`),
 };
 
 export const managerApi = {
@@ -137,6 +144,17 @@ export const categoryApi = {
 };
 
 // ==========================================
+// 공지사항 (notice)
+// ==========================================
+export const noticeApi = {
+  // 일반 유저용 공지사항 목록 조회
+  getNotices: (page: number = 0) => apiClient.get(`/api/notices?page=${page}`),
+
+  // 일반 유저용 공지사항 단건 상세 조회
+  getNotice: (id: number) => apiClient.get(`/api/notices/${id}`),
+};
+
+// ==========================================
 // 1:1 문의 (Inquiry)
 // ==========================================
 export const inquiryApi = {
@@ -152,4 +170,8 @@ export const inquiryApi = {
 
   // 상세 조회
   getInquiry: (id: number) => apiClient.get(`/api/inquiries/${id}`),
+
+  // 비밀글 비밀번호 확인 API
+  checkPassword: (id: number, password: string) => 
+    apiClient.post(`/api/inquiries/${id}/check-password`, { password }),
 };

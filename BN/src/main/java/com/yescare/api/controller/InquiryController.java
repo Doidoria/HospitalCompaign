@@ -4,6 +4,7 @@ import com.yescare.api.domain.Member;
 import com.yescare.api.dto.InquiryDetailResponse;
 import com.yescare.api.dto.InquiryRequest;
 import com.yescare.api.dto.InquiryResponse;
+import com.yescare.api.dto.PasswordRequest;
 import com.yescare.api.repository.MemberRepository;
 import com.yescare.api.service.InquiryService;
 import lombok.RequiredArgsConstructor;
@@ -55,5 +56,17 @@ public class InquiryController {
     public ResponseEntity<InquiryDetailResponse> getInquiry(@PathVariable Long id, Authentication authentication) {
         Member member = memberRepository.findByEmail(authentication.getName()).orElseThrow();
         return ResponseEntity.ok(inquiryService.getInquiryDetail(id, member));
+    }
+
+    // 비밀글 비밀번호 검증 API
+    @PostMapping("/{id}/check-password")
+    public ResponseEntity<Void> checkPassword(
+            @PathVariable Long id,
+            @RequestBody PasswordRequest request) {
+
+        inquiryService.checkInquiryPassword(id, request.getPassword());
+
+        // 에러 없이 통과했다면 200 OK 반환
+        return ResponseEntity.ok().build();
     }
 }
