@@ -17,6 +17,7 @@ public class ReviewResponse {
     private String comment;
     private String authorName;
     private LocalDateTime createdAt;
+    private String managerName;
 
     // Review 엔티티를 받아서 DTO로 자동 변환해주는 생성자
     public ReviewResponse(Review review) {
@@ -26,5 +27,10 @@ public class ReviewResponse {
         this.comment = review.getComment();
         this.authorName = review.getReservation().getMember().getName();
         this.createdAt = review.getCreatedAt();
+
+        // 예약에 배정된 매니저가 있을 경우 이름 세팅
+        if (review.getReservation().getManager() != null) {
+            this.managerName = review.getReservation().getManager().getName();
+        }
     }
 }

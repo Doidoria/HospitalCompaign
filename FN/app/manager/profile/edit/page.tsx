@@ -3,24 +3,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, FileText, Award, Briefcase, Star, CheckCircle2, AlertCircle, Eye } from 'lucide-react';
-import Swal from 'sweetalert2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { managerApi, authApi } from '@/src/api/index';
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2000,
-  timerProgressBar: true,
-});
+import { Toast } from '@/src/utils/alert';
 
 export default function ManagerProfileEditPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [userName, setUserName] = useState("");
-  
   const [profileForm, setProfileForm] = useState({
     introduction: '',
     career: '',

@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, FileText, MessageSquare, HelpCircle, ChevronRight, Navigation } from 'lucide-react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
 import { reservationApi, authApi } from '@/src/api/index';
+import { Toast } from '@/src/utils/alert';
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 // TypeScript 인터페이스
 interface Manager {
@@ -41,15 +42,6 @@ interface Reservation {
   transportation: string;
   mobility: string;
 }
-
-// 가벼운 Toast 알림 설정
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-});
 
 export default function ReservationDetailPage() {
   const params = useParams();

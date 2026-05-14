@@ -3,18 +3,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
-  LayoutDashboard, Users, CalendarDays, Activity, 
-  Search, CheckCircle2, XCircle, UserPlus,
-  FileText, MapPin, X, UserCog, Star, Loader2, Inbox, Send, UserMinus
+  LayoutDashboard, Users, CalendarDays, Activity, Search, CheckCircle2, XCircle, UserPlus,
+  FileText, MapPin, X, UserCog, Star, Loader2, Inbox, Send, UserMinus, MessageCircleQuestion, PenSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content'; 
-import { adminApi, reservationApi } from '@/src/api/index';
+import { adminApi, inquiryApi, reservationApi } from '@/src/api/index';
 
 const MySwal = withReactContent(Swal) as any;
 
-type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews';
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries';
 
 // 전역 Toast 알림 설정
 const Toast = Swal.mixin({
@@ -175,6 +174,18 @@ export default function AdminDashboardPage() {
   const [mgrAppStatus, setMgrAppStatus] = useState('WAITING'); // 지원서 상태 필터
   const [memberRoleFilter, setMemberRoleFilter] = useState(''); // 회원 권한 필터
 
+  // 1:1 문의 관련 상태
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [inquiryPage, setInquiryPage] = useState(0);
+  const [inquiryTotalPages, setInquiryTotalPages] = useState(0);
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState('');
+
+  // 문의 답변 모달 관련 상태
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [answerInput, setAnswerInput] = useState('');
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+
   const handleError = useCallback((error: any, defaultMsg: string) => {
     const serverMsg = error.response?.data?.message || error.response?.data;
     Swal.fire('요청 실패', serverMsg || defaultMsg, 'error');
@@ -200,6 +211,7 @@ export default function AdminDashboardPage() {
       case 'managers': return '매니저 승인 관리';
       case 'members': return '전체 회원 관리';
       case 'reviews': return '리뷰 및 리포트 모니터링';
+      case 'inquiries': return '고객센터 관리';
       default: return '관리자 시스템';
     }
   };
@@ -284,6 +296,47 @@ export default function AdminDashboardPage() {
     } catch (error) {} finally { setLoading(false); }
   }, []);
 
+  // 1:1 문의 가져오기
+  const fetchInquiries = useCallback(async (page: number = 0, status?: string) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAllInquiries(page, status);
+      setInquiries(res.data?.content || []);
+      setInquiryTotalPages(res.data?.totalPages || 0);
+    } catch (error) {
+      console.error('문의 내역 로드 에러:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 답변 작성 및 상태 변경 핸들러
+  const handleAnswerInquiry = async (inquiryId: number, title: string) => {
+    const { value: answerContent } = await MySwal.fire({
+      title: '문의 답변 작성',
+      input: 'textarea',
+      inputLabel: `'${title}' 문의에 대한 답변을 입력하세요.`,
+      inputPlaceholder: '답변 내용을 상세히 적어주세요...',
+      showCancelButton: true,
+      confirmButtonText: '답변 등록',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#2563eb',
+      inputValidator: (value: string) => {
+        if (!value) return '답변 내용을 입력해야 합니다!';
+      }
+    });
+
+    if (answerContent) {
+      try {
+        await adminApi.answerInquiry(inquiryId, answerContent);
+        Toast.fire({ icon: 'success', title: '답변이 성공적으로 등록되었습니다.' });
+        fetchInquiries(inquiryPage, inquiryStatusFilter); // 리스트 갱신
+      } catch (error) {
+        Swal.fire('오류', '답변 등록 중 문제가 발생했습니다.', 'error');
+      }
+    }
+  };
+
   useEffect(() => {
     if (activeTab !== 'dashboard') return;
     const delayDebounceFn = setTimeout(() => {
@@ -318,7 +371,8 @@ export default function AdminDashboardPage() {
     if (activeTab === 'members') fetchMembers(memberPage, memberRoleFilter);
     if (activeTab === 'reviews') fetchReviews(reviewPage);
     if (activeTab === 'managers') fetchManagerApplications(mgrAppStatus);
-  }, [activeTab, fetchMembers, fetchReviews, fetchManagerApplications, memberPage, memberRoleFilter, reviewPage, mgrAppStatus]);
+    if (activeTab === 'inquiries') fetchInquiries(inquiryPage, inquiryStatusFilter);
+  }, [activeTab, fetchMembers, fetchReviews, fetchManagerApplications, fetchInquiries, memberPage, memberRoleFilter, reviewPage, mgrAppStatus, inquiryPage, inquiryStatusFilter]);
 
   const handleOpenDetail = async (id: number) => {
     setSelectedRequest(null); // 이전 데이터 초기화
@@ -543,6 +597,39 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // 문의 상세 & 답변 모달 열기 핸들러
+  const handleOpenInquiryDetail = async (id: number) => {
+    setIsInquiryModalOpen(true);
+    setSelectedInquiry(null); // 로딩 스피너를 띄우기 위함
+    setAnswerInput(''); // 이전 입력값 초기화
+
+    try {
+      const res = await inquiryApi.getInquiry(id);
+      setSelectedInquiry(res.data);
+      if (res.data.answer) setAnswerInput(res.data.answer); // 이미 답변이 있다면 에디터에 채워넣기
+    } catch (error) {
+      setIsInquiryModalOpen(false);
+      Swal.fire('오류', '문의 상세 정보를 불러올 수 없습니다.', 'error');
+    }
+  };
+
+  // 답변 전송 핸들러
+  const submitAnswer = async () => {
+    if (!answerInput.trim()) return Toast.fire({ icon: 'warning', title: '답변 내용을 입력해주세요.' });
+    
+    setIsSubmittingAnswer(true);
+    try {
+      await adminApi.answerInquiry(selectedInquiry.id, answerInput);
+      Toast.fire({ icon: 'success', title: '답변이 성공적으로 등록되었습니다.' });
+      setIsInquiryModalOpen(false);
+      fetchInquiries(inquiryPage, inquiryStatusFilter); // 리스트 갱신
+    } catch (error) {
+      Swal.fire('오류', '답변 등록에 실패했습니다.', 'error');
+    } finally {
+      setIsSubmittingAnswer(false);
+    }
+  };
+
   const getStats = useCallback(() => {
     switch (activeTab) {
       case 'dashboard':
@@ -574,10 +661,17 @@ export default function AdminDashboardPage() {
           { title: '만점(5점) 리뷰', value: `${reviews.filter(r => r.rating === 5).length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
           { title: '주의(2점 이하) 리뷰', value: `${reviews.filter(r => r.rating <= 2).length}건`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
         ];
+      case 'inquiries':
+        return [
+          { title: '전체 문의', value: `${inquiries.length}건`, icon: <MessageCircleQuestion className="w-6 h-6 text-blue-500" /> },
+          { title: '답변 대기', value: `${inquiries.filter(i => i.status === 'PENDING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
+          { title: '답변 완료', value: `${inquiries.filter(i => i.status === 'ANSWERED').length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+          // (필요 시 기타 통계 추가)
+        ];
       default:
         return [];
     }
-  }, [activeTab, reservations, managerCount, pendingManagers, members, reviews]);
+  }, [activeTab, reservations, managerCount, pendingManagers, members, reviews, inquiries]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans text-gray-900 flex flex-col md:flex-row relative selection:bg-blue-100">
@@ -668,6 +762,89 @@ export default function AdminDashboardPage() {
             </motion.div>
           </motion.div>
         )}
+        {/* 1:1 문의 상세 및 답변 모달 */}
+        {isInquiryModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-100">
+              
+              <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-blue-50/30">
+                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                  <MessageCircleQuestion className="w-5 h-5 text-blue-600" /> 문의 상세 및 답변
+                  {selectedInquiry && <span className="text-sm font-medium text-slate-400 ml-1">#{selectedInquiry.id}</span>}
+                </h3>
+                <button onClick={() => setIsInquiryModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {!selectedInquiry ? (
+                <div className="flex flex-col items-center justify-center p-20 space-y-4">
+                  <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                  <p className="text-slate-400 font-medium text-sm">문의 내용을 불러오는 중입니다...</p>
+                </div>
+              ) : (
+                <div className="p-6 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
+                  
+                  {/* 질문 정보 */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap">
+                        {selectedInquiry.category === 'RESERVATION' ? '예약/매칭' : 
+                         selectedInquiry.category === 'PAYMENT' ? '결제/환불' : 
+                         selectedInquiry.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                      </span>
+                      <span className="text-slate-400 text-xs font-medium">{selectedInquiry.createdAt?.substring(0, 10)}</span>
+                    </div>
+                    <h2 className="text-xl font-extrabold text-slate-900 mb-4">{selectedInquiry.title}</h2>
+                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed min-h-[100px]">
+                      {selectedInquiry.content}
+                    </div>
+
+                    {/* 이미지 첨부가 있다면 렌더링 */}
+                    {selectedInquiry.imageUrls && selectedInquiry.imageUrls.length > 0 && (
+                      <div className="mt-4 flex gap-3 overflow-x-auto">
+                        {selectedInquiry.imageUrls.map((url: string, idx: number) => {
+                          const fullImageUrl = url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+                          return (
+                            <img key={idx} src={fullImageUrl} alt="첨부" 
+                              className="w-32 h-32 object-cover rounded-xl border border-slate-200 cursor-pointer hover:opacity-80" 
+                              onClick={() => window.open(fullImageUrl, '_blank')} 
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 답변 작성 에디터 */}
+                  <div className="border-t border-slate-200/60 pt-6">
+                    <h4 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-1.5">
+                      <PenSquare className="w-4 h-4" /> 관리자 답변 작성
+                    </h4>
+                    <textarea
+                      value={answerInput}
+                      onChange={(e) => setAnswerInput(e.target.value)}
+                      placeholder="고객의 문의에 대한 친절한 답변을 작성해주세요."
+                      className="w-full h-40 p-4 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm text-slate-800 resize-none shadow-sm"
+                    />
+                    <div className="flex justify-end gap-2 mt-4">
+                      <button onClick={() => setIsInquiryModalOpen(false)} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">
+                        취소
+                      </button>
+                      <button onClick={submitAnswer} disabled={isSubmittingAnswer} className="px-5 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/30 flex items-center gap-2 disabled:opacity-50">
+                        {isSubmittingAnswer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        {selectedInquiry.status === 'PENDING' ? '답변 등록' : '답변 수정'}
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* 좌측 사이드바 */}
@@ -685,7 +862,8 @@ export default function AdminDashboardPage() {
             { id: 'dashboard', icon: CalendarDays, label: '예약 관리' },
             { id: 'managers', icon: UserPlus, label: '매니저 승인 관리', badge: pendingManagers.length },
             { id: 'members', icon: UserCog, label: '전체 회원 관리' },
-            { id: 'reviews', icon: Star, label: '리뷰 모니터링' }
+            { id: 'reviews', icon: Star, label: '리뷰 모니터링' },
+            { id: 'inquiries', icon: MessageCircleQuestion, label: '고객센터 관리' }
           ].map((item) => (
             <button 
               key={item.id}
@@ -1044,7 +1222,7 @@ export default function AdminDashboardPage() {
                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                      <UserCog className="w-5 h-5 text-purple-600" /> 전체 회원 목록
                    </h2>
-                   <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full sm:w-auto">
+                   <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full sm:w-auto gap-2">
                     {/* 권한 선택 셀렉트 박스 */}
                     <select value={memberRoleFilter} onChange={(e) => {setMemberRoleFilter(e.target.value); setMemberPage(0);}}
                       className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm">
@@ -1153,11 +1331,12 @@ export default function AdminDashboardPage() {
                  </div>
                  
                  <div className="overflow-x-auto">
-                   <table className="w-full text-left border-collapse min-w-[800px]">
+                   <table className="w-full text-left border-collapse min-w-[850px]">
                      <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
                        <tr>
                          <th className="p-4 font-bold pl-6">리뷰 ID</th>
                          <th className="p-4 font-bold">예약 번호 / 작성자</th>
+                         <th className="p-4 font-bold text-center">동행 매니저</th>
                          <th className="p-4 font-bold">평점</th>
                          <th className="p-4 font-bold w-2/5">리뷰 내용</th>
                          <th className="p-4 font-bold text-center pr-6">관리</th>
@@ -1165,7 +1344,7 @@ export default function AdminDashboardPage() {
                      </thead>
                      <tbody className="text-sm bg-white">
                       {loading && filteredReviews.length === 0 ? (
-                        <tr><td colSpan={5} className="p-16 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></td></tr>
+                        <tr><td colSpan={6} className="p-16 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></td></tr>
                       ) : filteredReviews.length > 0 ? filteredReviews.map((review) => (
                          <tr key={review.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
                            <td className="p-4 pl-6 text-slate-400 font-medium">#{review.id}</td>
@@ -1173,7 +1352,31 @@ export default function AdminDashboardPage() {
                              <button className="text-blue-600 font-bold hover:text-blue-800 transition-colors flex items-center gap-1" onClick={() => handleOpenDetail(review.reservationId)}>
                                예약 #{review.reservationId} <FileText className="w-3 h-3" />
                              </button>
+                             <p className="text-xs text-slate-500 mt-1">{review.authorName}</p>
                            </td>
+                           
+                           {/* 매니저 프로필 버튼 영역 */}
+                           <td className="p-4 text-center">
+                             {review.managerName ? (
+                               <button 
+                                 onClick={() => {
+                                   // 전체 members 배열에서 매니저 이름으로 정보 찾기
+                                   const managerInfo = members.find(m => m.name === review.managerName && m.role.includes('MANAGER'));
+                                   if (managerInfo) {
+                                     handleViewMemberProfile(managerInfo);
+                                   } else {
+                                     Swal.fire('알림', '매니저 상세 정보를 찾을 수 없습니다.', 'warning');
+                                   }
+                                 }}
+                                 className="text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all font-bold shadow-sm mx-auto flex items-center gap-1 w-fit"
+                               >
+                                 <UserCog className="w-3.5 h-3.5" /> {review.managerName}
+                               </button>
+                             ) : (
+                               <span className="text-slate-400 text-xs font-medium">배정 안됨</span>
+                             )}
+                           </td>
+
                            <td className="p-4">
                              <div className="flex items-center text-amber-400">
                                {[...Array(5)].map((_, i) => (
@@ -1207,6 +1410,88 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
                </motion.div>
+            )}
+            {/* 탭 5: 고객센터(1:1 문의) 관리 */}
+            {activeTab === 'inquiries' && (
+              <motion.div key="inquiries" variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
+                <div className="p-5 border-b border-slate-100 bg-blue-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <MessageCircleQuestion className="w-5 h-5 text-blue-600" /> 고객센터 관리
+                  </h2>
+                  <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full sm:w-auto">
+                    <select value={inquiryStatusFilter} onChange={(e) => {setInquiryStatusFilter(e.target.value); setInquiryPage(0);}}
+                      className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+                      <option value="">모든 상태</option>
+                      <option value="PENDING">답변 대기 (PENDING)</option>
+                      <option value="ANSWERED">답변 완료 (ANSWERED)</option>
+                    </select>
+                  </form>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
+                    <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="p-4 font-bold pl-6">ID / 분류</th>
+                        <th className="p-4 font-bold">제목 / 작성자</th>
+                        <th className="p-4 font-bold">상태 / 작성일</th>
+                        <th className="p-4 font-bold text-center pr-6">답변 관리</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm bg-white">
+                      {loading && inquiries.length === 0 ? (
+                        <tr><td colSpan={4} className="p-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></td></tr>
+                      ) : inquiries.length > 0 ? inquiries.map((inq) => (
+                        <tr key={inq.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4 pl-6">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400 font-medium">#{inq.id}</span>
+                              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                {inq.category === 'RESERVATION' ? '예약/매칭' : 
+                                inq.category === 'PAYMENT' ? '결제/환불' : 
+                                inq.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                          <p className="font-bold text-slate-800 cursor-pointer hover:underline" onClick={() => handleOpenInquiryDetail(inq.id)}>{inq.title}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{inq.authorName} ({inq.authorEmail})</p>
+                        </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                              {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
+                            </span>
+                            <p className="text-xs text-slate-400 mt-1">{inq.createdAt?.substring(0, 10)}</p>
+                          </td>
+                          <td className="p-4 pr-6 text-center">
+                            {inq.status === 'PENDING' ? (
+                              <button onClick={() => handleOpenInquiryDetail(inq.id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
+                                답변 달기
+                              </button>
+                            ) : (
+                              <button onClick={() => handleOpenInquiryDetail(inq.id)} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm">
+                                답변 수정
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )) : <EmptyState message="문의 내역이 없습니다." />}
+                    </tbody>
+                  </table>
+                </div>
+
+                {inquiryTotalPages > 0 && (
+                  <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+                    <button disabled={inquiryPage === 0} onClick={() => setInquiryPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+                    {[...Array(inquiryTotalPages)].map((_, i) => (
+                      <button key={i} onClick={() => setInquiryPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${inquiryPage === i ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>
+                        {i + 1}
+                      </button>
+                    ))}
+                    <button disabled={inquiryPage >= inquiryTotalPages - 1} onClick={() => setInquiryPage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+                  </div>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

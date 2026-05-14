@@ -3,16 +3,25 @@
 import React, { useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Mail, Lock, User, ShieldCheck, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
 import { authApi } from '@/src/api/index';
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export default function LoginPage() {
   const [loginType, setLoginType] = useState<'user' | 'manager'>('user');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+
+  const handleKakaoLogin = () => {
+    const KAKAO_REST_API_KEY = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY?.trim();
+    const KAKAO_REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI?.trim();
+    
+    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_API_KEY}&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI as string)}&response_type=code`;
+    
+    window.location.href = KAKAO_AUTH_URL;
+};
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,9 +117,14 @@ export default function LoginPage() {
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호를 입력해주세요" className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
                 </div>
               </div>
-
               <button type="submit" className={`w-full text-white text-lg font-bold py-4 rounded-xl shadow-md transition-all active:scale-[0.98] mt-4 ${loginType === 'user' ? 'bg-blue-900 hover:bg-blue-950' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
                 로그인
+              </button>
+
+              {/* 카카오 로그인 버튼 */}
+              <button onClick={handleKakaoLogin}
+                className="w-full flex items-center justify-center py-3 px-4 mt-2 bg-[#FEE500] text-[#000000] font-bold rounded-lg hover:bg-[#FEE500]/90 transition-colors">
+                카카오 로그인 1초 만에 시작하기
               </button>
             </form>
             

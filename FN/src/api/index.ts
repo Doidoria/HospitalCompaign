@@ -95,6 +95,17 @@ export const adminApi = {
     
   cancelAssignManager: (reservationId: number) => 
     apiClient.patch(`/api/reservations/${reservationId}/cancel-assign`),
+
+  // 전체 1:1 문의 내역 조회 (페이징 및 상태 필터링)
+  getAllInquiries: (page: number = 0, status?: string) => {
+    let url = `/api/admin/inquiries?page=${page}`;
+    if (status) url += `&status=${status}`;
+    return apiClient.get(url);
+  },
+
+  // 1:1 문의에 답변 달기 및 상태 변경
+  answerInquiry: (inquiryId: number, answer: string) =>
+    apiClient.patch(`/api/admin/inquiries/${inquiryId}/answer`, { answer }),
 };
 
 export const managerApi = {
@@ -107,6 +118,9 @@ export const managerApi = {
     apiClient.put(`/api/managers/profile`, data),
 };
 
+// ==========================================
+// 리뷰 (review)
+// ==========================================
 export const reviewApi = {
   // 리뷰 목록 조회
   getReviews: (page = 0, size = 10) => 
@@ -120,4 +134,22 @@ export const reviewApi = {
 export const categoryApi = {
   // 서비스 카테고리 전체 목록 조회
   getAll: () => apiClient.get('/api/categories'), 
+};
+
+// ==========================================
+// 1:1 문의 (Inquiry)
+// ==========================================
+export const inquiryApi = {
+  submitInquiry: (formData: FormData) => 
+    apiClient.post('/api/inquiries', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+
+  // 내 문의 내역 가져오기
+  getMyInquiries: () => apiClient.get('/api/inquiries/me'),
+
+  // 상세 조회
+  getInquiry: (id: number) => apiClient.get(`/api/inquiries/${id}`),
 };

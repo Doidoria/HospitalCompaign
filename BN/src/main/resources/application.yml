@@ -40,6 +40,18 @@ spring:
           starttls:
             enable: true
 
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: a82a43d633b736010c5a157bdd5d2e25 # 백엔드에서 카카오와 통신할 때 사용
+            client-secret: cXoNJn9DAMZGJX7sVCaTCjDdAO6xlkFk # 필수 권장 (보안 강화)
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post # 카카오 권장 방식
+            redirect-uri: http://localhost:3000/api/auth/callback/kakao
+            scope: profile_nickname, account_email # 필요한 권한
+
 jwt:
   # 💡 비밀 도장 (실무에서는 절대 외부에 노출하면 안 됩니다!)
   # 최소 256비트(32글자) 이상이어야 안전합니다.

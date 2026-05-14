@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Calendar, Clock, MapPin, User, FileText, ChevronRight, Activity, CalendarDays, GraduationCap, Settings, Star, Crown, LogOut, Search } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
 import { STATUS_MAP, StatusKey } from '@/src/constants/statusMap';
 import { reservationApi, authApi } from '@/src/api/index';
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export default function MyPage() {
   const router = useRouter();
@@ -85,6 +85,20 @@ export default function MyPage() {
 
         if (userRes.data && userRes.data.name) {
           setUserName(userRes.data.name);
+
+          // 카카오 최초 가입자(가짜 번호)인 경우 정보 수정 페이지로 강제 이동
+          if (userRes.data.phoneNumber === '010-0000-0000') {
+            Swal.fire({
+              icon: 'info',
+              title: '추가 정보 입력 필요',
+              text: '원활한 매니저 매칭을 위해 연락처와 기본 주소를 먼저 입력해 주세요!',
+              confirmButtonText: '입력하러 가기',
+              allowOutsideClick: false // 바깥 클릭 방지
+            }).then(() => {
+              router.push('/mypage/edit');
+            });
+            return; // 아래 리스트 렌더링을 멈추고 바로 이동
+          }
         }
 
         const data = response.data;

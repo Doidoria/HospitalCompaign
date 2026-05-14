@@ -81,7 +81,7 @@ export default function Header() {
           </Link>
 
           {/* PC 전용 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-8 whitespace-nowrap">
             <div className="flex items-center gap-8 text-base font-bold">
               <Link href="/guide" className={`transition duration-300 ${isActive('/guide') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
                 서비스 안내

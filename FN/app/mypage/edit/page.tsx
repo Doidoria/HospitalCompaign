@@ -6,18 +6,13 @@ import { ArrowLeft, Lock, User, Phone, MapPin, CheckCircle2, Search, Users, Hear
 import Swal from 'sweetalert2';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import { authApi } from '@/src/api/index';
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2000,
-  timerProgressBar: true,
-});
+import { Toast } from '@/src/utils/alert';
 
 export default function MyInfoEditPage() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true); // 화면 깜빡임 방지용 로딩 상태
   const [isVerified, setIsVerified] = useState(false); // 진입 비밀번호 통과 여부
+  const [isKakaoUser, setIsKakaoUser] = useState(false); // 카카오 유저 여부 확인용
   const [password, setPassword] = useState('');
   
   const [isOpenPost, setIsOpenPost] = useState(false);
@@ -33,34 +28,53 @@ export default function MyInfoEditPage() {
     guardianPhone: ''
   });
 
-  // 휴대폰 인증 관련 상태 추가
+  // 휴대폰 인증 관련 상태
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
   const [smsCode, setSmsCode] = useState('');
   
-  // 비밀번호 변경 관련 상태 추가
+  // 비밀번호 변경 관련 상태
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // 비밀번호 정규식 (8자 이상, 영문, 숫자, 특수문자 포함)
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
 
-  // 인증 성공 시 내 정보 불러오기
+  // 페이지 진입 시 무조건 내 정보를 먼저 불러와서 카카오 유저인지 판별
   useEffect(() => {
-    if (isVerified) {
-      authApi.getMe().then(res => {
-        setFormData({
-          name: res.data.name || '',
-          phoneNumber: res.data.phoneNumber || '',
-          zipCode: res.data.zipCode || '',
-          address: res.data.address || '',
-          detailAddress: res.data.detailAddress || '',
-          guardianName: res.data.guardianName || '',
-          guardianPhone: res.data.guardianPhone || ''
-        });
-      }).catch(() => Swal.fire('오류', '내 정보를 불러올 수 없습니다.', 'error'));
-    }
-  }, [isVerified]);
+    let isMounted = true;
+    authApi.getMe().then(res => {
+      if (!isMounted) return;
+      const data = res.data;
+      
+      // 카카오 유저 판별 (이메일에 kakao가 들어가거나, 가짜 이메일 도메인이거나, 번호가 010-0000-0000인 경우)
+      const isSocial = data.email?.includes('kakao') || data.email?.includes('@yescare.dummy') || data.phoneNumber === '010-0000-0000';
+      
+      setIsKakaoUser(isSocial);
+      
+      // 카카오 유저면 '비밀번호 재확인' 단계를 무조건 패스시킴
+      if (isSocial) {
+        setIsVerified(true);
+      }
+
+      setFormData({
+        name: data.name || '',
+        phoneNumber: data.phoneNumber === '010-0000-0000' ? '' : (data.phoneNumber || ''), // 가짜 번호면 빈칸으로 설정하여 입력을 유도
+        zipCode: data.zipCode || '',
+        address: data.address || '',
+        detailAddress: data.detailAddress || '',
+        guardianName: data.guardianName || '',
+        guardianPhone: data.guardianPhone || ''
+      });
+    }).catch(() => {
+      Swal.fire('오류', '내 정보를 불러올 수 없습니다.', 'error');
+      router.push('/login');
+    }).finally(() => {
+      if (isMounted) setIsLoading(false);
+    });
+
+    return () => { isMounted = false; };
+  }, [router]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +91,8 @@ export default function MyInfoEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.phoneNumber) return Swal.fire('알림', '연락처를 입력해주세요.', 'warning');
+
     try {
       await authApi.updateMe(formData);
       Toast.fire({ icon: 'success', title: '모든 정보가 성공적으로 변경되었습니다.' });
@@ -145,6 +161,15 @@ export default function MyInfoEditPage() {
     }
   };
 
+  // 데이터를 불러오기 전까지 빈 화면 처리 (깜빡임 방지)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900">
       {isOpenPost && (
@@ -194,11 +219,16 @@ export default function MyInfoEditPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">이름</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                           readOnly={isKakaoUser}
+                           className={`w-full px-4 py-3 rounded-xl border outline-none ${isKakaoUser ? 'bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed' : 'border-gray-200 focus:ring-2 focus:ring-blue-500'}`} required />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">연락처</label>
-                    <input type="text" value={formData.phoneNumber} readOnly className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 outline-none" />
+                    <input type="text" value={formData.phoneNumber} onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+                           placeholder="010-0000-0000"
+                           readOnly={!isKakaoUser} // 카카오 유저만 수정 가능 (일반 유저는 SMS 인증 후 자동 입력)
+                           className={`w-full px-4 py-3 rounded-xl border outline-none ${!isKakaoUser ? 'bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed' : 'border-gray-200 focus:ring-2 focus:ring-blue-500'}`} required />
                   </div>
                 </div>
               </div>
@@ -237,71 +267,73 @@ export default function MyInfoEditPage() {
 
             </form>
 
-            {/* 2. 비밀번호 변경 폼 */}
-            <div className="bg-white p-8 rounded-[24px] shadow-sm border border-orange-100 bg-orange-50/10">
-              <h3 className="text-lg font-bold mb-5 flex items-center gap-2 text-orange-600">
-                <ShieldCheck className="w-5 h-5"/> 비밀번호 변경
-              </h3>
-              
-              {!isPhoneVerified ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-500 mb-2">비밀번호 변경을 위해 휴대폰 본인 인증이 필요합니다.</p>
-                  <div className="flex gap-2">
-                    <input type="text" value={formData.phoneNumber} readOnly className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none text-gray-500" />
-                    <button type="button" onClick={handleSendSms} className="px-4 py-3 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors">
-                      {smsSent ? '재발송' : '인증번호 발송'}
-                    </button>
-                  </div>
-                  {smsSent && (
+            {/* 카카오 유저가 아닐 때만 노출되는 비밀번호 변경 영역 */}
+            {!isKakaoUser && (
+              <div className="bg-white p-8 rounded-[24px] shadow-sm border border-orange-100 bg-orange-50/10">
+                <h3 className="text-lg font-bold mb-5 flex items-center gap-2 text-orange-600">
+                  <ShieldCheck className="w-5 h-5"/> 비밀번호 변경
+                </h3>
+                
+                {!isPhoneVerified ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-500 mb-2">비밀번호 변경을 위해 휴대폰 본인 인증이 필요합니다.</p>
                     <div className="flex gap-2">
-                      <input type="text" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} placeholder="인증번호 6자리" className="flex-1 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                      <button type="button" onClick={handleVerifySms} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                        인증확인
+                      <input type="text" value={formData.phoneNumber} readOnly className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none text-gray-500" />
+                      <button type="button" onClick={handleSendSms} className="px-4 py-3 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors">
+                        {smsSent ? '재발송' : '인증번호 발송'}
                       </button>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-2 mb-4">
-                    <CheckCircle2 className="w-4 h-4"/> 휴대폰 인증이 완료되었습니다.
+                    {smsSent && (
+                      <div className="flex gap-2">
+                        <input type="text" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} placeholder="인증번호 6자리" className="flex-1 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <button type="button" onClick={handleVerifySms} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                          인증확인
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">새 비밀번호 (영문+숫자+특수문자 8자 이상)</label>
-                    <input 
-                      type="password" 
-                      value={newPassword} 
-                      onChange={(e) => setNewPassword(e.target.value)} 
-                      className={`w-full px-4 py-3 rounded-xl border outline-none ${newPassword && !passwordRegex.test(newPassword) ? 'border-red-500 bg-red-50/20' : 'border-gray-200 focus:ring-2 focus:ring-orange-500'}`} 
-                      placeholder="새 비밀번호 입력" 
-                    />
-                    {newPassword && !passwordRegex.test(newPassword) && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> 형식이 맞지 않습니다.</p>}
-                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-2 mb-4">
+                      <CheckCircle2 className="w-4 h-4"/> 휴대폰 인증이 완료되었습니다.
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">새 비밀번호 (영문+숫자+특수문자 8자 이상)</label>
+                      <input 
+                        type="password" 
+                        value={newPassword} 
+                        onChange={(e) => setNewPassword(e.target.value)} 
+                        className={`w-full px-4 py-3 rounded-xl border outline-none ${newPassword && !passwordRegex.test(newPassword) ? 'border-red-500 bg-red-50/20' : 'border-gray-200 focus:ring-2 focus:ring-orange-500'}`} 
+                        placeholder="새 비밀번호 입력" 
+                      />
+                      {newPassword && !passwordRegex.test(newPassword) && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> 형식이 맞지 않습니다.</p>}
+                    </div>
 
-                  <div>
-                    <input 
-                      type="password" 
-                      value={confirmPassword} 
-                      onChange={(e) => setConfirmPassword(e.target.value)} 
-                      className={`w-full px-4 py-3 rounded-xl border outline-none ${confirmPassword && newPassword !== confirmPassword ? 'border-red-500 bg-red-50/20' : 'border-gray-200 focus:ring-2 focus:ring-orange-500'}`} 
-                      placeholder="새 비밀번호 확인" 
-                    />
-                    {confirmPassword && newPassword !== confirmPassword && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> 비밀번호가 일치하지 않습니다.</p>}
-                    {confirmPassword && newPassword === confirmPassword && passwordRegex.test(newPassword) && <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> 비밀번호가 일치하며 사용 가능합니다.</p>}
-                  </div>
+                    <div>
+                      <input 
+                        type="password" 
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                        className={`w-full px-4 py-3 rounded-xl border outline-none ${confirmPassword && newPassword !== confirmPassword ? 'border-red-500 bg-red-50/20' : 'border-gray-200 focus:ring-2 focus:ring-orange-500'}`} 
+                        placeholder="새 비밀번호 확인" 
+                      />
+                      {confirmPassword && newPassword !== confirmPassword && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> 비밀번호가 일치하지 않습니다.</p>}
+                      {confirmPassword && newPassword === confirmPassword && passwordRegex.test(newPassword) && <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> 비밀번호가 일치하며 사용 가능합니다.</p>}
+                    </div>
 
-                  <button 
-                    type="button" 
-                    onClick={handlePasswordChange} 
-                    disabled={!passwordRegex.test(newPassword) || newPassword !== confirmPassword} 
-                    className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl shadow-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 mt-2"
-                  >
-                    비밀번호 변경 확정
-                  </button>
-                </div>
-              )}
-            </div>
+                    <button 
+                      type="button" 
+                      onClick={handlePasswordChange} 
+                      disabled={!passwordRegex.test(newPassword) || newPassword !== confirmPassword} 
+                      className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl shadow-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 mt-2"
+                    >
+                      비밀번호 변경 확정
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button 
               type="submit" 

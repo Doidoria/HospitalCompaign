@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.List;
 
 @Configuration
@@ -40,7 +41,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/members/join", "/api/members/login",
-                                "/api/members/check-email", "/api/members/sms/**",
+                                "/api/members/check-email", "/api/members/sms/**", "/api/members/auth/kakao",
                                 "/error", "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/managers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()

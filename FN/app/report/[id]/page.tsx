@@ -3,18 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
 import { reportApi } from '@/src/api/index';
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2500,
-  timerProgressBar: true,
-});
+import { Toast } from '@/src/utils/alert';
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export default function ReportDetailPage() {
   const params = useParams();

@@ -1,21 +1,22 @@
 'use client';
 
+import DaumPostcodeEmbed from 'react-daum-postcode';
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ArrowLeft, Save, MapPin, Calendar, FileText, Search, 
   MessageSquare, HelpCircle, Car, Accessibility, Building2, X 
 } from 'lucide-react';
-import Swal from 'sweetalert2';
-import DaumPostcodeEmbed from 'react-daum-postcode';
 import { reservationApi } from '@/src/api/index';
+import { Toast } from '@/src/utils/alert';
+import Swal from 'sweetalert2';
 
 export default function ReservationEditPage() {
   const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   
-  // 🌟 주소 검색 타겟 상태 ('none' | 'hospital' | 'meeting')
+  // 주소 검색 타겟 상태 ('none' | 'hospital' | 'meeting')
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
 
   // 일정 및 상세 정보 보관함
@@ -28,21 +29,13 @@ export default function ReservationEditPage() {
     doctorInquiry: ''     // 의사 질의
   });
 
-  // 🌟 동행 기본 정보 보관함 추가
+  // 동행 기본 정보 보관함 추가
   const [basicExtraData, setBasicExtraData] = useState({
     meetingType: '자택',
     meetingAddress: '',
     meetingDetail: '',
     transportation: '택시 이용',
     mobility: '도보'
-  });
-
-  const Toast = Swal.mixin({
-    toast: true,
-    position: 'top-end',
-    showConfirmButton: false,
-    timer: 2000,
-    timerProgressBar: true,
   });
 
   useEffect(() => {

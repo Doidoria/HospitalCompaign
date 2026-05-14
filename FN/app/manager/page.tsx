@@ -5,17 +5,9 @@ import { motion, Variants } from "framer-motion";
 import { BookOpen, ShieldCheck, HeartHandshake, CheckCircle2, GraduationCap, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/src/api/index';
-import { apiClient } from '@/src/api/client'; 
+import { apiClient } from '@/src/api/client';
+import { Toast } from '@/src/utils/alert';
 import Swal from 'sweetalert2';
-
-// 가벼운 토스트 알림 설정 (화면을 가리지 않음)
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-});
 
 export default function ManagerApplyPage() {
   const router = useRouter();

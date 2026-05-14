@@ -5,15 +5,8 @@ import { motion, Variants } from 'framer-motion';
 import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
+import { Toast } from '@/src/utils/alert';
 import Swal from 'sweetalert2';
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2500,
-  timerProgressBar: true,
-});
 
 export default function ReportWritePage() {
   const params = useParams();

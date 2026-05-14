@@ -26,6 +26,10 @@ export const YesAlert = Swal.mixin({
   }
 });
 
-// 사용 예시 (컴포넌트에서)
-// import { YesAlert } from '@/src/utils/alert';
-// YesAlert.fire({ icon: 'success', title: '성공', text: '완료되었습니다.' });
+export const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2000, // 기본값 2초
+  timerProgressBar: true,
+});
