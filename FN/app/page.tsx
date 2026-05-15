@@ -6,6 +6,7 @@ import { motion, Variants } from 'framer-motion';
 import Link from 'next/link';
 import { reviewApi } from '@/src/api/index';
 import dayjs from 'dayjs';
+import EventPopup from '@/src/components/EventPopup';
 
 interface Review {
   id: number;
@@ -46,6 +47,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 overflow-x-hidden relative">
+      <EventPopup />
       {/* 1. 히어로 섹션 */}
       <motion.section className="bg-gradient-to-b from-blue-950 via-blue-900 to-gray-900 text-white py-16 md:py-32 px-6 text-center overflow-hidden relative z-0"
         initial="hidden" animate="visible" variants={containerVariants}
@@ -165,7 +167,6 @@ export default function Home() {
                   variants={itemVariants}
                 >
                   <div>
-                    {/* 별점 (DB 데이터 연동) */}
                     <div className="flex gap-1 mb-4">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <svg key={star} className={`w-5 h-5 ${star <= review.rating ? 'text-orange-400' : 'text-gray-200'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -173,7 +174,6 @@ export default function Home() {
                         </svg>
                       ))}
                     </div>
-                    {/* 후기 텍스트 */}
                     <p className="text-gray-700 leading-relaxed mb-6 break-keep italic whitespace-pre-wrap">
                       "{review.comment}"
                     </p>
@@ -186,17 +186,14 @@ export default function Home() {
                       </div>
                       <div>
                         <span className="block font-bold text-gray-900 text-sm">{maskName(review.authorName)} 고객님</span>
-                        {/* 백엔드 모델에 '병원' 정보가 없으므로 대체 텍스트 적용 */}
                         <span className="text-[11px] text-blue-600 font-semibold">예스케어 서비스 이용</span>
                       </div>
                     </div>
-                    {/* 날짜 포맷 (dayjs 사용) */}
                     <span className="text-[11px] text-gray-400">{dayjs(review.createdAt).format('YYYY.MM.DD')}</span>
                   </div>
                 </motion.div>
               ))
             ) : (
-              // 리뷰 데이터가 하나도 없을 때 보여줄 화면
               <div className="col-span-1 md:col-span-3 text-center py-16 text-gray-500 bg-gray-50 rounded-3xl border border-gray-100">
                 아직 작성된 후기가 없습니다. 첫 후기의 주인공이 되어주세요!
               </div>

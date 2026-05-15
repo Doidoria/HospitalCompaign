@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "animate.css": "^4.1.1",
     "axios": "^1.15.0",
     "dayjs": "^1.11.20",
     "framer-motion": "^12.38.0",

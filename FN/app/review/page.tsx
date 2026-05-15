@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Star, MessageCircleHeart, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star, MessageCircleHeart, Loader2, ChevronDown } from 'lucide-react';
 import { reviewApi } from '@/src/api/index';
 import dayjs from 'dayjs';
 
@@ -18,15 +18,43 @@ interface Review {
 export default function ReviewPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // 리스트 페이징 상태 관리 (리스트맵 추가)
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const SIZE = 10; // 모바일 앱 환경을 고려해 초기 로딩 개수를 10개로 조정
+
+  const fetchReviews = async (currentPage: number, isInitial = false) => {
+    try {
+      isInitial ? setIsLoading(true) : setIsLoadingMore(true);
+      const res = await reviewApi.getReviews(currentPage, SIZE);
+      const fetchedData = res.data.content || res.data;
+      
+      if (fetchedData.length < SIZE) {
+        setHasMore(false); // 더 이상 불러올 데이터가 없으면 버튼 숨김
+      }
+
+      setReviews(prev => isInitial ? fetchedData : [...prev, ...fetchedData]);
+    } catch (err) {
+      console.error("리뷰 로딩 실패:", err);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    reviewApi.getReviews(0, 50)
-      .then(res => {
-        setReviews(res.data.content || res.data); 
-      })
-      .catch(err => console.error("리뷰 로딩 실패:", err))
-      .finally(() => setIsLoading(false));
+    fetchReviews(0, true);
   }, []);
+
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchReviews(nextPage);
+    }
+  };
 
   const maskName = (name: string) => {
     if (!name || name.length < 2) return name;
@@ -55,30 +83,52 @@ export default function ReviewPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {reviews.map((review, idx) => (
-              <motion.div 
-                key={review.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex gap-1 mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star key={star} className={`w-5 h-5 ${star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-100 text-gray-200'}`} />
-                      ))}
+            <AnimatePresence>
+              {reviews.map((review, idx) => (
+                <motion.div 
+                  key={`${review.id}-${idx}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  // 새로 추가된 리스트만 애니메이션 딜레이 적용
+                  transition={{ delay: (idx % SIZE) * 0.1 }} 
+                  className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <div className="flex gap-1 mb-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star key={star} className={`w-5 h-5 ${star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-100 text-gray-200'}`} />
+                        ))}
+                      </div>
+                      <p className="text-sm font-bold text-gray-800">
+                        {maskName(review.authorName)} <span className="text-gray-400 font-normal ml-1">보호자님</span>
+                      </p>
                     </div>
-                    <p className="text-sm font-bold text-gray-800">
-                      {maskName(review.authorName)} <span className="text-gray-400 font-normal ml-1">보호자님</span>
-                    </p>
+                    <span className="text-sm text-gray-400">{dayjs(review.createdAt).format('YYYY.MM.DD')}</span>
                   </div>
-                  <span className="text-sm text-gray-400">{dayjs(review.createdAt).format('YYYY.MM.DD')}</span>
-                </div>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{review.comment}</p>
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{review.comment}</p>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* 리스트맵 하단 더보기 버튼 추가 */}
+            {hasMore && (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="flex justify-center pt-6"
+              >
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-full text-gray-600 font-medium hover:bg-gray-50 hover:text-blue-600 transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {isLoadingMore ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronDown className="w-5 h-5" />}
+                  더보기
+                </button>
               </motion.div>
-            ))}
+            )}
           </div>
         )}
       </main>

@@ -60,7 +60,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // 프론트엔드(리액트) 주소 허용 (포트가 3000번일 경우)
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://hospital-compaign.vercel.app"));
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",                 // 로컬 웹
+                "https://hospital-compaign.vercel.app",  // 배포된 웹
+                "http://localhost",                      // Android 앱 내부 웹뷰
+                "capacitor://localhost"                  // iOS 앱 내부 웹뷰
+        ));
         // 허용할 HTTP 메서드 지정 (OPTIONS는 브라우저의 사전 검사를 위해 필수)
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         // 모든 헤더 허용

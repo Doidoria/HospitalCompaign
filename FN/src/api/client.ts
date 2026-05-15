@@ -29,12 +29,25 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 3. 응답(Response) 인터셉터: 백엔드에서 에러를 보냈을 때 공통 처리
+// 3. 응답(Response) 인터셉터: 데이터 정제 및 공통 에러 처리
 let isAlertOpen = false; 
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // 백엔드의 ApiResponse 껍데기를 자동으로 벗겨줌
+    if (response.data && typeof response.data.success !== 'undefined') {
+      if (response.data.success) {
+        // 껍데기 버리고 알맹이(data)만 남겨서 컴포넌트로 전달
+        response.data = response.data.data;
+      } else {
+        // 백엔드에서 success: false 로 보낸 경우 강제로 에러 발생시킴
+        return Promise.reject(new Error(response.data.error || 'API 요청 실패'));
+      }
+    }
+    return response;
+  },
   (error) => {
+    // 기존 401(인증 만료) 에러 처리 로직
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');

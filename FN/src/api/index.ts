@@ -175,3 +175,23 @@ export const inquiryApi = {
   checkPassword: (id: number, password: string) => 
     apiClient.post(`/api/inquiries/${id}/check-password`, { password }),
 };
+
+// ==========================================
+// 팝업창 (Popup)
+// ==========================================
+export const popupApi = {
+  // 클라이언트: 현재 활성화된 팝업 정보 가져오기
+  getActivePopup: () => apiClient.get('/api/popups/active'),
+  
+  // 어드민: 모든 팝업 설정 조회
+  getPopupSettings: () => apiClient.get('/api/admin/popups'),
+  
+  // 어드민: 팝업 이미지 업로드 및 정보 수정
+  updatePopup: (formData: FormData) => apiClient.post('/api/admin/popups', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  
+  // 어드민: 사용 여부(상태) 즉시 변경
+  togglePopupStatus: (id: number, isActive: boolean) => 
+    apiClient.patch(`/api/admin/popups/${id}/status`, { isActive })
+};
