@@ -41,7 +41,7 @@ export const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
   showConfirmButton: false,
-  timer: 2500, // 읽기 편하도록 2.5초로 살짝 증가
+  timer: 2500, // 2.5초
   timerProgressBar: true,
   customClass: {
     // 토스트 전용 테일윈드 디자인 추가

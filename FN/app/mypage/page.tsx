@@ -6,8 +6,8 @@ import { Calendar, Clock, MapPin, User, FileText, ChevronRight, Activity, Calend
 import { useRouter } from 'next/navigation';
 import { STATUS_MAP, StatusKey } from '@/src/constants/statusMap';
 import { reservationApi, authApi } from '@/src/api/index';
+import { YesAlert, Toast } from '@/src/utils/alert';
 import Link from 'next/link';
-import Swal from 'sweetalert2';
 
 export default function MyPage() {
   const router = useRouter();
@@ -70,7 +70,7 @@ export default function MyPage() {
     const fetchData = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        Swal.fire({ icon: 'warning', title: '로그인 필요', text: '로그인 후 이용해 주세요.' });
+        YesAlert.fire({ icon: 'warning', title: '로그인 필요', text: '로그인 후 이용해 주세요.' });
         router.push('/login');
         return;
       }
@@ -88,7 +88,7 @@ export default function MyPage() {
 
           // 카카오 최초 가입자(가짜 번호)인 경우 정보 수정 페이지로 강제 이동
           if (userRes.data.phoneNumber === '010-0000-0000') {
-            Swal.fire({
+            YesAlert.fire({
               icon: 'info',
               title: '추가 정보 입력 필요',
               text: '원활한 매니저 매칭을 위해 연락처와 기본 주소를 먼저 입력해 주세요!',
@@ -176,15 +176,15 @@ export default function MyPage() {
       if (status === 'NONE') confirmText = '매니저 지원하러 가기';
       if (status === 'REJECTED') confirmText = '다시 지원하기';
 
-      Swal.fire({
+      YesAlert.fire({
         html: htmlContent, confirmButtonText: confirmText, confirmButtonColor: iconColor,
         showCancelButton: status === 'NONE' || status === 'REJECTED',
         cancelButtonText: '닫기', customClass: { popup: 'rounded-[32px]' }
       }).then((result) => {
         if ((status === 'NONE' || status === 'REJECTED') && result.isConfirmed) router.push('/manager'); 
       });
-    } catch (error) {
-      Swal.fire('오류', '신청 상태를 불러올 수 없습니다.', 'error');
+    } catch (error: any) {
+      YesAlert.fire('오류', error.message || '신청 상태를 불러올 수 없습니다.', 'error');
     }
   };
 

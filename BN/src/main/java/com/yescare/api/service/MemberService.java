@@ -25,13 +25,16 @@ public class MemberService {
     @Transactional
     public Long join(MemberJoinRequest request) {
         memberRepository.findByEmail(request.getEmail())
-                .ifPresent(m -> { throw new IllegalStateException("이미 가입된 이메일입니다."); });
+                .ifPresent(m -> {
+                    throw new IllegalStateException("이미 가입된 이메일입니다.");
+                });
 
         Member newMember = Member.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
+                .provider("LOCAL")
                 .zipCode(request.getZipCode())
                 .address(request.getAddress())
                 .detailAddress(request.getDetailAddress())

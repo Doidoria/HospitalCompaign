@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Lock, User, Phone, MapPin, CheckCircle2, Search, Users, HeartPulse, ShieldCheck, AlertCircle } from 'lucide-react';
-import Swal from 'sweetalert2';
 import DaumPostcodeEmbed from 'react-daum-postcode';
+import { YesAlert, Toast } from '@/src/utils/alert';
 import { authApi } from '@/src/api/index';
-import { Toast } from '@/src/utils/alert';
 
 export default function MyInfoEditPage() {
   const router = useRouter();
@@ -47,8 +46,8 @@ export default function MyInfoEditPage() {
       if (!isMounted) return;
       const data = res.data;
       
-      // 카카오 유저 판별 (이메일에 kakao가 들어가거나, 가짜 이메일 도메인이거나, 번호가 010-0000-0000인 경우)
-      const isSocial = data.email?.includes('kakao') || data.email?.includes('@yescare.dummy') || data.phoneNumber === '010-0000-0000';
+      // 카카오 유저 판별 (이메일에 kakao가 들어가면)
+      const isSocial = data.provider === 'KAKAO';
       
       setIsKakaoUser(isSocial);
       
@@ -66,8 +65,8 @@ export default function MyInfoEditPage() {
         guardianName: data.guardianName || '',
         guardianPhone: data.guardianPhone || ''
       });
-    }).catch(() => {
-      Swal.fire('오류', '내 정보를 불러올 수 없습니다.', 'error');
+    }).catch((error: any) => {
+      YesAlert.fire('오류', error.message || '내 정보를 불러올 수 없습니다.', 'error');
       router.push('/login');
     }).finally(() => {
       if (isMounted) setIsLoading(false);
@@ -78,27 +77,36 @@ export default function MyInfoEditPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) return Swal.fire('알림', '비밀번호를 입력해주세요.', 'warning');
-    
+    if (!password) return YesAlert.fire('알림', '비밀번호를 입력해주세요.', 'warning');
+
     try {
-      await authApi.verifyPassword(password);
-      setIsVerified(true);
-    } catch (error) {
-      Swal.fire({ icon: 'error', title: '인증 실패', text: '비밀번호가 일치하지 않습니다.' });
+      const res = await authApi.verifyPassword(password);
+      
+      const isMatch = (res.data as any) === true || res.data === 'true';
+      
+      if (isMatch) {
+        setIsVerified(true);
+      } else {
+        YesAlert.fire({ icon: 'error', title: '인증 실패', text: '비밀번호가 일치하지 않습니다.' });
+        setPassword('');
+      }
+    } catch (error: any) {
+      // 400 에러 등으로 던졌을 경우 여기서 잡힘
+      YesAlert.fire({ icon: 'error', title: '인증 실패', text: '비밀번호가 일치하지 않습니다.' });
       setPassword('');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.phoneNumber) return Swal.fire('알림', '연락처를 입력해주세요.', 'warning');
+    if (!formData.phoneNumber) return YesAlert.fire('알림', '연락처를 입력해주세요.', 'warning');
 
     try {
       await authApi.updateMe(formData);
       Toast.fire({ icon: 'success', title: '모든 정보가 성공적으로 변경되었습니다.' });
       router.push('/mypage');
-    } catch (error) {
-      Swal.fire('오류', '정보 수정에 실패했습니다.', 'error');
+    } catch (error: any) {
+      YesAlert.fire('오류', error.message || '정보 수정에 실패했습니다.', 'error');
     }
   };
 
@@ -120,8 +128,8 @@ export default function MyInfoEditPage() {
       await authApi.sendSms(formData.phoneNumber);
       setSmsSent(true);
       Toast.fire({ icon: 'success', title: '인증번호가 전송되었습니다.' });
-    } catch (err) {
-      Swal.fire('실패', 'SMS 발송 중 오류가 발생했습니다.', 'error');
+    } catch (err: any) {
+      YesAlert.fire('실패', err.message || 'SMS 발송 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -131,18 +139,18 @@ export default function MyInfoEditPage() {
       await authApi.verifySms(formData.phoneNumber, smsCode);
       setIsPhoneVerified(true);
       Toast.fire({ icon: 'success', title: '이제 비밀번호를 변경할 수 있습니다.' });
-    } catch (err) {
-      Swal.fire('인증 실패', '인증번호가 올바르지 않습니다.', 'error');
+    } catch (err: any) {
+      YesAlert.fire('인증 실패', err.message || '인증번호가 올바르지 않습니다.', 'error');
     }
   };
 
   // 비밀번호 변경 핸들러
   const handlePasswordChange = async () => {
     if (!passwordRegex.test(newPassword)) {
-      return Swal.fire('알림', '비밀번호 형식이 올바르지 않습니다.', 'warning');
+      return YesAlert.fire('알림', '비밀번호 형식이 올바르지 않습니다.', 'warning');
     }
     if (newPassword !== confirmPassword) {
-      return Swal.fire('알림', '비밀번호 확인이 일치하지 않습니다.', 'warning');
+      return YesAlert.fire('알림', '비밀번호 확인이 일치하지 않습니다.', 'warning');
     }
 
     try {
@@ -156,8 +164,8 @@ export default function MyInfoEditPage() {
       setIsPhoneVerified(false);
       setSmsSent(false);
       setSmsCode('');
-    } catch (err) {
-      Swal.fire('오류', '비밀번호 변경에 실패했습니다.', 'error');
+    } catch (err: any) {
+      YesAlert.fire('오류', err.message || '비밀번호 변경에 실패했습니다.', 'error');
     }
   };
 

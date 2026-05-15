@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/members/join", "/api/members/login",
                                 "/api/members/check-email", "/api/members/sms/**", "/api/members/auth/kakao",
                                 "/api/notices/", "/error", "/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/notices/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/managers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers("/api/managers/profile").authenticated()

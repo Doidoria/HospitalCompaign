@@ -47,6 +47,9 @@ public class Member {
     @Column(length = 20)
     private String guardianPhone; // 보호자 연락처
 
+    @Column(nullable = false, length = 20)
+    private String provider = "LOCAL"; // 기본값은 일반 가입(LOCAL)
+
     @Column(updatable = false)
     private LocalDateTime createdAt; // 가입일
 
@@ -62,7 +65,7 @@ public class Member {
 
     @Builder
     public Member(String email, String password, String name, String phoneNumber, String address, String detailAddress,
-                  String zipCode, String guardianName, String guardianPhone, Role role) {
+                  String zipCode, String guardianName, String guardianPhone, Role role, String provider) {
         this.email = email;
         this.password = password;
         this.name = name;
@@ -74,6 +77,7 @@ public class Member {
         this.guardianPhone = guardianPhone;
         this.createdAt = LocalDateTime.now(); // 객체 생성 시 현재 시간 자동 입력
         this.role = role != null ? role : Role.USER;
+        this.provider = provider != null ? provider : "LOCAL";
     }
 
     // 1:N 관계 설정 (회원 1 : 예약 N)

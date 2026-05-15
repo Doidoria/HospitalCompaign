@@ -11,6 +11,7 @@ public class MemberResponse {
     private String name;
     private String phoneNumber;
     private String role;
+    private String provider;
     private String zipCode;
     private String address;
     private String detailAddress;
@@ -28,6 +29,7 @@ public class MemberResponse {
         this.name = member.getName();
         this.phoneNumber = member.getPhoneNumber();
         this.role = member.getRole().name();
+        this.provider = member.getProvider();
         this.zipCode = member.getZipCode();
         this.address = member.getAddress();
         this.detailAddress = member.getDetailAddress();

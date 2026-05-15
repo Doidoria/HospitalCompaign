@@ -13,8 +13,14 @@ public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
 
     @Override
     public boolean supports(MethodParameter returnType, Class converterType) {
-        // 이미 ApiResponse로 감싸진 경우나 에러 응답은 중복으로 감싸지 않음
-        return !returnType.getParameterType().equals(ApiResponse.class);
+        // 1. 이미 ApiResponse인 경우 제외
+        if (returnType.getParameterType().equals(ApiResponse.class)) return false;
+
+        // 2. Swagger / OpenAPI 관련 경로 제외 (추가해 두면 좋습니다)
+        String className = returnType.getDeclaringClass().getName();
+        if (className.contains("springdoc") || className.contains("swagger")) return false;
+
+        return true;
     }
 
     @Override

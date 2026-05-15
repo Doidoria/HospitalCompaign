@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete; // 🌟 추가됨
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -89,7 +90,7 @@ public class Reservation {
     public Reservation(Member member, String patientName, String patientPhone, String hospitalName, LocalDateTime reservationTime,
                        String guardianName, String guardianPhone, String memo, ReservationStatus status, String requirements,
                        String detailedContent, String doctorInquiry, String category, String meetingPoint,
-                       String transportation, String mobility, String revisitCount) {
+                       String transportation, String mobility, String revisitCount, boolean hasProxy) {
         this.member = member;
         this.patientName = patientName;
         this.patientPhone = patientPhone;
@@ -108,6 +109,7 @@ public class Reservation {
         this.requirements = requirements;
         this.revisitCount = revisitCount;
         this.status = status != null ? status : ReservationStatus.WAITING;
+        this.hasProxy = hasProxy;
     }
 
     public void assignManager(Member manager) {

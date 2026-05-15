@@ -34,30 +34,34 @@ let isAlertOpen = false;
 
 apiClient.interceptors.response.use(
   (response) => {
-    // 백엔드의 ApiResponse 껍데기를 자동으로 벗겨줌
     if (response.data && typeof response.data.success !== 'undefined') {
       if (response.data.success) {
-        // 껍데기 버리고 알맹이(data)만 남겨서 컴포넌트로 전달
         response.data = response.data.data;
       } else {
-        // 백엔드에서 success: false 로 보낸 경우 강제로 에러 발생시킴
         return Promise.reject(new Error(response.data.error || 'API 요청 실패'));
       }
     }
     return response;
   },
   (error) => {
-    // 기존 401(인증 만료) 에러 처리 로직
+    // 에러가 난 API 주소가 무엇인지 확인합니다.
+    const originalRequestUrl = error.config?.url;
+
     if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        if (!isAlertOpen) {
-          isAlertOpen = true;
-          alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-          window.location.href = '/login';
+      // 로그인 API(/api/members/login 등)에서 터진 401 에러가 "아닐 때만" 만료 처리!
+      if (originalRequestUrl && !originalRequestUrl.includes('/login')) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          if (!isAlertOpen) {
+            isAlertOpen = true;
+            alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+            window.location.href = '/login';
+          }
         }
       }
     }
+    
+    // 에러를 그대로 통과시켜서 LoginPage의 catch 블록이 잡을 수 있게 해줍니다.
     return Promise.reject(error);
   }
 );

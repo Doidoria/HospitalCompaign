@@ -44,11 +44,11 @@ public class KakaoAuthService {
         Map<String, Object> userInfo = getKakaoUserInfo(kakaoAccessToken);
         Map<String, Object> kakaoAccount = (Map<String, Object>) userInfo.get("kakao_account");
 
-        // 🌟 방어 1: 카카오 고유 ID 추출 (이메일이 없을 때 사용할 식별자)
+        // 방어 1: 카카오 고유 ID 추출 (이메일이 없을 때 사용할 식별자)
         Object idObj = userInfo.get("id");
         String kakaoId = idObj != null ? String.valueOf(idObj) : UUID.randomUUID().toString().substring(0, 8);
 
-        // 🌟 방어 2: 이메일 안전하게 추출 및 임시 이메일 생성
+        // 방어 2: 이메일 안전하게 추출 및 임시 이메일 생성
         String email = null;
         if (kakaoAccount != null) {
             email = (String) kakaoAccount.get("email");
@@ -58,7 +58,7 @@ public class KakaoAuthService {
             email = "kakao_" + kakaoId + "@yescare.dummy";
         }
 
-        // 🌟 방어 3: 닉네임 안전하게 추출
+        // 방어 3: 닉네임 안전하게 추출
         String nickname = "카카오유저_" + kakaoId;
         if (kakaoAccount != null && kakaoAccount.get("profile") != null) {
             Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
@@ -81,6 +81,7 @@ public class KakaoAuthService {
                     .name(finalNickname)
                     .phoneNumber("010-0000-0000") // 필수값이므로 임시 부여
                     .role(Role.USER)
+                    .provider("KAKAO")
                     .build();
             return memberRepository.save(newMember);
         });

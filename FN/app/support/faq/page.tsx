@@ -9,11 +9,8 @@ import {
   ChevronDown, MessageCircleQuestion, Bell, Headphones, Search, ChevronLeft, 
   ChevronRight, PenSquare, Lock
 } from 'lucide-react';
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content'; 
+import { Toast, YesAlert, MySwal } from '@/src/utils/alert'; 
 import Link from 'next/link';
-
-const MySwal = withReactContent(Swal) as any;
 
 const faqs = [
   { q: "예약 취소 수수료는 어떻게 되나요?", a: "서비스 시작 24시간 전까지는 100% 무료 취소가 가능합니다. 12시간 전 취소 시 50% 수수료가 부과됩니다." },
@@ -46,40 +43,57 @@ export default function CustomerSupportPage() {
 
   useEffect(() => {
     if (activeTab === 'inquiry') {
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        Toast.fire({
+          icon: 'warning',
+          title: '로그인이 필요한 서비스입니다.',
+          timer: 1500,
+        });
+        setTimeout(() => {
+          router.push('/login'); 
+        }, 500); 
+        
+        return; 
+      }
+
       const fetchMyInquiries = async () => {
         try {
           const response = await inquiryApi.getMyInquiries();
 
-          // 백엔드 데이터를 프론트엔드 인터페이스(InquiryType)에 맞게 매핑
           const formattedData = response.data.map((item: any) => ({
             id: item.id,
             title: item.title,
             status: item.status,
-            date: item.createdAt ? item.createdAt.substring(0, 10).replace(/-/g, '.') : '날짜 없음', // 예: 2024-05-24T... -> 2024.05.24 로 변환
+            date: item.createdAt ? item.createdAt.substring(0, 10).replace(/-/g, '.') : '날짜 없음',
             isPrivate: item.private
           }));
-          // 응답 데이터가 배열이라고 가정하고 상태 업데이트
+          
           setMyInquiries(formattedData);
         } catch (error) {
           console.error("문의 내역을 불러오는 데 실패했습니다.", error);
-          // 실패 시 빈 배열 처리 혹은 알림창
+          // 에러 발생 시 토스트 알림
+          Toast.fire({ icon: 'error', title: '문의 내역을 불러오지 못했습니다.' });
         }
       };
+      
       fetchMyInquiries();
     }
-  }, [activeTab]); // activeTab이 변경될 때마다 실행
+  }, [activeTab]);
 
   useEffect(() => {
     const loadNotices = async () => {
       try {
-        const res = await noticeApi.getNotices(); // API 호출
+        const res = await noticeApi.getNotices();
         setNotices(res.data.content);
-      } catch (e) { console.error("공지 로드 실패", e); }
+      } catch (e) { 
+        console.error("공지 로드 실패", e); 
+      }
     };
     loadNotices();
   }, []);
 
-  // 7일 이내 작성된 공지인지 확인하는 함수
   const isNewNotice = (dateString: string) => {
     if (!dateString) return false;
     const noticeDate = new Date(dateString);
@@ -117,13 +131,22 @@ export default function CustomerSupportPage() {
   // 비밀글 비밀번호 확인 핸들러
   const handleCheckPassword = async (id: number) => {
     const { value: password } = await MySwal.fire({
-      title: '비밀번호 입력',
+      title: '비밀번호 확인',
       input: 'password',
-      inputLabel: '이 문의글에 설정한 비밀번호를 입력해주세요.',
-      inputPlaceholder: '비밀번호',
+      html: '<p class="text-sm text-slate-500 mb-2">이 문의글을 작성할 때 설정한<br/>비밀번호를 입력해주세요.</p>',
+      inputPlaceholder: '비밀번호 입력',
       showCancelButton: true,
       confirmButtonText: '확인',
       cancelButtonText: '취소',
+      customClass: {
+        popup: 'bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 p-4 md:p-6',
+        title: 'text-xl font-bold text-slate-800',
+        confirmButton: 'bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/30',
+        cancelButton: 'bg-slate-100 text-slate-600 px-6 py-3 rounded-2xl font-bold hover:bg-slate-200 transition-all',
+        actions: 'flex gap-3 mt-6',
+        input: 'rounded-xl border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-center text-lg tracking-widest' // 인풋창 스타일링
+      },
+      buttonsStyling: false,
       inputValidator: (value: string) => {
         if (!value) return '비밀번호를 입력해야 합니다!';
       }
@@ -131,12 +154,14 @@ export default function CustomerSupportPage() {
 
     if (password) {
       try {
-        // 백엔드 비밀번호 검증 API 호출 (사전에 api/index.ts에 추가 필요)
         await inquiryApi.checkPassword(id, password); 
-        // 성공하면 상세 페이지로 이동
         router.push(`/support/inquiry/${id}`);
       } catch (error) {
-        Swal.fire('오류', '비밀번호가 일치하지 않습니다.', 'error');
+        YesAlert.fire({
+          icon: 'error',
+          title: '인증 실패',
+          html: '비밀번호가 일치하지 않습니다.<br/>다시 확인해 주세요.'
+        });
       }
     }
   };

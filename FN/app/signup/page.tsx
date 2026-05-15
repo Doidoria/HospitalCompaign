@@ -5,7 +5,7 @@ import { motion, Variants } from 'framer-motion';
 import { Mail, Lock, User, ArrowLeft, Phone, CheckCircle2, MapPin, Search, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
+import { YesAlert, Toast } from '@/src/utils/alert';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import { authApi } from '@/src/api/index';
 
@@ -39,7 +39,7 @@ export default function SignupPage() {
   const allAgreed = agreements.age && agreements.terms && agreements.privacy;
 
   // 비밀번호 정규식 (영문, 숫자, 특수문자 포함 8~16자)
-  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*?_]).{8,16}$/;
+  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9\s]).{8,16}$/;
   const isPasswordValid = passwordRegex.test(formData.password);
   const isPasswordMatch = formData.password === formData.passwordConfirm && formData.password !== '';
 
@@ -76,22 +76,26 @@ export default function SignupPage() {
   const handleEmailCheck = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      Swal.fire({ icon: 'warning', title: '형식 오류', text: '올바른 이메일 형식을 입력해 주세요.' });
+      YesAlert.fire({ icon: 'warning', title: '형식 오류', text: '올바른 이메일 형식을 입력해 주세요.' });
       return;
     }
 
     try {
       const response = await authApi.checkEmail(formData.email);
-      if (response.data.isAvailable) {
-        Swal.fire({ icon: 'success', title: '사용 가능', text: '사용 가능한 이메일입니다.' });
+
+      // 값이 그냥 true이거나, 객체 안에 isAvailable이 true인 경우 모두 커버
+      const isAvailable = response.data === true || response.data?.isAvailable === true;
+
+      if (isAvailable) {
+        YesAlert.fire({ icon: 'success', title: '사용 가능', text: '사용 가능한 이메일입니다.' });
         setIsEmailChecked(true);
       } else {
-        Swal.fire({ icon: 'error', title: '사용 불가', text: '이미 가입된 이메일입니다.' });
+        YesAlert.fire({ icon: 'error', title: '사용 불가', text: '이미 가입된 이메일입니다.' });
         setIsEmailChecked(false);
       }
     } catch (error) {
       console.error('이메일 중복 검사 에러:', error);
-      Swal.fire({ icon: 'info', title: 'API 연결 필요', text: '현재 중복 검사 API가 없어 임시로 통과됩니다.' });
+      YesAlert.fire({ icon: 'info', title: 'API 연결 필요', text: '현재 중복 검사 API가 없어 임시로 통과됩니다.' });
       setIsEmailChecked(true); 
     }
   };
@@ -102,20 +106,20 @@ export default function SignupPage() {
     const cleanEmergency = formData.guardianPhone.replace(/-/g, '');
 
     if (!phoneRegex.test(cleanPhone)) {
-      Swal.fire({ icon: 'warning', title: '연락처 오류', text: '본인 연락처를 올바른 휴대폰 번호 형식으로 입력해 주세요.' });
+      YesAlert.fire({ icon: 'warning', title: '연락처 오류', text: '본인 연락처를 올바른 휴대폰 번호 형식으로 입력해 주세요.' });
       return;
     }
     if (cleanEmergency && !phoneRegex.test(cleanEmergency)) {
-      Swal.fire({ icon: 'warning', title: '연락처 오류', text: '보호자 연락처를 올바른 형식으로 입력해 주세요.' });
+      YesAlert.fire({ icon: 'warning', title: '연락처 오류', text: '보호자 연락처를 올바른 형식으로 입력해 주세요.' });
       return;
     }
     try {
       await authApi.sendSms(cleanPhone);
       setIsCodeSent(true);
       setTimer(180);
-      Swal.fire({ icon: 'success', title: '발송 완료', text: '인증번호가 발송되었습니다. 3분 내에 입력해 주세요.' });
+      YesAlert.fire({ icon: 'success', title: '발송 완료', text: '인증번호가 발송되었습니다. 3분 내에 입력해 주세요.' });
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '발송 실패', text: '문자 발송에 실패했습니다. 번호를 확인해 주세요.' });
+      YesAlert.fire({ icon: 'error', title: '발송 실패', text: '문자 발송에 실패했습니다. 번호를 확인해 주세요.' });
     }
   };
 
@@ -124,9 +128,9 @@ export default function SignupPage() {
     try {
       await authApi.verifySms(cleanPhone, verificationCode);
       setIsPhoneVerified(true);
-      Swal.fire({ icon: 'success', title: '인증 성공', text: '휴대폰 인증이 완료되었습니다.' });
+      YesAlert.fire({ icon: 'success', title: '인증 성공', text: '휴대폰 인증이 완료되었습니다.' });
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '인증 실패', text: '인증번호가 일치하지 않거나 만료되었습니다.' });
+      YesAlert.fire({ icon: 'error', title: '인증 실패', text: '인증번호가 일치하지 않거나 만료되었습니다.' });
     }
   };
 
@@ -196,8 +200,8 @@ export default function SignupPage() {
           router.push('/login');
         }
       }
-    } catch (error) {
-      setErrorMessage('회원가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    } catch (error: any) {
+      setErrorMessage(error.message || '회원가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
     }
   };
 
