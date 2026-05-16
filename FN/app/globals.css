@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* 예스케어 브랜드 커스텀 컬러 등록 */
+@theme {
+  --color-brand-blue: #0f172a;
+  --color-care-orange: #f97316;
+  --color-care-gray: #64748b;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

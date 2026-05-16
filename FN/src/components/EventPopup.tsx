@@ -1,83 +1,67 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { popupApi } from '@/src/api/index';
 import { X } from 'lucide-react';
-import { popupApi } from '@/src/api/index'; // API 임포트
-import dayjs from 'dayjs';
 
 export default function EventPopup() {
-  const [popupData, setPopupData] = useState<{imageUrl: string, isActive: boolean} | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const [popup, setPopup] = useState<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const checkPopup = async () => {
-      // 1. 로컬 스토리지 확인 (오늘 하루 보지 않기 여부)
-      const hideUntil = localStorage.getItem('hideEventPopupUntil');
-      if (hideUntil && dayjs().isBefore(dayjs(hideUntil))) return;
+    // 1. 로컬 스토리지에서 '오늘 하루 안 보기' 체크
+    const hidePopup = localStorage.getItem('hide_popup_today');
+    if (hidePopup === 'true') return;
 
-      try {
-        // 2. 백엔드에서 활성화된 팝업 데이터 가져오기
-        const res = await popupApi.getActivePopup();
-        if (res.data && res.data.isActive) {
-          setPopupData(res.data);
-          setIsVisible(true);
-        }
-      } catch (err) {
-        console.error("팝업 데이터를 불러오는데 실패했습니다.");
+    // 2. 백엔드에서 활성화된 팝업 가져오기
+    popupApi.getActivePopup().then(res => {
+      const data = Array.isArray(res.data) ? res.data[0] : res.data;
+      
+      if (data && (data.isActive || data.active)) {
+        const fullImageUrl = data.imageUrl?.startsWith('http') 
+          ? data.imageUrl 
+          : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${data.imageUrl}`;
+          
+        setPopup({ ...data, imageUrl: fullImageUrl });
+        setIsOpen(true);
       }
-    };
-
-    checkPopup();
+    }).catch(e => console.log('팝업 데이터를 불러오지 못했습니다.'));
   }, []);
 
-  const handleClose = () => {
-    if (isChecked) {
-      const tomorrow = dayjs().add(1, 'day').startOf('day').toISOString();
-      localStorage.setItem('hideEventPopupUntil', tomorrow);
-    }
-    setIsVisible(false);
+  const closeToday = () => {
+    // 24시간 동안 안 보기 설정 (임시로 true값만 저장)
+    localStorage.setItem('hide_popup_today', 'true');
+    setIsOpen(false);
   };
 
-  if (!popupData) return null;
+  if (!isOpen || !popup) return null;
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden"
-          >
-            <div className="relative aspect-[3/4] bg-blue-50">
-              <img 
-                src={popupData.imageUrl} // 백엔드에서 받은 이미지 URL
-                alt="이벤트 팝업" 
-                className="w-full h-full object-cover"
-              />
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-full max-w-md sm:max-w-lg animate__animated animate__zoomIn">
+        
+        {/* 팝업 이미지 클릭 시 링크 이동 */}
+        <a href={popup.linkUrl || '#'} target={popup.linkUrl ? "_blank" : "_self"} rel="noreferrer" className="block cursor-pointer">
+          <img 
+            src={popup.imageUrl} 
+            alt={popup.title || '이벤트 팝업'} 
+            className="w-full aspect-[4/5] object-cover" 
+          />
+        </a>
 
-            <div className="flex items-center justify-between px-5 py-4 bg-white border-t border-gray-100">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => setIsChecked(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 cursor-pointer"
-                />
-                <span className="text-sm text-gray-600">오늘 하루 보지 않기</span>
-              </label>
-              
-              <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-800">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-          </motion.div>
+        {/* 팝업 하단 컨트롤 버튼 */}
+        <div className="flex bg-white border-t border-gray-100">
+          <button onClick={closeToday}
+            className="flex-1 py-3 text-sm text-gray-600 hover:bg-gray-100 transition-colors border-r border-gray-100">
+              오늘 하루 보지 않기
+          </button>
+          <button onClick={() => setIsOpen(false)}
+            className="flex-1 py-3 text-sm font-bold text-gray-800 hover:bg-gray-100 transition-colors">
+              닫기
+          </button>
         </div>
-      )}
-    </AnimatePresence>
+
+      </div>
+    </div>
   );
 }

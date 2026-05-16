@@ -16,10 +16,10 @@ export const YesAlert = Swal.mixin({
     htmlContainer: 'text-slate-500 text-sm mt-2 mb-6 leading-relaxed',
     
     // 확인 버튼: 5:5 비율(flex-1), 파란색 글로우 그림자
-    confirmButton: 'flex-1 bg-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/30',
+    confirmButton: 'flex-1 bg-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/30 whitespace-nowrap',
     
     // 취소 버튼: 5:5 비율(flex-1)
-    cancelButton: 'flex-1 bg-slate-100 text-slate-600 px-5 py-3.5 rounded-2xl font-bold hover:bg-slate-200 transition-all',
+    cancelButton: 'flex-1 bg-slate-100 text-slate-600 px-5 py-3.5 rounded-2xl font-bold hover:bg-slate-200 transition-all whitespace-nowrap',
     
     // 버튼 컨테이너: 간격을 살짝 벌리고 위쪽 마진 제거
     actions: 'w-full flex gap-3 px-2 pb-2 mt-0'

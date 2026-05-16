@@ -54,7 +54,7 @@ export default function LoginPage() {
       // 권한별 페이지 이동
       if (userRole === 'ADMIN') router.push('/admin');
       else if (userRole === 'MANAGER') router.push('/manager/dashboard');
-      else router.push('/mypage');
+      else router.push('/');
 
     } catch (error: any) {
       if (error.response?.status === 409) {

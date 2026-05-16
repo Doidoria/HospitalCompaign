@@ -36,7 +36,8 @@ import java.util.stream.Collectors;
 public class InquiryService {
 
     private final InquiryRepository inquiryRepository;
-    private final PasswordEncoder passwordEncoder; // SecurityConfig에 등록된 Bean 사용
+    private final PasswordEncoder passwordEncoder;
+    private final FileStorageService fileStorageService;
 
     // 1:1 문의 전용 이미지 제한 용량 (5MB)
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -65,7 +66,7 @@ public class InquiryService {
                 }
 
                 // 파일 저장 및 URL(경로) 반환
-                String imageUrl = saveImageToLocal(file);
+                String imageUrl = fileStorageService.uploadFile(file);
                 savedImageUrls.add(imageUrl);
             }
         }
@@ -207,7 +208,7 @@ public class InquiryService {
         }
 
         // 비밀번호가 틀리면 예외 발생 (프론트에서 catch 블록으로 빠짐)
-        if (inquiry.getPassword() == null || !inquiry.getPassword().equals(password)) {
+        if (inquiry.getPassword() == null || !passwordEncoder.matches(password, inquiry.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
     }

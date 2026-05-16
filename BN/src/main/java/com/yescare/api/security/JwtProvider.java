@@ -45,7 +45,7 @@ public class JwtProvider {
                 .parseClaimsJws(token).getBody().get("role", String.class);
     }
 
-    // 🌟 [새로 추가된 기능 1] 토큰이 유효한지(변조/만료 여부) 확인
+    // 토큰이 유효한지(변조/만료 여부) 확인
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
@@ -55,7 +55,7 @@ public class JwtProvider {
         }
     }
 
-    // 🌟 [새로 추가된 기능 2] 토큰에서 회원 이메일 정보 꺼내기
+    // 토큰에서 회원 이메일 정보 꺼내기
     public String getEmail(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build()
                 .parseClaimsJws(token).getBody().getSubject();

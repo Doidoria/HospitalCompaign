@@ -32,7 +32,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 String role = jwtProvider.getRole(token);
                 request.setAttribute("userEmail", email);
 
-                // 🌟 [핵심 추가 부분] 스프링 시큐리티 본부에 "이 사람 정상 회원(ROLE_USER)입니다!" 라고 정식 보고하기
+                // 스프링 시큐리티 본부에 "이 사람 정상 회원(ROLE_USER)입니다!" 라고 정식 보고하기
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(email, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

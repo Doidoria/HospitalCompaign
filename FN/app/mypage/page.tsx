@@ -76,32 +76,31 @@ export default function MyPage() {
       }
 
       try {
-        const [userRes, response] = await Promise.all([
-          authApi.getMe(),
-          reservationApi.getMyList()
-        ]);
+        const userRes = await authApi.getMe();
         
         if (!isMounted) return;
 
         if (userRes.data && userRes.data.name) {
           setUserName(userRes.data.name);
 
-          // 카카오 최초 가입자(가짜 번호)인 경우 정보 수정 페이지로 강제 이동
           if (userRes.data.phoneNumber === '010-0000-0000') {
             YesAlert.fire({
               icon: 'info',
               title: '추가 정보 입력 필요',
               text: '원활한 매니저 매칭을 위해 연락처와 기본 주소를 먼저 입력해 주세요!',
               confirmButtonText: '입력하러 가기',
-              allowOutsideClick: false // 바깥 클릭 방지
+              allowOutsideClick: false
             }).then(() => {
               router.push('/mypage/edit');
             });
-            return; // 아래 리스트 렌더링을 멈추고 바로 이동
+            return; 
           }
         }
 
+        // 가짜 번호 검사를 통과한 "정상 유저"만 예약 목록을 가져옵니다.
+        const response = await reservationApi.getMyList();
         const data = response.data;
+
         const processedData = data.map((res: any) => {
           const dateObj = new Date(res.reservationTime);
           const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
@@ -146,21 +145,42 @@ export default function MyPage() {
   const handleCheckManagerStatus = async () => {
     try {
       const res = await authApi.getManagerAppStatus();
-      const { status, title, description, rejectionReason } = res.data;
+      const status = res.data?.status || 'NONE';
+      const rejectionReason = res.data?.rejectionReason || '';
 
-      let iconColor = ''; let iconEmoji = '';
-      if (status === 'APPROVED') { iconColor = '#10b981'; iconEmoji = '🎉'; } 
-      else if (status === 'WAITING') { iconColor = '#f59e0b'; iconEmoji = '⏳'; } 
-      else if (status === 'REJECTED') { iconColor = '#ef4444'; iconEmoji = '😥'; } 
-      else { iconColor = '#3b82f6'; iconEmoji = '📝'; }
+      let iconEmoji = '';
+      let title = '';
+      let description = '';
+
+      if (status === 'APPROVED') { 
+        iconEmoji = '🎉'; 
+        title = '매니저 승인 완료';
+        description = '축하합니다! 동행 매니저 승인이 완료되었습니다.<br/>이제부터 매니저 전용 시스템을 이용하실 수 있습니다.';
+      } 
+      else if (status === 'WAITING') { 
+        iconEmoji = '⏳'; 
+        title = '지원서 심사 중';
+        description = '제출해주신 매니저 지원서를 꼼꼼히 검토하고 있습니다.<br/>심사에는 영업일 기준 1~3일 정도 소요됩니다.';
+      } 
+      else if (status === 'REJECTED') { 
+        iconEmoji = '😥'; 
+        title = '매니저 승인 반려';
+        description = '아쉽게도 이번에는 승인이 반려되었습니다.<br/>아래 사유를 확인하신 후 요건을 보완하여 다시 지원해 주세요.';
+      } 
+      else { // 'NONE' (미지원 상태)
+        iconEmoji = '📝'; 
+        title = '매니저 지원 안내';
+        description = '아직 예스케어 동행 매니저로 지원하지 않으셨습니다.<br/>예스케어의 든든한 파트너가 되어주세요!';
+      }
 
       let htmlContent = `
-        <div style="padding: 15px 0;">
-          <div style="font-size: 65px; margin-bottom: 15px;">${iconEmoji}</div>
-          <h3 style="font-weight: 900; font-size: 22px; color: #1e293b; margin-bottom: 12px;">${title}</h3>
+        <div style="padding: 10px 0;">
+          <div style="font-size: 60px; margin-bottom: 15px;">${iconEmoji}</div>
+          <h3 style="font-weight: 900; font-size: 22px; color: #1e293b; margin-bottom: 10px;">${title}</h3>
           <p style="color: #64748b; font-size: 15px; line-height: 1.6; word-break: keep-all;">${description}</p>
       `;
 
+      // 반려 사유 박스
       if (status === 'REJECTED') {
         const displayReason = rejectionReason || '사유가 기재되지 않았습니다.';
         htmlContent += `
@@ -172,19 +192,38 @@ export default function MyPage() {
       }
       htmlContent += `</div>`;
 
+      // 버튼 텍스트 설정
       let confirmText = '확인';
       if (status === 'NONE') confirmText = '매니저 지원하러 가기';
       if (status === 'REJECTED') confirmText = '다시 지원하기';
 
+      // 팝업 띄우기
       YesAlert.fire({
-        html: htmlContent, confirmButtonText: confirmText, confirmButtonColor: iconColor,
+        html: htmlContent,
+        confirmButtonText: confirmText,
         showCancelButton: status === 'NONE' || status === 'REJECTED',
-        cancelButtonText: '닫기', customClass: { popup: 'rounded-[32px]' }
+        cancelButtonText: '닫기',
       }).then((result) => {
-        if ((status === 'NONE' || status === 'REJECTED') && result.isConfirmed) router.push('/manager'); 
+        if ((status === 'NONE' || status === 'REJECTED') && result.isConfirmed) {
+          router.push('/manager'); // 매니저 지원 페이지로 이동
+        } 
       });
+
     } catch (error: any) {
-      YesAlert.fire('오류', error.message || '신청 상태를 불러올 수 없습니다.', 'error');
+      if (error.response?.status === 404 || error.response?.status === 400) {
+        YesAlert.fire({
+          icon: 'info',
+          title: '매니저 지원 안내',
+          html: '아직 매니저로 지원하지 않으셨습니다.<br/>지금 바로 예스케어의 파트너가 되어보세요!',
+          showCancelButton: true,
+          confirmButtonText: '매니저 지원하러 가기',
+          cancelButtonText: '닫기'
+        }).then((result) => {
+          if(result.isConfirmed) router.push('/manager');
+        });
+      } else {
+        YesAlert.fire({ icon: 'error', title: '오류', text: error.message || '신청 상태를 불러올 수 없습니다.' });
+      }
     }
   };
 
@@ -239,7 +278,7 @@ export default function MyPage() {
               </Link>
             </div>
 
-            {/* 👉 탭 메뉴 버튼 */}
+            {/* 탭 메뉴 버튼 */}
             <div className="flex items-center gap-6 border-b border-slate-200 mt-2">
               <button
                 onClick={() => setActiveTab('upcoming')}
@@ -249,7 +288,7 @@ export default function MyPage() {
               >
                 다가오는 예약
                 {activeTab === 'upcoming' && (
-                  <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-[3px] bg-indigo-600 rounded-t-full" />
+                  <motion.div layoutId="mypage-tab-indicator" className="absolute bottom-0 left-0 right-0 h-[3px] bg-indigo-600 rounded-t-full" />
                 )}
               </button>
               <button
@@ -260,7 +299,7 @@ export default function MyPage() {
               >
                 과거 내역 및 리포트
                 {activeTab === 'past' && (
-                  <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-[3px] bg-indigo-600 rounded-t-full" />
+                  <motion.div layoutId="mypage-tab-indicator" className="absolute bottom-0 left-0 right-0 h-[3px] bg-indigo-600 rounded-t-full" />
                 )}
               </button>
             </div>

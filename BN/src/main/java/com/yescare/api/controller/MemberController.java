@@ -2,10 +2,7 @@ package com.yescare.api.controller;
 
 import com.yescare.api.domain.Member;
 import com.yescare.api.dto.*;
-import com.yescare.api.service.KakaoAuthService;
-import com.yescare.api.service.ManagerService;
-import com.yescare.api.service.MemberService;
-import com.yescare.api.service.SmsService;
+import com.yescare.api.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,11 +16,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -35,6 +29,7 @@ public class MemberController {
     private final ManagerService managerService;
     private final SmsService smsService;
     private final KakaoAuthService kakaoAuthService;
+    private final FileStorageService fileStorageService;
 
     // ==========================================
     // [회원(Member) 관련 API] -> memberService 사용
@@ -117,18 +112,7 @@ public class MemberController {
 
         String fileUrl = null;
         if (file != null && !file.isEmpty()) {
-            try {
-                String uploadDir = System.getProperty("user.dir") + "/uploads/certificates/";
-                File folder = new File(uploadDir);
-                if (!folder.exists()) folder.mkdirs();
-
-                String uniqueFilename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-                File destFile = new File(folder, uniqueFilename);
-                file.transferTo(destFile);
-                fileUrl = "/uploads/certificates/" + uniqueFilename;
-            } catch (IOException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 업로드 실패");
-            }
+            fileUrl = fileStorageService.uploadFile(file);
         }
         managerService.saveManagerApplication(request, email, fileUrl);
         return ResponseEntity.ok("매니저 지원이 완료되었습니다.");

@@ -1,6 +1,9 @@
 package com.yescare.api.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yescare.api.dto.ApiResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
@@ -8,15 +11,18 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-@RestControllerAdvice(basePackages = "com.example.yescare.controller") // 컨트롤러가 있는 패키지명으로 변경
+@RestControllerAdvice(basePackages = "com.yescare.api.controller")
+@RequiredArgsConstructor
 public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(MethodParameter returnType, Class converterType) {
         // 1. 이미 ApiResponse인 경우 제외
         if (returnType.getParameterType().equals(ApiResponse.class)) return false;
 
-        // 2. Swagger / OpenAPI 관련 경로 제외 (추가해 두면 좋습니다)
+        // 2. Swagger / OpenAPI 관련 경로 제외
         String className = returnType.getDeclaringClass().getName();
         if (className.contains("springdoc") || className.contains("swagger")) return false;
 
@@ -33,14 +39,21 @@ public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-        // 2. 문자열(String)을 반환할 때는 ClassCastException 방지를 위해 원본 반환 또는 수동 처리
-        if (body instanceof String) {
-            // String 타입은 여기서 감싸면 Spring 내부의 StringHttpMessageConverter와 충돌할 수 있으므로
-            // 컨트롤러에서 직접 ApiResponse.success()로 감싸는 것을 권장합니다.
-            return body;
+        // 공통 ApiResponse 객체 생성
+        ApiResponse<Object> apiResponse = ApiResponse.success(body);
+
+        // 2. 컨트롤러 반환 타입이 String이거나 StringHttpMessageConverter가 선택된 경우
+        // Spring 내부 내부 충돌(ClassCastException)을 방지하기 위해 ObjectMapper로 직접 JSON 변환 후 반환
+        if (body instanceof String || selectedConverterType.getName().contains("StringHttpMessageConverter")) {
+            response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+            try {
+                return objectMapper.writeValueAsString(apiResponse);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("공통 응답 포맷 직렬화 중 오류가 발생했습니다.", e);
+            }
         }
 
-        // 3. 그 외 모든 데이터(List, DTO 등)를 ApiResponse.success() 껍데기로 자동 포장!
-        return ApiResponse.success(body);
+        // 3. 그 외 모든 데이터 객체 자동 포장
+        return apiResponse;
     }
 }

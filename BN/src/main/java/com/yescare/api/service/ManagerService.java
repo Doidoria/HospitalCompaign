@@ -133,6 +133,15 @@ public class ManagerService {
         List<Review> reviews = reviewRepository.findByReservation_ManagerId(managerId);
         double averageRating = reviews.isEmpty() ? 0.0 : reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
 
-        return new ManagerProfileResponse(manager); // 이전에 만든 생성자 사용
+        return ManagerProfileResponse.of(
+                managerMember,
+                manager.getCertifications(),
+                manager.getCareer(),
+                manager.getIntroduction(),
+                averageRating,
+                reviews.size(), // 리뷰 개수 반영
+                manager.getAvailableDays(),
+                manager.getAvailableTime()
+        );
     }
 }
