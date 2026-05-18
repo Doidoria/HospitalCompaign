@@ -5,8 +5,7 @@ import { motion, Variants } from 'framer-motion';
 import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
-import { Toast } from '@/src/utils/alert';
-import Swal from 'sweetalert2';
+import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
 
 export default function ReportWritePage() {
   const params = useParams();
@@ -17,6 +16,8 @@ export default function ReportWritePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const [noNextSchedule, setNoNextSchedule] = useState(false); 
+  const [existingReportId, setExistingReportId] = useState<number | null>(null);
+  const [isModified, setIsModified] = useState(false);
 
   const [formData, setFormData] = useState({
     department: '',
@@ -29,18 +30,47 @@ export default function ReportWritePage() {
 
   // 작성할 예약 원본 데이터 불러오기
   useEffect(() => {
-    const fetchReservation = async () => {
+    const fetchReservationAndReport = async () => {
       try {
+        // 1) 예약 정보 불러오기
         const res = await reservationApi.getDetail(params.id as string);
         setTargetReservation(res.data);
+
+        try {
+          // 백엔드에 만들어둔 리포트 조회 API 호출 (예: reportApi.getReportByReservationId)
+          const reportRes = await reportApi.getReportByReservationId(params.id as string);
+          
+          if (reportRes.data) {
+            setExistingReportId(reportRes.data.id); // 기존 리포트 번호 저장
+            setIsModified(reportRes.data.isModified);
+            
+            // 3) 기존 데이터로 폼 덮어쓰기
+            setFormData({
+              department: reportRes.data.department || '',
+              doctorOpinion: reportRes.data.doctorOpinion || '',
+              prescription: reportRes.data.prescription || '',
+              nextSchedule: reportRes.data.nextSchedule || '',
+              patientCondition: reportRes.data.patientCondition || 'good',
+              managerComment: reportRes.data.managerComment || ''
+            });
+
+            // 다음 일정 없음 체크박스 연동
+            if (reportRes.data.noNextSchedule || reportRes.data.nextSchedule === '') {
+              setNoNextSchedule(true);
+            }
+          }
+        } catch (e) {
+          console.log("기존 리포트 없음 (신규 작성 모드)");
+        }
+
       } catch (error) {
-        Swal.fire({ icon: 'error', title: '오류', text: '예약 정보를 불러올 수 없습니다.' });
+        MySwal.fire({ icon: 'error', title: '오류', text: '예약 정보를 불러올 수 없습니다.' });
         router.push('/manager/dashboard');
       } finally {
         setLoading(false);
       }
     };
-    fetchReservation();
+    fetchReservationAndReport();
   }, [params.id, router]);
 
   // 컴포넌트 마운트 시 임시 저장된 리포트 데이터 불러오기
@@ -83,7 +113,7 @@ export default function ReportWritePage() {
     e.preventDefault();
     if (!reportRef.current) return;
     if (!formData.department || !formData.doctorOpinion || !formData.prescription || !formData.managerComment) {
-      Swal.fire({ icon: 'warning', title: '입력 확인', text: '필수 항목을 모두 입력해 주세요.' });
+      MySwal.fire({ icon: 'warning', title: '입력 확인', text: '필수 항목을 모두 입력해 주세요.' });
       return;
     }
     setIsSubmitting(true);
@@ -115,17 +145,28 @@ export default function ReportWritePage() {
       payload.append('request', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
       payload.append('pdfFile', pdfBlob, `케어리포트_${params.id}.pdf`);
 
-      const res = await reportApi.createWithPdf(payload);
+      let res;
+      if (existingReportId) {
+        // 기존 리포트가 있으면 수정(Update) API 호출
+        res = await reportApi.updateWithPdf(existingReportId, payload);
+      } else {
+        // 기존 리포트가 없으면 신규 생성(Create) API 호출
+        res = await reportApi.createWithPdf(payload);
+      }
 
       if (res.status === 200 || res.status === 201) {
         localStorage.removeItem(`draft_care_report_${params.id}`);
-        Swal.fire({ icon: 'success', title: '리포트 작성 완료', text: '보호자에게 알림이 전송되었습니다.' });
+        MySwal.fire({ 
+          icon: 'success', 
+          title: existingReportId ? '리포트 수정 완료' : '리포트 작성 완료', 
+          text: '보호자에게 알림이 전송되었습니다.' 
+        });
         router.push('/manager/dashboard');
       }
 
     } catch (error) {
       console.error('리포트 제출 에러:', error);
-      Swal.fire({ icon: 'error', title: '제출 실패', text: '서버 오류가 발생했습니다. 다시 시도해 주세요.' });
+      MySwal.fire({ icon: 'error', title: '제출 실패', text: '서버 오류가 발생했습니다. 다시 시도해 주세요.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -143,8 +184,15 @@ export default function ReportWritePage() {
         {/* 상단 대상자 정보 요약 */}
         <motion.div variants={itemVariants} className="bg-white rounded-2xl p-5 mb-6 border border-emerald-100 shadow-sm">
           <div className="flex justify-between items-start mb-2">
-            <div className="text-sm text-emerald-600 font-bold px-2 py-1 bg-emerald-50 rounded-lg">
-              작성 대상 (예약번호: #{targetReservation.id})
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-emerald-600 font-bold px-2 py-1 bg-emerald-50 rounded-lg">
+                작성 대상 (예약번호: #{targetReservation.id})
+              </div>
+              {isModified && (
+                <div className="text-xs text-orange-600 font-bold px-2 py-1 bg-orange-50 border border-orange-200 rounded-lg shadow-sm">
+                  수정됨 (재전송)
+                </div>
+              )}
             </div>
             <div className="text-sm text-gray-400">
               {new Date(targetReservation.reservationTime).toLocaleDateString('ko-KR')}
@@ -157,7 +205,6 @@ export default function ReportWritePage() {
           </p>
         </motion.div>
 
-        {/* 🌟 수정: form의 pb-28 제거 (하단 고정을 풀었으므로 불필요한 공백 제거) */}
         <form onSubmit={handleSubmit} className="space-y-6 pb-8">
           <div ref={reportRef} className="space-y-5 bg-gray-50 pb-4">
             
@@ -246,7 +293,12 @@ export default function ReportWritePage() {
               className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
               active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
               {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
-              {isSubmitting ? '전송 중...' : '보호자에게 전송하기'}
+              {isSubmitting 
+                ? '전송 중...' 
+                : existingReportId 
+                  ? '수정 및 재전송하기' 
+                  : '보호자에게 전송하기'
+              }
             </button>
           </motion.div>
           

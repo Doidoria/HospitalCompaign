@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircleQuestion, X, Loader2, Send, PenSquare } from 'lucide-react'; // ✅ PenSquare 추가
+import { MessageCircleQuestion, X, Loader2, Send, PenSquare } from 'lucide-react';
 
 interface InquiryModalProps {
   isOpen: boolean;
@@ -48,8 +48,6 @@ export default function InquiryModal({ isOpen, onClose, selectedInquiry, answerI
                     ))}
                   </div>
                 )}
-
-                {/* ✅ 복구된 에디터 영역 (구분선, PenSquare 아이콘, 상세 Placeholder, 테두리 색상) */}
                 <div className="border-t border-slate-200/60 pt-6 mt-4">
                   <h4 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-1.5">
                     <PenSquare className="w-4 h-4" /> 관리자 답변 작성
@@ -68,8 +66,6 @@ export default function InquiryModal({ isOpen, onClose, selectedInquiry, answerI
                     </button>
                   </div>
                 </div>
-                {/* 에디터 영역 끝 */}
-
               </div>
             )}
           </div>

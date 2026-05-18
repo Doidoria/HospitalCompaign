@@ -113,7 +113,7 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
               <tr>
@@ -173,6 +173,52 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto" /></div>
+          ) : filteredMembers.length > 0 ? filteredMembers.map((member) => {
+            const isAccountActive = member.active ?? member.isActive ?? true;
+            return (
+              <div key={member.id} className={`p-4 rounded-xl border shadow-sm flex flex-col gap-3 ${!isAccountActive ? 'bg-red-50/30 border-red-100' : 'bg-white border-slate-200'}`}>
+                <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                  <div>
+                    <span className="text-slate-400 font-bold text-xs mr-1">#{member.id}</span>
+                    <span className="font-extrabold text-slate-800 text-sm">{member.name}</span>
+                    <p className="text-xs text-slate-500 mt-0.5">{member.email}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${member.role.includes('ADMIN') ? 'bg-purple-50 text-purple-700 border-purple-200' : member.role.includes('MANAGER') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                    {member.role.includes('ADMIN') ? '관리자' : member.role.includes('MANAGER') ? '매니저' : '일반 고객'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button onClick={() => handleViewMemberProfile(member)} className="flex-[0.5] py-2 text-xs text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 font-bold shadow-sm flex justify-center items-center gap-1">
+                    <FileText className="w-3 h-3" /> 프로필
+                  </button>
+                  
+                  {member.role.includes('ADMIN') ? (
+                    <span className="flex-1 text-center py-2 text-xs font-bold text-slate-400 bg-slate-50 rounded-lg border border-slate-200">관리 불가</span>
+                  ) : (
+                    <>
+                      <select value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'} onChange={(e) => handleChangeRole(member.id, e.target.value)} className="flex-1 bg-white border border-slate-200 text-xs font-bold text-slate-600 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm">
+                        <option value="USER">일반 고객</option>
+                        <option value="MANAGER">매니저</option>
+                        <option value="ADMIN">관리자</option>
+                      </select>
+                      <button onClick={() => handleToggleStatus(member)} className={`flex-1 py-2 text-xs rounded-lg font-bold shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600' : 'bg-emerald-600 text-white'}`}>
+                        {isAccountActive ? '계정 정지' : '정지 해제'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          }) : (
+            <EmptyState message="검색 결과가 없습니다." />
+          )}
         </div>
         
         {memberTotalPages > 0 && (

@@ -105,7 +105,7 @@ export default function InquiryTab() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
               <tr>
@@ -124,7 +124,7 @@ export default function InquiryTab() {
                     <td className="p-4 pl-6">
                       <div className="flex items-center gap-2">
                         <span className="text-slate-400 font-medium">#{inq.id}</span>
-                        {/* ✅ 누락되었던 카테고리(분류) 뱃지 복구 */}
+                        {/* 카테고리(분류) 뱃지 */}
                         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md whitespace-nowrap">
                           {inq.category === 'RESERVATION' ? '예약/매칭' : 
                            inq.category === 'PAYMENT' ? '결제/환불' : 
@@ -140,14 +140,14 @@ export default function InquiryTab() {
                       <p className="text-xs text-slate-500 mt-0.5">{inq.authorName} ({inq.authorEmail || '이메일 없음'})</p>
                     </td>
                     <td className="p-4">
-                      {/* ✅ 상태 뱃지 테두리 디자인 및 작성일자 복구 */}
+                      {/* 상태 뱃지 테두리 디자인 및 작성일자 */}
                       <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
                         {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
                       </span>
                       <p className="text-xs text-slate-400 mt-1">{inq.createdAt?.substring(0, 10)}</p>
                     </td>
                     <td className="p-4 pr-6 text-center">
-                      {/* ✅ 답변 수정 버튼 오리지널 테마(흰 배경 + 회색 테두리) 복구 */}
+                      {/* 답변 수정 버튼 오리지널 테마(흰 배경 + 회색 테두리) */}
                       {inq.status === 'PENDING' ? (
                         <button onClick={() => handleOpenDetail(inq.id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
                           답변 달기
@@ -161,14 +161,52 @@ export default function InquiryTab() {
                   </tr>
                 ))
               ) : (
-                /* ✅ Empty State 복구 */
                 <tr><td colSpan={4} className="p-16 text-center text-slate-400">조건에 맞는 문의 내역이 없습니다.</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* ✅ 페이지네이션 블록 복구 */}
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></div>
+          ) : inquiries.length > 0 ? inquiries.map((inq) => (
+            <div key={inq.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-bold text-xs">#{inq.id}</span>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
+                    {inq.category === 'RESERVATION' ? '예약/매칭' : inq.category === 'PAYMENT' ? '결제/환불' : inq.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                  </span>
+                </div>
+                <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                  {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
+                </span>
+              </div>
+              
+              <div onClick={() => handleOpenDetail(inq.id)} className="cursor-pointer group">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5 text-sm group-hover:text-blue-600 transition-colors">
+                  {inq.isPrivate && <Lock className="w-3.5 h-3.5 text-slate-400" />} {inq.title}
+                </p>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-xs font-medium text-slate-600">{inq.authorName}</span>
+                  <span className="text-[11px] text-slate-400">{inq.createdAt?.substring(0, 10)}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-50">
+                <button onClick={() => handleOpenDetail(inq.id)} className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1 ${inq.status === 'PENDING' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  {inq.status === 'PENDING' ? '답변 달기' : '답변 수정'}
+                </button>
+              </div>
+            </div>
+          )) : (
+            <div className="py-16 text-center text-slate-400 text-sm">조건에 맞는 문의 내역이 없습니다.</div>
+          )}
+        </div>
+
+        {/* 페이지네이션 블록 */}
         {inquiryTotalPages > 0 && (
           <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
             <button disabled={inquiryPage === 0} onClick={() => setInquiryPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>

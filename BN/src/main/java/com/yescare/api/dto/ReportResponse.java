@@ -16,6 +16,7 @@ public class ReportResponse {
     private String managerComment;
     private String nextSchedule;
     private String patientCondition;
+    private boolean isModified;
 
     public ReportResponse(Report entity) {
         this.id = entity.getId();
@@ -31,5 +32,6 @@ public class ReportResponse {
         this.managerComment = entity.getManagerComment();
         this.nextSchedule = entity.getNextSchedule();
         this.patientCondition = entity.getPatientCondition();
+        this.isModified = entity.isModified();
     }
 }

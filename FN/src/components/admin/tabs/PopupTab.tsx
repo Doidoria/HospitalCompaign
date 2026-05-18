@@ -75,7 +75,7 @@ export default function PopupTab() {
     <div className="p-6 max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 mt-4">
       <div className="space-y-8">
         
-        {/* 💡 디자이너 가이드 (앱/웹 호환 4:5 규격 안내 박스) */}
+        {/* 디자이너 가이드 (앱/웹 호환 4:5 규격 안내 박스) */}
         <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3 text-sm text-blue-800">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
@@ -116,14 +116,14 @@ export default function PopupTab() {
         </div>
 
         {/* 사용 여부 토글 */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl">
           <div>
-            <p className="font-bold text-gray-800">팝업 노출 상태</p>
-            <p className="text-sm text-gray-500">메인 페이지에 팝업을 띄울지 결정합니다.</p>
+            <p className="font-bold text-gray-800 text-sm sm:text-base">팝업 노출 상태</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">메인 페이지에 팝업을 띄울지 결정합니다.</p>
           </div>
           <button 
             onClick={() => setIsActive(!isActive)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
@@ -131,12 +131,11 @@ export default function PopupTab() {
 
         {/* 이미지 업로드 */}
         <div>
-          <p className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-            <ImageIcon className="w-5 h-5" /> 팝업 포스터 이미지 <span className="text-red-500">*</span>
+          <p className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" /> 팝업 포스터 이미지 <span className="text-red-500">*</span>
           </p>
           <div 
-            // 💡 aspect-[4/5] 로 수정하여 규격 강제
-            className="relative aspect-[4/5] max-w-sm mx-auto rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden hover:border-blue-400 transition-colors group cursor-pointer bg-slate-50"
+            className="relative w-full max-w-[320px] aspect-[4/5] mx-auto rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden hover:border-blue-400 transition-colors group cursor-pointer bg-slate-50"
             onClick={() => document.getElementById('poster-upload')?.click()}
           >
             {previewUrl ? (
@@ -145,7 +144,7 @@ export default function PopupTab() {
               <div className="text-center p-4">
                 <ImageIcon className="w-10 h-10 text-gray-300 mx-auto mb-2 group-hover:text-blue-400 transition-colors" />
                 <p className="text-gray-500 font-medium mb-1">클릭하여 이미지 업로드</p>
-                {/* 💡 규격 안내 문구 추가 */}
+                {/* 규격 안내 문구 */}
                 <p className="text-xs text-gray-400">
                   권장 크기: 800 x 1000 px <br/>
                   최대 용량: 5MB

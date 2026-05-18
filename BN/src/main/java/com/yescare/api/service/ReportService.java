@@ -7,9 +7,9 @@ import com.yescare.api.dto.ReportRequest;
 import com.yescare.api.dto.ReportResponse;
 import com.yescare.api.repository.ReportRepository;
 import com.yescare.api.repository.ReservationRepository;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -68,7 +68,51 @@ public class ReportService {
                 reservation.getMember().getName(),
                 reservation.getHospitalName(),
                 request.getDoctorOpinion(),
-                pdfFile
+                pdfFile,
+                false // 신규 작성이므로 false 전달
+        );
+
+        return report.getId();
+    }
+
+    @Transactional
+    public Long updateReport(Long reportId, ReportRequest request, MultipartFile pdfFile) {
+        // 1. 기존 리포트 찾기
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 리포트를 찾을 수 없습니다."));
+
+        Reservation reservation = report.getReservation();
+
+        // 리포트를 수정(재전송)하면, 혹시 꼬여있던 상태라도 무조건 '이용 완료'로 강제 픽스!
+        reservation.updateStatus(ReservationStatus.COMPLETED);
+
+        // 2. 예약의 다음 일정 없음 체크박스 덮어쓰기
+        if (request.getNoNextSchedule() != null && request.getNoNextSchedule()) {
+            reservation.setNoRevisit(true);
+        } else {
+            reservation.setNoRevisit(false);
+        }
+
+        report.setModified(true);
+
+        // 3. 엔티티의 updateReport 메서드를 사용하여 내용 덮어쓰기
+        report.updateReport(
+                request.getDepartment(),
+                request.getDoctorOpinion(),
+                request.getPrescription(),
+                request.getManagerComment(),
+                request.getNextSchedule(),
+                request.getPatientCondition()
+        );
+
+        // 4. 수정한 내용과 새로운 PDF로 보호자에게 이메일 재전송
+        emailService.sendCareReport(
+                reservation.getMember().getEmail(),
+                reservation.getMember().getName(),
+                reservation.getHospitalName(),
+                request.getDoctorOpinion(),
+                pdfFile,
+                true // 수정 후 재전송이므로 true 전달!
         );
 
         return report.getId();
@@ -83,9 +127,9 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public ReportResponse getReportByReservationId(Long reservationId) {
-        Report report = reportRepository.findByReservationId(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 예약의 케어 리포트가 아직 작성되지 않았습니다."));
+        return reportRepository.findByReservationId(reservationId)
 
-        return new ReportResponse(report);
+                .map(ReportResponse::new)  // 리포트가 있으면 DTO로 변환
+                .orElse(null);
     }
 }

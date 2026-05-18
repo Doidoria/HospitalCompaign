@@ -90,17 +90,19 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
       </motion.div>
 
       <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
-        <div className="p-5 border-b border-slate-100 bg-amber-50/30 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-500" /> 작성된 리뷰 모니터링
+        <div className="p-5 border-b border-slate-100 bg-amber-50/30 flex flex-col items-center justify-center gap-3">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center justify-center gap-2 text-center">
+            <Star className="w-5 h-5 text-amber-500 shrink-0" /> 
+            <span className="leading-tight break-keep">리뷰 모니터링</span>
           </h2>
-          <div className="relative w-64">
-            <input type="text" placeholder="예약번호 또는 내용 검색..." value={reviewSearchTerm} onChange={(e) => setReviewSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          <div className="relative w-full max-w-auto">
+            <input type="text" placeholder="예약번호 또는 내용 검색..." value={reviewSearchTerm} onChange={(e) => setReviewSearchTerm(e.target.value)} 
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm" />
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
           </div>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[850px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
               <tr>
@@ -151,6 +153,49 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 (md:hidden) */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></div>
+          ) : filteredReviews.length > 0 ? (
+            filteredReviews.map((review) => (
+              <div key={review.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <span className="text-slate-400 font-bold text-xs mr-2">#{review.id}</span>
+                    <button className="text-blue-600 font-bold text-sm hover:underline" onClick={() => handleOpenDetail(review.reservationId)}>
+                      예약 #{review.reservationId}
+                    </button>
+                    <p className="text-xs text-slate-500 mt-0.5">작성자: {review.authorName}</p>
+                  </div>
+                  <div className="flex items-center text-amber-400 bg-amber-50 px-2 py-1 rounded-md">
+                     <Star className="w-3.5 h-3.5 fill-current" />
+                     <span className="ml-1 text-slate-700 font-bold text-xs">{review.rating}</span>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 font-medium break-all my-1">
+                  {review.comment}
+                </div>
+
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                  {review.managerName ? (
+                    <button onClick={() => handleViewMemberProfile(review.managerName)} className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1">
+                      <UserCog className="w-3 h-3" /> {review.managerName}
+                    </button>
+                  ) : <span className="text-slate-400 text-xs">매니저 없음</span>}
+
+                  <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center gap-1 bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold">
+                    <XCircle className="w-3 h-3" /> 삭제
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-16 text-center text-slate-400 text-sm font-medium">등록된 리뷰가 없습니다.</div>
+          )}
         </div>
         
         {reviewTotalPages > 0 && (

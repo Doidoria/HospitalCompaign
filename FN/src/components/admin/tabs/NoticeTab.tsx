@@ -124,41 +124,29 @@ export default function NoticeTab() {
       </motion.div>
       
       <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
-        {/* 헤더 변경: 검색창 및 필터 추가 */}
         <div className="p-5 border-b border-slate-100 bg-red-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 whitespace-nowrap">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center justify-center gap-2">
             <Megaphone className="w-5 h-5 text-red-600" /> 공지사항 관리
           </h2>
-          
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            <select
-              value={importanceFilter}
-              onChange={(e) => setImportanceFilter(e.target.value)}
-              className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm cursor-pointer w-full sm:w-auto"
-            >
+            <select value={importanceFilter} onChange={(e) => setImportanceFilter(e.target.value)}
+              className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm cursor-pointer w-full sm:w-auto">
               <option value="">모든 공지</option>
               <option value="IMPORTANT">중요 공지</option>
               <option value="GENERAL">일반 공지</option>
             </select>
-            
             <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="제목 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm transition-all placeholder:text-slate-400"
-              />
+              <input type="text" placeholder="제목 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm transition-all placeholder:text-slate-400"/>
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
             </div>
-            
             <button onClick={openNewNoticeModal} className="w-full sm:w-auto bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-red-700 shadow-sm whitespace-nowrap">
               + 새 공지 작성
             </button>
           </div>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
               <tr>
@@ -215,6 +203,51 @@ export default function NoticeTab() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-red-500 animate-spin mx-auto" /></div>
+          ) : filteredNotices.length > 0 ? filteredNotices.map((n) => {
+            const createdDate = n.createdAt?.substring(0, 10);
+            const updatedDate = n.updatedAt?.substring(0, 10);
+            const isModified = updatedDate && createdDate !== updatedDate;
+
+            return (
+              <div key={n.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                <div className="flex justify-between items-center mb-1">
+                  <div className="flex items-center gap-1.5">
+                    {n.important ? (
+                      <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold">중요</span>
+                    ) : (
+                      <span className="text-slate-400 text-[10px] font-bold px-2 py-0.5 border border-slate-200 rounded">일반</span>
+                    )}
+                    {isNewNotice(n.createdAt) && (
+                      <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">NEW</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-400 text-[10px] font-medium block">{createdDate}</span>
+                    {isModified && <span className="text-[9px] text-slate-300 block">(수정됨)</span>}
+                  </div>
+                </div>
+
+                <p className="font-bold text-slate-800 text-sm my-1">{n.title}</p>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-50 mt-1">
+                  <button onClick={() => { setSelectedNotice(n); setNoticeForm({ title: n.title, content: n.content, important: n.important }); setIsNoticeModalOpen(true); }} className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200">
+                    수정
+                  </button>
+                  <button onClick={() => handleDeleteNotice(n.id)} className="bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50">
+                    삭제
+                  </button>
+                </div>
+              </div>
+            );
+          }) : (
+            <div className="py-16 text-center text-slate-400 text-sm">조건에 맞는 공지사항이 없습니다.</div>
+          )}
         </div>
 
         {/* 페이지네이션 유지 */}

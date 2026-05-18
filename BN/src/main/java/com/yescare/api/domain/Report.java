@@ -38,6 +38,10 @@ public class Report {
     @Column(length = 20)
     private String patientCondition; // 당일 환자 컨디션
 
+    // 리포트가 수정(재전송)되었는지 여부를 추적하는 꼬리표
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isModified = false;
+
     @Builder
     public Report(Reservation reservation, String department, String doctorOpinion, String prescription,
                   String managerComment, String nextSchedule, String patientCondition) {
@@ -59,5 +63,13 @@ public class Report {
         this.managerComment = managerComment;
         this.nextSchedule = nextSchedule;
         this.patientCondition = patientCondition;
+    }
+
+    public boolean isModified() {
+        return this.isModified;
+    }
+
+    public void setModified(boolean modified) {
+        this.isModified = modified;
     }
 }

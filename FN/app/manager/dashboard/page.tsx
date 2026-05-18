@@ -356,19 +356,29 @@ export default function ManagerDashboard() {
                         className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-[0_2px_4px_rgb(59,130,246,0.1)] flex items-center justify-center gap-1.5">
                         <FileText className="w-4 h-4" /> 케어 리포트 작성
                       </Link>
-                    ) : req.noRevisit ? (
-                      <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                        <XCircle className="w-4 h-4" /> 재방문 없음
-                      </button>
-                    ) : req.hasProxy ? (
-                      <button disabled className="flex-1 bg-emerald-50 text-emerald-600 opacity-70 font-bold py-3.5 rounded-xl text-center text-sm border border-emerald-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                        <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
-                      </button>
                     ) : (
-                      <button onClick={() => handleProxyReservation(req)}
-                        className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
-                        <CalendarPlus className="w-4 h-4" /> 재방문 대리 신청
-                      </button>
+                      <>
+                        <Link href={`/manager/report/${req.id}`} 
+                          className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-indigo-200/60 shadow-[0_2px_4px_rgb(79,70,229,0.1)] flex items-center justify-center gap-1.5">
+                          <FileText className="w-4 h-4" /> 조회/수정
+                        </Link>
+
+                        {/* 3. 재방문 관련 버튼들 */}
+                        {req.noRevisit ? (
+                          <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                            <XCircle className="w-4 h-4" /> 재방문 없음
+                          </button>
+                        ) : req.hasProxy ? (
+                          <button disabled className="flex-1 bg-emerald-50 text-emerald-600 opacity-70 font-bold py-3.5 rounded-xl text-center text-sm border border-emerald-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                            <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
+                          </button>
+                        ) : (
+                          <button onClick={() => handleProxyReservation(req)}
+                            className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
+                            <CalendarPlus className="w-4 h-4" /> 대리 신청
+                          </button>
+                        )}
+                      </>
                     )}
                     
                     {/* 리뷰 별점 버튼 */}

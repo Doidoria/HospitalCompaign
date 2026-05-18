@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { adminApi, reservationApi } from '@/src/api/index';
-import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
+import { User, Mail, Phone, ShieldCheck, Home } from 'lucide-react';
+import { Toast, YesAlert, MySwal, WideSwal } from '@/src/utils/alert';
 
 // UI & Layout
 import Sidebar from '@/src/components/admin/ui/Sidebar';
@@ -73,17 +74,20 @@ export default function AdminDashboardPage() {
     }
     let confirmedEmail = ''; 
 
+    // 매니저 배정 버튼
     const result = await MySwal.fire({
       title: '매니저 배정',
       html: <ManagerListModalContent managers={allManagers} onSelect={(email) => { confirmedEmail = email; }} />,
-      width: '32em',
+      width: '42em',
       showCancelButton: true,
       confirmButtonText: '배정하기',
       cancelButtonText: '취소',
-      customClass: { popup: 'rounded-[28px] shadow-2xl p-2' }, 
+      customClass: { 
+        popup: 'bg-white rounded-[28px] shadow-2xl p-6 !max-w-4xl w-full' 
+      }, 
       preConfirm: () => {
         if (!confirmedEmail) {
-          MySwal.showValidationMessage('매니저를 선택해주세요.');
+          WideSwal.showValidationMessage('매니저를 선택해주세요.');
           return false;
         }
         return confirmedEmail;
@@ -122,35 +126,70 @@ export default function AdminDashboardPage() {
     MySwal.fire({
       title: '회원 상세 정보',
       html: (
-        <div className="text-left space-y-4 p-2 text-sm mt-2">
-          {/* 기본 정보 */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
-            <p className="mb-2 flex items-center"><span className="font-bold text-slate-500 w-24 shrink-0">이름</span> <span className="font-bold text-slate-800">{member.name}</span></p>
-            <p className="mb-2 flex items-center"><span className="font-bold text-slate-500 w-24 shrink-0">이메일</span> <span className="text-slate-700">{member.email}</span></p>
-            <p className="flex items-center"><span className="font-bold text-slate-500 w-24 shrink-0">휴대폰 번호</span> <span className="text-blue-600 font-bold">{member.phoneNumber || member.phone || '정보 없음'}</span></p>
+        <div className="text-left space-y-3 px-1 mt-0">
+          {/* 1. 기본 정보 */}
+          <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.03)]">
+            <h4 className="text-sm font-extrabold text-slate-800 mb-4 flex items-center gap-2">
+              <div className="p-1.5 bg-slate-50 rounded-lg border border-slate-100"><User className="w-4 h-4 text-slate-600"/></div>
+              기본 정보
+            </h4>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50">
+                <span className="font-bold text-slate-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5"/> 이름</span>
+                <span className="font-extrabold text-slate-800">{member.name}</span>
+              </div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50">
+                <span className="font-bold text-slate-400 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5"/> 이메일</span>
+                <span className="font-medium text-slate-600">{member.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-400 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5"/> 연락처</span>
+                <span className="font-extrabold text-blue-600">{member.phoneNumber || member.phone || '정보 없음'}</span>
+              </div>
+            </div>
           </div>
-          
-          {/* 보호자 정보 */}
-          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 shadow-sm">
-            <h4 className="font-extrabold text-blue-700 mb-2.5 border-b border-blue-100/80 pb-2">보호자 정보</h4>
-            <p className="mb-1.5 flex items-center"><span className="font-semibold text-slate-500 w-24 shrink-0">보호자 성함</span> <span className="text-slate-700 font-medium">{member.guardianName || '정보 없음'}</span></p>
-            <p className="flex items-center"><span className="font-semibold text-slate-500 w-24 shrink-0">보호자 연락처</span> <span className="text-slate-700 font-medium">{member.guardianPhone || '정보 없음'}</span></p>
+          {/* 2. 보호자 정보 */}
+          <div className="bg-white p-5 rounded-[20px] border border-blue-50 shadow-[0_2px_10px_rgb(59,130,246,0.04)] relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-400"></div>
+            <h4 className="text-sm font-extrabold text-slate-800 mb-4 flex items-center gap-2">
+              <div className="p-1.5 bg-blue-50 rounded-lg"><ShieldCheck className="w-4 h-4 text-blue-600"/></div>
+              보호자 정보
+            </h4>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-50">
+                <span className="font-bold text-slate-400">보호자 성함</span>
+                <span className="font-bold text-slate-700">{member.guardianName || '정보 없음'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-400">보호자 연락처</span>
+                <span className="font-bold text-slate-700">{member.guardianPhone || '정보 없음'}</span>
+              </div>
+            </div>
           </div>
-
-          {/* 자택 주소지 */}
-          <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100/50 shadow-sm">
-            <h4 className="font-extrabold text-emerald-700 mb-2.5 border-b border-emerald-100/80 pb-2">자택 주소지</h4>
-            <p className="text-slate-700 font-medium leading-relaxed">
-              {member.zipCode ? <span className="text-emerald-600 font-bold mr-1">[{member.zipCode}]</span> : ''}
-              {member.address || '등록된 주소 정보가 없습니다.'} 
-              {member.detailAddress ? ` ${member.detailAddress}` : ''}
-            </p>
+          {/* 3. 자택 주소지 */}
+          <div className="bg-white p-5 rounded-[20px] border border-emerald-50 shadow-[0_2px_10px_rgb(16,185,129,0.04)] relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
+            <h4 className="text-sm font-extrabold text-slate-800 mb-3 flex items-center gap-2">
+              <div className="p-1.5 bg-emerald-50 rounded-lg"><Home className="w-4 h-4 text-emerald-600"/></div>
+              자택 주소지
+            </h4>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-sm">
+              {member.zipCode && <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[11px] font-extrabold rounded-md mb-2 border border-emerald-100">우편번호 {member.zipCode}</span>}
+              <p className="text-slate-700 font-bold leading-relaxed break-words">
+                {member.address || '등록된 주소 정보가 없습니다.'} 
+                {member.detailAddress ? ` ${member.detailAddress}` : ''}
+              </p>
+            </div>
           </div>
         </div>
       ),
-      confirmButtonText: '닫기',
-      confirmButtonColor: '#334155',
-      customClass: { popup: 'rounded-[24px]' },
+      confirmButtonText: '확인 완료',
+      buttonsStyling: false,
+      customClass: { 
+        popup: 'bg-[#F8FAFC] rounded-[32px] shadow-2xl border border-slate-100 p-4 !max-w-md w-full',
+        title: 'text-xl font-extrabold text-slate-800 pt-2 pb-0',
+        confirmButton: 'w-full bg-slate-800 text-white rounded-2xl py-4 px-4 text-sm font-bold hover:bg-slate-900 transition-colors shadow-md active:scale-[0.98]'
+      },
     });
   };
 

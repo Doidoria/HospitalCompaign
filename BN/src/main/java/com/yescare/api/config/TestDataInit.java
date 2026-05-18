@@ -32,7 +32,7 @@ public class TestDataInit implements CommandLineRunner {
         String defaultPw = passwordEncoder.encode("1234");
 
         // ==========================================
-        // 1. 최고 관리자 및 일반 고객 생성
+        // 1. 최고 관리자 및 일반 고객 생성 (보호자 및 주소 정보 추가)
         // ==========================================
 
         // [최고 관리자]
@@ -46,7 +46,7 @@ public class TestDataInit implements CommandLineRunner {
         // [카카오 가입 고객 테스트용]
         Member kakaoUser = createMember("kakao_test@kakao.com", defaultPw, "카카오유저", "010-0000-0000", Role.USER, "KAKAO");
 
-        // [윤태현님 데이터 - 유지 및 provider 추가]
+        // [윤태현님 데이터]
         Member yoonUser = Member.builder()
                 .email("shth15926@gmail.com")
                 .password(passwordEncoder.encode("shth1234!!"))
@@ -76,15 +76,9 @@ public class TestDataInit implements CommandLineRunner {
         Manager m3 = createManager("manager3@yescare.com", defaultPw, "김케어", "010-7777-8888",
                 "행정 업무 완벽 지원!", "병원 원무과 7년", "병원행정사, 사회복지사", "월, 화, 수, 목, 금", "10:00 - 19:00");
 
-        Manager m4 = createManager("manager4@yescare.com", defaultPw, "최안심", "010-8888-9999",
-                "주말 전담 매니저입니다.", "재활센터 4년", "물리치료사 면허", "토, 일", "09:00 - 14:00");
-
-        Manager m5 = createManager("manager5@yescare.com", defaultPw, "정동행", "010-2222-8888",
-                "어르신 말벗 전문입니다.", "사회복지관 10년", "사회복지사 1급", "월, 화, 목", "13:00 - 21:00");
-
 
         // ==========================================
-        // 3. 예약 및 사후 데이터 (총 20건 이상 시뮬레이션)
+        // 3. 예약 데이터 시뮬레이션 (3단 UI 연동 상세 기본정보 추가)
         // ==========================================
         LocalDateTime now = LocalDateTime.now();
 
@@ -93,55 +87,47 @@ public class TestDataInit implements CommandLineRunner {
         saveRes(user2, "분당서울대병원", now.plusDays(2), "정밀 검사", ReservationStatus.WAITING, null);
         saveRes(yoonUser, "경북대병원", now.plusDays(3), "처방약 대리수령", ReservationStatus.WAITING, null);
         saveRes(user3, "삼성서울병원", now.plusDays(5), "일반 진료", ReservationStatus.WAITING, null);
-        saveRes(kakaoUser, "아산병원", now.plusDays(1), "종합 검진", ReservationStatus.WAITING, null);
 
-        // [예약 확정 건들]
-        Reservation resConf1 = saveRes(user1, "세브란스병원", now.plusDays(2), "항암 치료", ReservationStatus.CONFIRMED, m1);
-        Reservation resConf2 = saveRes(user2, "고대구로병원", now.plusHours(5), "정기 검진", ReservationStatus.CONFIRMED, m3);
-        Reservation resConf3 = saveRes(yoonUser, "영남대병원", now.plusDays(10), "재활 치료", ReservationStatus.CONFIRMED, m5);
+        // [예약 확정 건들 -> 대시보드에서 '케어 리포트 작성' 버튼이 뜨는 핵심 타겟]
+        saveRes(user1, "세브란스병원", now.plusDays(2), "항암 치료", ReservationStatus.CONFIRMED, m1);
+        saveRes(user2, "고대구로병원", now.plusHours(2), "정기 검진", ReservationStatus.CONFIRMED, m3);
+        saveRes(yoonUser, "영남대병원", now.plusDays(10), "재활 치료", ReservationStatus.CONFIRMED, m2);
 
         // [취소 건들]
         saveRes(user1, "한양대병원", now.minusDays(5), "치과 진료", ReservationStatus.CANCELLED, null);
-        saveRes(user3, "강남성모병원", now.plusDays(1), "내과 진료", ReservationStatus.CANCELLED, m2);
 
-        // [이용 완료 및 리포트/리뷰 세트]
-
-        // 세트 1: 김테스트 & 이매니저
-        Reservation comp1 = saveRes(user1, "아산현대병원", now.minusDays(2), "수면 내시경", ReservationStatus.COMPLETED, m1);
-        saveReport(comp1, "소화기내과", "normal", "용종 없이 깨끗합니다.", "특이사항 없음", "보호자님께 전화로 내용 전달 완료");
+        // [이용 완료 및 리뷰 세트]
+        // 💡 중요: 리포트 최초 작성 테스트를 방해하지 않도록 saveReport()는 과감히 제외했습니다.
+        // 현재 이 상태로 두면 대시보드 완료 탭에서 [케어 리포트 작성] 버튼이 깔끔하게 노출됩니다.
+        Reservation comp1 = saveRes(user1, "아산현대병원", now.minusDays(1), "수면 내시경", ReservationStatus.COMPLETED, m1);
         saveReview(comp1, 5, "매니저님이 검사 끝날 때까지 문 앞에서 기다려주셔서 감동이었어요.");
 
-        // 세트 2: 이단골 & 김케어
-        Reservation comp2 = saveRes(user2, "분당제생병원", now.minusDays(7), "당뇨 수치 확인", ReservationStatus.COMPLETED, m3);
-        saveReport(comp2, "내분비내과", "good", "혈당 조절이 잘 되고 있습니다.", "기존 약 동일 처방", "약국 대기 줄이 길었으나 무사히 수령");
+        Reservation comp2 = saveRes(user2, "분당제생병원", now.minusDays(2), "당뇨 수치 확인", ReservationStatus.COMPLETED, m3);
         saveReview(comp2, 4, "설명을 꼼꼼하게 메모해주셔서 의사 선생님 말씀을 다 이해했네요.");
 
-        // 세트 3: 윤태현님 고정 데이터 (유지)
-        Reservation yoonComp = Reservation.builder()
-                .member(yoonUser).patientName("윤태현").patientPhone("01012341234")
-                .hospitalName("계명대동산병원").reservationTime(LocalDateTime.of(2026, 5, 1, 17, 30))
-                .category("일반 진료").status(ReservationStatus.COMPLETED).hasProxy(true).build();
-        yoonComp.assignManager(m1.getMember());
-        reservationRepository.save(yoonComp);
-        saveReport(yoonComp, "이비인후과", "good", "중이염 소견.", "항생제 3일분", "첫 방문 안내 완벽 수행");
-        saveReview(yoonComp, 4, "처음이라 막막했는데 든든했습니다.");
-
         // [대량 페이징 테스트용 추가 데이터]
-        for (int i = 1; i <= 10; i++) {
-            saveRes(user3, "테스트병원 " + i, now.minusDays(10 + i), "일반 진료", ReservationStatus.COMPLETED, m2);
+        for (int i = 1; i <= 8; i++) {
+            saveRes(user3, "종합병원 " + i, now.minusDays(10 + i), "정기 검진", ReservationStatus.COMPLETED, m2);
         }
 
-        System.out.println("✅ [YesCare] 런칭급 대규모 테스트 데이터 초기화 완료!");
-        System.out.println("   - 총 회원 수: " + memberRepository.count() + "명 (Yoon, Kakao 포함)");
-        System.out.println("   - 총 예약 수: " + reservationRepository.count() + "건 (전 상태 포함)");
-        System.out.println("   - Provider 필드 적용 완료 (LOCAL/KAKAO)");
+        System.out.println("✅ [YesCare] 보호자/주소/예약 상세정보가 완벽히 포함된 런칭 데이터 초기화 완료!");
     }
 
-    // 편의 메서드: 회원 생성
+    // 편의 메서드: 회원 생성 (기본 주소 및 보호자 정보 일괄 자동 세팅)
     private Member createMember(String email, String pw, String name, String phone, Role role, String provider) {
         Member m = Member.builder()
-                .email(email).password(pw).name(name).phoneNumber(phone)
-                .role(role).provider(provider).build();
+                .email(email)
+                .password(pw)
+                .name(name)
+                .phoneNumber(phone)
+                .guardianName(name + "보호자")          // 💡 자동 생성 보호자 이름
+                .guardianPhone("010-8888-7777")       // 💡 자동 생성 보호자 연락처
+                .zipCode("12345")                     // 💡 기본 우편번호
+                .address("서울시 강남구 테헤란로 123")     // 💡 기본 주소
+                .detailAddress("예스빌딩 4층")          // 💡 상세 주소
+                .role(role)
+                .provider(provider)
+                .build();
         return memberRepository.save(m);
     }
 
@@ -154,18 +140,30 @@ public class TestDataInit implements CommandLineRunner {
         return managerRepository.save(manager);
     }
 
-    // 편의 메서드: 예약 저장
+    // 편의 메서드: 예약 저장 (3단 UI 고도화 데이터 탑재)
     private Reservation saveRes(Member user, String hospital, LocalDateTime time, String cat, ReservationStatus status, Manager manager) {
         Reservation res = Reservation.builder()
-                .member(user).patientName(user.getName()).patientPhone(user.getPhoneNumber())
-                .hospitalName(hospital).reservationTime(time).category(cat).status(status).build();
+                .member(user)
+                .patientName(user.getName())
+                .patientPhone(user.getPhoneNumber())
+                .guardianName(user.getGuardianName())   // 💡 회원 정보에서 보호자 연동
+                .guardianPhone(user.getGuardianPhone()) // 💡 회원 정보에서 보호자 연락처 연동
+                .hospitalName(hospital)
+                .reservationTime(time)
+                .category(cat)
+                .status(status)
+
+                // 💡 프론트엔드 3단 UI(회색, 파란색, 주황색) 및 카카오맵 연동을 위한 상세 데이터 픽스
+                .meetingPoint("자택 앞 /// " + user.getAddress())
+                .transportation("일반 택시 결제 요청")
+                .mobility("독립 보행 가능 (약간의 부축 필요)")
+                .requirements("병원 원무과 접수 시 보호자 대리 사인 부탁드립니다. 낙상에 주의해 주세요.")
+                .detailedContent("- 정기 혈액 검사 진행 예정\n- 진료 전 8시간 금식 상태 유지 확인 필요")
+                .doctorInquiry("최근 처방받은 약을 드신 후 간헐적인 어지러움증이 생기셨는데 약물 부작용 가능성이 있는지 여쭤봐 주세요.")
+                .build();
+
         if (manager != null) res.assignManager(manager.getMember());
         return reservationRepository.save(res);
-    }
-
-    private void saveReport(Reservation res, String dep, String cond, String opinion, String pres, String comment) {
-        reportRepository.save(Report.builder().reservation(res).department(dep).patientCondition(cond)
-                .doctorOpinion(opinion).prescription(pres).managerComment(comment).build());
     }
 
     private void saveReview(Reservation res, int rating, String comment) {

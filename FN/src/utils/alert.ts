@@ -56,3 +56,26 @@ export const Toast = Swal.mixin({
 });
 
 export const MySwal = withReactContent(Swal);
+
+// ==========================================
+// 넓은 화면용 React 컴포넌트 모달 (매니저 배정)
+// ==========================================
+export const WideSwal = withReactContent(Swal.mixin({
+  width: '56em', // (약 900px)
+  customClass: {
+    popup: 'bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 p-4 md:p-6 !max-w-4xl w-full',
+    title: 'text-xl font-extrabold text-slate-800 mt-2',
+    htmlContainer: 'mt-4 mb-6', // 컴포넌트가 들어가므로 글자색 스타일 제외
+    confirmButton: 'flex-1 bg-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/30 whitespace-nowrap',
+    cancelButton: 'flex-1 bg-slate-100 text-slate-600 px-5 py-3.5 rounded-2xl font-bold hover:bg-slate-200 transition-all whitespace-nowrap',
+    actions: 'w-full flex gap-3 px-2 pb-2 mt-0'
+  },
+  buttonsStyling: false,
+  backdrop: 'rgba(15, 23, 42, 0.4) backdrop-blur-sm', 
+  showClass: {
+    popup: 'animate__animated animate__fadeInUp animate__faster'
+  },
+  hideClass: {
+    popup: 'animate__animated animate__fadeOutDown animate__faster'
+  }
+}));

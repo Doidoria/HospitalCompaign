@@ -83,19 +83,19 @@ export default function MyPage() {
         if (userRes.data && userRes.data.name) {
           setUserName(userRes.data.name);
 
-          if (userRes.data.phoneNumber === '010-0000-0000') {
-            YesAlert.fire({
-              icon: 'info',
-              title: '추가 정보 입력 필요',
-              text: '원활한 매니저 매칭을 위해 연락처와 기본 주소를 먼저 입력해 주세요!',
-              confirmButtonText: '입력하러 가기',
-              allowOutsideClick: false
-            }).then(() => {
-              router.push('/mypage/edit');
-            });
-            return; 
-          }
+        if (userRes.data.phoneNumber === '010-0000-0000' && !userRes.data.name.includes('관리자')) {
+          YesAlert.fire({
+            icon: 'info',
+            title: '추가 정보 입력 필요',
+            text: '원활한 매니저 매칭을 위해 연락처와 기본 주소를 먼저 입력해 주세요!',
+            confirmButtonText: '입력하러 가기',
+            allowOutsideClick: false
+          }).then(() => {
+            router.push('/mypage/edit');
+          });
+          return; 
         }
+      }
 
         // 가짜 번호 검사를 통과한 "정상 유저"만 예약 목록을 가져옵니다.
         const response = await reservationApi.getMyList();

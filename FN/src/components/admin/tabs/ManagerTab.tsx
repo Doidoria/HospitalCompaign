@@ -74,7 +74,6 @@ export default function ManagerTab() {
       </motion.div>
       
       <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6">
-        {/* ✅ 헤더 flex 속성 변경으로 필터 버튼 오른쪽 끝으로 배치 */}
         <div className="p-5 border-b border-slate-100 bg-emerald-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-emerald-600" /> 가입 승인 대기 목록
@@ -88,7 +87,7 @@ export default function ManagerTab() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
               <tr>
@@ -140,11 +139,61 @@ export default function ManagerTab() {
                   </td>
                 </tr>
               )) : (
-                /* ✅ EmptyState 컴포넌트로 통일성 부여 */
                 <EmptyState message="대기 중인 지원서가 없습니다." colSpan={6} />
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" /></div>
+          ) : pendingManagers.length > 0 ? pendingManagers.map((mgr) => (
+            <div key={mgr.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                <div>
+                  <p className="font-extrabold text-slate-800 text-sm">{mgr.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{mgr.phone}</p>
+                </div>
+                <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-bold border border-emerald-100">
+                  {mgr.licenseName === 'caregiver' ? '요양보호사' : mgr.licenseName === 'socialworker' ? '사회복지사' : mgr.licenseName === 'none' ? '없음' : mgr.licenseName}
+                </span>
+              </div>
+              
+              <div className="bg-slate-50 p-3 rounded-lg flex flex-col gap-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold">지원일자</span>
+                  <span className="text-slate-700 font-medium">{mgr.applyDate}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block mb-1">근무 가능 시간</span>
+                  <div className="flex gap-1 flex-wrap mb-1">
+                    {mgr.availableDays?.split(',').map((day: string, idx: number) => (
+                      <span key={idx} className="bg-white border border-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{day.trim()}</span>
+                    ))}
+                  </div>
+                  <span className="text-[11px] text-slate-600 font-medium">{mgr.availableTime}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                {mgr.certificateUrl && (
+                  <a href={`${process.env.NEXT_PUBLIC_API_URL}${mgr.certificateUrl}`} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
+                    증명서 보기
+                  </a>
+                )}
+                {mgrAppStatus === 'WAITING' && (
+                  <>
+                    <button onClick={() => handleApprove(mgr.memberId, mgr.name)} className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm">승인</button>
+                    <button onClick={() => handleReject(mgr.id, mgr.name)} className="flex-1 bg-white border border-red-200 text-red-600 py-2 rounded-lg text-xs font-bold hover:bg-red-50 shadow-sm">반려</button>
+                  </>
+                )}
+              </div>
+            </div>
+          )) : (
+            <EmptyState message="대기 중인 지원서가 없습니다." />
+          )}
         </div>
       </motion.div>
     </>
