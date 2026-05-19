@@ -1,3 +1,4 @@
+// src/components/admin/modals/NoticeModal.tsx
 'use client';
 
 import React from 'react';

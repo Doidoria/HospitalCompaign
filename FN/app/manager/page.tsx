@@ -1,3 +1,4 @@
+// app/manager/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,8 +7,7 @@ import { BookOpen, ShieldCheck, HeartHandshake, CheckCircle2, GraduationCap, Loa
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/src/api/index';
 import { apiClient } from '@/src/api/client';
-import { Toast } from '@/src/utils/alert';
-import Swal from 'sweetalert2';
+import { Toast, MySwal } from '@/src/utils/alert';
 
 export default function ManagerApplyPage() {
   const router = useRouter();
@@ -90,7 +90,7 @@ export default function ManagerApplyPage() {
       await apiClient.post('/api/members/apply-manager', submitData);
       
       // 중요한 최종 완료 메시지만 모달 유지 (디자인 개선)
-      await Swal.fire({
+      await MySwal.fire({
         icon: 'success', 
         title: '신청이 완료되었습니다', 
         text: '관리자 심사 후 매니저 권한이 부여됩니다.',
@@ -99,9 +99,16 @@ export default function ManagerApplyPage() {
       });
       router.push('/mypage');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      Toast.fire({ icon: 'error', title: '오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+      
+      if (error.response?.status === 409) {
+        Toast.fire({ icon: 'info', title: '이미 지원이 완료되었습니다' });
+        router.push('/mypage');
+      } else {
+        // 그 외의 진짜 서버 에러 (500 등)
+        Toast.fire({ icon: 'error', title: '오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+      }
     } finally {
       setIsSubmitting(false); // 로딩 종료
     }

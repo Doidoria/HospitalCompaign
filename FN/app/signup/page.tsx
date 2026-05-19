@@ -195,7 +195,7 @@ export default function SignupPage() {
           const token = loginRes.data.token || loginRes.data;
           localStorage.setItem('accessToken', token);
 
-          router.push('/mypage'); 
+          router.push('/login'); 
         } catch (loginError) {
           router.push('/login');
         }

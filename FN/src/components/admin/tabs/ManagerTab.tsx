@@ -7,7 +7,6 @@ import { motion, Variants } from 'framer-motion';
 import { adminApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
-import { div } from 'framer-motion/client';
 
 const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };

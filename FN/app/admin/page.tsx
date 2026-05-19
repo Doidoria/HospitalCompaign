@@ -35,7 +35,6 @@ export default function AdminDashboardPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-  // activeTab 상태가 바뀔 때마다 윈도우 스크롤을 부드럽게 최상단
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);

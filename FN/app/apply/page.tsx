@@ -1,8 +1,9 @@
+//app/apply/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
 import DaumPostcodeEmbed from 'react-daum-postcode';
@@ -12,6 +13,14 @@ import Swal from 'sweetalert2';
 export default function ApplyPage() {
   const router = useRouter();
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
+
+  // 누락된 입력 항목을 관리하는 State
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+
+  // 내일 날짜 구하기 (YYYY-MM-DD 형식)
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1); // 오늘 기준 +1일
+  const minDate = tomorrowDate.toISOString().split('T')[0];
 
   // 통합 데이터 관리 보관함
   const [formData, setFormData] = useState({
@@ -60,6 +69,8 @@ export default function ApplyPage() {
   const handleSmartChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    // 사용자가 입력하면 해당 항목에 대한 에러 메시지 초기화 (선택적 편의 기능)
+    if (missingFields.length > 0) setMissingFields([]);
   };
 
   const handlePostComplete = (data: any) => {
@@ -74,10 +85,51 @@ export default function ApplyPage() {
       setBasicExtraData({ ...basicExtraData, meetingAddress: fullAddress });
     }
     setPostTarget('none');
+    if (missingFields.length > 0) setMissingFields([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // --- [추가된 유효성 검사 로직] ---
+    const missing: string[] = [];
+
+    if (!formData.date) missing.push('진료 날짜');
+    if (!formData.time) missing.push('진료 시간');
+    if (!formData.hospitalName) missing.push('방문 병원');
+    if (!formData.patientName) missing.push('실제 이용자 성함');
+    if (!formData.patientPhone) missing.push('환자 연락처');
+
+    if (!formData.date) {
+      missing.push('진료 날짜');
+    } else if (formData.date < minDate) {
+      missing.push('진료 날짜 (과거 날짜는 예약할 수 없습니다)');
+    }
+
+    // 만나는 장소가 '직접 지정'일 경우 주소 필수
+    if (basicExtraData.meetingType === '직접 지정' && !basicExtraData.meetingAddress) {
+      missing.push('만나는 장소 (주소 검색 필요)');
+    }
+
+    // 진료/검사 카테고리에 따른 필수 항목
+    if (formData.category === '일반 진료') {
+      if (!detailData.department) missing.push('진료 과목');
+      if (!detailData.symptoms) missing.push('주요 증상');
+    } else {
+      if (!detailData.testType) missing.push('검사 종류');
+    }
+
+    // 누락된 항목이 있다면 State 업데이트 후 종료
+    if (missing.length > 0) {
+      setMissingFields(missing);
+      // 화면을 버튼 쪽으로 살짝 스크롤 해주면 더 좋습니다 (선택 사항)
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      return;
+    }
+    // 검사 통과 시 초기화
+    setMissingFields([]);
+    // ---------------------------------
+
     try {
       const finalMeetingPoint = basicExtraData.meetingType === '자택' 
         ? '자택' 
@@ -112,7 +164,7 @@ export default function ApplyPage() {
       });
       router.push('/mypage');
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '신청 실패', text: '입력 내용을 다시 확인해 주세요.' });
+      Swal.fire({ icon: 'error', title: '신청 실패', text: '서버 오류로 인해 신청에 실패했습니다.' });
     }
   };
 
@@ -160,6 +212,8 @@ export default function ApplyPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          // 기본 HTML5 검증 팝업 방지를 위해 noValidate 추가
+          noValidate
         >
           
           {/* 1. 일정 및 장소 선택 */}
@@ -171,18 +225,18 @@ export default function ApplyPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 날짜</label>
-                  <input type="date" name="date" onChange={handleSmartChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" required />
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 날짜 <span className="text-red-500">*</span></label>
+                  <input type="date" name="date" min={minDate} onChange={handleSmartChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 시간</label>
-                  <input type="time" name="time" onChange={handleSmartChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" required />
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 시간 <span className="text-red-500">*</span></label>
+                  <input type="time" name="time" onChange={handleSmartChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">방문 병원</label>
+                <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">방문 병원 <span className="text-red-500">*</span></label>
                 <div className="flex gap-2">
-                  <input type="text" name="hospitalName" value={formData.hospitalName} placeholder="병원을 검색하거나 직접 입력하세요" onChange={handleSmartChange} className="flex-1 px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" required />
+                  <input type="text" name="hospitalName" value={formData.hospitalName} placeholder="병원을 검색하거나 직접 입력하세요" onChange={handleSmartChange} className="flex-1 px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" />
                   <button type="button" onClick={() => setPostTarget('hospital')} className="px-6 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-colors shadow-md flex items-center justify-center">
                     <Search className="w-5 h-5" />
                   </button>
@@ -200,22 +254,24 @@ export default function ApplyPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">실제 이용자 성함 (환자)</label>
-                  <input type="text" name="patientName" value={formData.patientName} onChange={handleSmartChange} placeholder="예: 홍길동" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" required />
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">실제 이용자 성함 (환자) <span className="text-red-500">*</span></label>
+                  <input type="text" name="patientName" value={formData.patientName} onChange={handleSmartChange} placeholder="예: 홍길동" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">환자 연락처</label>
-                  <input type="text" name="patientPhone" value={formData.patientPhone} onChange={handleSmartChange} placeholder="010-0000-0000" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" required />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">보호자 성함</label>
-                  <input type="text" name="guardianName" value={formData.guardianName} onChange={handleSmartChange} placeholder="예: 김보호 (자녀)" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" required />
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">환자 연락처 <span className="text-red-500">*</span></label>
+                  <input type="text" name="patientPhone" value={formData.patientPhone} onChange={handleSmartChange} placeholder="010-0000-0000" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">보호자 비상연락처</label>
-                  <input type="text" name="guardianPhone" value={formData.guardianPhone} onChange={handleSmartChange} placeholder="010-0000-0000" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" required />
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">
+                    보호자 성함 <span className="text-gray-400 font-normal">(선택)</span>
+                  </label>
+                  <input type="text" name="guardianName" value={formData.guardianName} onChange={handleSmartChange} placeholder="예: 김보호 (자녀)" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">
+                    보호자 비상연락처 <span className="text-gray-400 font-normal">(선택)</span>
+                  </label>
+                  <input type="text" name="guardianPhone" value={formData.guardianPhone} onChange={handleSmartChange} placeholder="010-0000-0000" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
               </div>
             </div>
@@ -229,13 +285,16 @@ export default function ApplyPage() {
             </h3>
             <div className="space-y-8">
               <div>
-                <label className="block text-sm font-bold text-gray-500 mb-3 ml-1">매니저와 만나는 장소</label>
+                <label className="block text-sm font-bold text-gray-500 mb-3 ml-1">매니저와 만나는 장소 <span className="text-red-500">*</span></label>
                 <div className="flex gap-3 mb-4">
                   {['자택', '직접 지정'].map((type) => (
                     <button 
                       key={type} 
                       type="button" 
-                      onClick={() => setBasicExtraData({...basicExtraData, meetingType: type})} 
+                      onClick={() => {
+                        setBasicExtraData({...basicExtraData, meetingType: type});
+                        setMissingFields([]); // 타입 변경 시 에러 초기화
+                      }} 
                       className={`flex-1 py-4 rounded-2xl font-bold text-base transition-all border-2 ${basicExtraData.meetingType === type ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'border-gray-100 bg-white text-gray-400 hover:bg-gray-50'}`}
                     >
                       {type}
@@ -251,12 +310,15 @@ export default function ApplyPage() {
                         <Search className="w-5 h-5" />
                       </button>
                       
-                      {/* 병원 주소 가져오기 버튼 */}
                       <button 
                         type="button" 
                         onClick={() => {
-                          if(!formData.hospitalName) return Swal.fire('알림', '먼저 1번 항목에서 방문 병원을 입력해주세요.', 'warning');
+                          if(!formData.hospitalName) {
+                            setMissingFields(['방문 병원 (1번 항목에서 먼저 입력해주세요)']);
+                            return;
+                          }
                           setBasicExtraData({...basicExtraData, meetingAddress: formData.hospitalName});
+                          setMissingFields([]);
                         }} 
                         className="px-6 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-md whitespace-nowrap flex items-center gap-1"
                       >
@@ -304,7 +366,15 @@ export default function ApplyPage() {
                 <label className="block text-sm font-bold text-gray-500 mb-3 ml-1">동행 목적 구분</label>
                 <div className="flex gap-3">
                   {['일반 진료', '정밀 검사'].map((cat) => (
-                    <button key={cat} type="button" onClick={() => setFormData({...formData, category: cat})} className={`flex-1 py-4 rounded-2xl font-bold text-base transition-all border-2 ${formData.category === cat ? 'border-rose-500 bg-rose-50 text-rose-700 shadow-sm' : 'border-gray-100 bg-white text-gray-400 hover:bg-gray-50'}`}>
+                    <button 
+                      key={cat} 
+                      type="button" 
+                      onClick={() => {
+                        setFormData({...formData, category: cat});
+                        setMissingFields([]); // 탭 변경 시 에러 초기화
+                      }} 
+                      className={`flex-1 py-4 rounded-2xl font-bold text-base transition-all border-2 ${formData.category === cat ? 'border-rose-500 bg-rose-50 text-rose-700 shadow-sm' : 'border-gray-100 bg-white text-gray-400 hover:bg-gray-50'}`}
+                    >
                       {cat}
                     </button>
                   ))}
@@ -315,12 +385,12 @@ export default function ApplyPage() {
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 과목</label>
-                      <input type="text" placeholder="예) 내과, 정형외과" value={detailData.department} onChange={(e) => setDetailData({...detailData, department: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
+                      <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 과목 <span className="text-red-500">*</span></label>
+                      <input type="text" placeholder="예) 내과, 정형외과" value={detailData.department} onChange={(e) => { setDetailData({...detailData, department: e.target.value}); setMissingFields([]); }} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">주요 증상</label>
-                      <input type="text" placeholder="예) 기침, 무릎 통증" value={detailData.symptoms} onChange={(e) => setDetailData({...detailData, symptoms: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
+                      <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">주요 증상 <span className="text-red-500">*</span></label>
+                      <input type="text" placeholder="예) 기침, 무릎 통증" value={detailData.symptoms} onChange={(e) => { setDetailData({...detailData, symptoms: e.target.value}); setMissingFields([]); }} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
                     </div>
                   </div>
                 </motion.div>
@@ -328,8 +398,8 @@ export default function ApplyPage() {
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">검사 종류</label>
-                      <input type="text" placeholder="예) 위/대장 수면 내시경" value={detailData.testType} onChange={(e) => setDetailData({...detailData, testType: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
+                      <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">검사 종류 <span className="text-red-500">*</span></label>
+                      <input type="text" placeholder="예) 위/대장 수면 내시경" value={detailData.testType} onChange={(e) => { setDetailData({...detailData, testType: e.target.value}); setMissingFields([]); }} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">금식 여부</label>
@@ -370,6 +440,28 @@ export default function ApplyPage() {
           </motion.div>
 
           <motion.div variants={itemVariants} className="pt-6">
+            
+            {/* 누락된 필드가 있을 때 보여주는 에러 안내 태그 */}
+            {missingFields.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-5 bg-red-50 border border-red-200 rounded-[20px] shadow-sm flex items-start gap-3 text-red-600"
+              >
+                <AlertCircle className="w-6 h-6 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-bold text-[15px] mb-1">다음 필수 항목들을 입력해 주세요</h4>
+                  <ul className="text-sm font-medium flex flex-wrap gap-2">
+                    {missingFields.map((field, idx) => (
+                      <li key={idx} className="bg-white/60 px-3 py-1 rounded-lg border border-red-100">
+                        {field}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.div>
+            )}
+
             <button type="submit" className="w-full bg-blue-950 text-white text-xl font-bold py-6 rounded-[24px] shadow-xl hover:bg-blue-900 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
               <CheckCircle2 className="w-7 h-7" /> 동행 서비스 신청 완료하기
             </button>
