@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { popupApi } from '@/src/api/index';
-// 💡 제목, 링크, 알림 배너용 아이콘 추가
 import { Save, Image as ImageIcon, Type, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { Toast } from '@/src/utils/alert';
 
 export default function PopupTab() {
-  // 💡 백엔드와 맞춘 상태(State) 변수들
   const [title, setTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [isActive, setIsActive] = useState(false);

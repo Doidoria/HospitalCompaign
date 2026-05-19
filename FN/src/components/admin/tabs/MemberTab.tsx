@@ -20,6 +20,10 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
   const [memberPage, setMemberPage] = useState(0);
   const [memberTotalPages, setMemberTotalPages] = useState(0);
 
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [memberPage]);
+
   const fetchMembers = useCallback(async (page: number, role: string) => {
     setLoading(true);
     try {
@@ -99,12 +103,15 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
       
       <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col mt-6">
         <div className="p-5 border-b border-slate-100 bg-purple-50/30 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-purple-600" /> 전체 회원 목록
+          <h2 className="w-full sm:w-auto text-lg font-bold text-slate-800 flex items-center justify-start gap-2">
+            <UserCog className="w-5 h-5 text-purple-600 shrink-0" /> 전체 회원 목록
           </h2>
           <div className="flex items-center w-full sm:w-auto gap-2">
             <select value={memberRoleFilter} onChange={(e) => {setMemberRoleFilter(e.target.value); setMemberPage(0);}} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer">
-              <option value="">전체 권한</option><option value="USER">일반 고객</option><option value="MANAGER">매니저</option><option value="ADMIN">관리자</option>
+              <option value="">전체 권한</option>
+              <option value="USER">일반 고객</option>
+              <option value="MANAGER">매니저</option>
+              <option value="ADMIN">관리자</option>
             </select>
             <div className="relative w-full sm:w-64">
               <input type="text" placeholder="이름/이메일 검색..." value={memberSearchTerm} onChange={(e) => setMemberSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm placeholder:text-slate-400" />
@@ -195,7 +202,7 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button onClick={() => handleViewMemberProfile(member)} className="flex-[0.5] py-2 text-xs text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 font-bold shadow-sm flex justify-center items-center gap-1">
+                  <button onClick={() => handleViewMemberProfile(member)} className="flex-[0.5] py-2 px-0.5 text-xs text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 font-bold shadow-sm flex justify-center items-center gap-1">
                     <FileText className="w-3 h-3" /> 프로필
                   </button>
                   
@@ -217,7 +224,9 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
               </div>
             );
           }) : (
-            <EmptyState message="검색 결과가 없습니다." />
+            <div className='flex justify-center'>
+              <EmptyState message="검색 결과가 없습니다." isTable={false} />
+            </div>
           )}
         </div>
         

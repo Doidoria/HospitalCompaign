@@ -58,9 +58,11 @@ export default function InquiryModal({ isOpen, onClose, selectedInquiry, answerI
                     placeholder="고객의 문의에 대한 친절한 답변을 작성해주세요." 
                     className="w-full h-40 p-4 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm text-slate-800 resize-none shadow-sm" 
                   />
-                  <div className="flex justify-end gap-2 mt-4">
-                    <button onClick={onClose} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">취소</button>
-                    <button onClick={onSubmit} disabled={isSubmitting} className="px-5 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/30 flex items-center gap-2 disabled:opacity-50">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-5">
+                    <button onClick={onClose} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">
+                      취소
+                    </button>
+                    <button onClick={onSubmit} disabled={isSubmitting} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/30 flex items-center justify-center gap-2 disabled:opacity-50">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4"/>} 
                       {selectedInquiry.status === 'PENDING' ? '답변 등록' : '답변 수정'}
                     </button>

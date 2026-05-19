@@ -42,15 +42,12 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
 
   return (
     <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6"
-      >
-        <motion.div 
-          initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
-          className="bg-[#F8FAFC] rounded-[28px] w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]"
-        >
-          {/* 🌟 헤더 영역 */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6">
+        <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+          className="bg-[#F8FAFC] rounded-[28px] w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
+            
+          {/* 헤더 영역 */}
           <div className="flex justify-between items-center px-6 py-5 bg-white border-b border-slate-100 relative z-10 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100/50">
@@ -65,7 +62,7 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
             </div>
             
             <div className="flex items-center gap-3">
-              {/* 수정됨(재전송) 배지 - PC 화면용 */}
+              {/* (재전송) 배지 - PC 화면용 */}
               {reportData?.isModified && (
                 <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[11px] font-extrabold rounded-lg border border-orange-200/60 shadow-sm hidden sm:block">
                   수정됨 (재전송)
@@ -77,7 +74,7 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
             </div>
           </div>
 
-          {/* 🌟 본문 영역 */}
+          {/* 본문 영역 */}
           <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -86,7 +83,7 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
               </div>
             ) : reportData ? (
               <div className="space-y-4">
-                {/* 수정됨(재전송) 배지 - 모바일 화면용 */}
+                {/* (재전송) 배지 - 모바일 화면용 */}
                 {reportData.isModified && (
                   <div className="sm:hidden mb-4">
                     <span className="px-2.5 py-1 inline-block bg-orange-50 text-orange-600 text-[11px] font-extrabold rounded-lg border border-orange-200/60 shadow-sm">
@@ -96,7 +93,7 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
                 )}
 
                 {/* 1. 상단 요약 정보 (방문 진료과, 환자 컨디션) */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
                     <p className="text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5" /> 방문 진료과

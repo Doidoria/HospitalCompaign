@@ -50,12 +50,12 @@ export default function ManagerListModalContent({ managers, onSelect }: ManagerL
                   {isChecked ? <CheckCircle2 className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                 </div>
 
-                <div className="min-w-0"> {/* 글자 넘침 방지 */}
+                <div className="flex-1 min-w-0">
                   <h4 className="font-extrabold text-slate-800 text-sm mb-0.5 flex items-center gap-1.5">
                     <span className="truncate">{manager.name}</span>
                     <span className="shrink-0 font-bold text-blue-600 text-[9px] bg-blue-100/50 px-1.5 py-0.5 rounded-full border border-blue-200/50">PRO</span>
                   </h4>
-                  <p className="text-[11px] font-medium text-slate-400 truncate w-32">{manager.email}</p>
+                  <p className="text-[11px] font-medium text-slate-400 truncate w-full">{manager.email}</p>
                 </div>
               </div>
               

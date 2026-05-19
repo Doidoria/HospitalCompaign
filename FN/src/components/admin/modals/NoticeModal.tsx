@@ -38,7 +38,7 @@ export default function NoticeModal({ isOpen, onClose, selectedNotice, noticeFor
               <label className="block text-sm font-bold text-slate-700 mb-1.5">내용</label>
               <textarea value={noticeForm.content} onChange={(e) => setNoticeForm({...noticeForm, content: e.target.value})}
                 placeholder="공지사항 내용을 상세히 작성해주세요."
-                className="w-full h-80 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm leading-relaxed resize-none" />
+                className="w-full h-48 sm:h-80 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm leading-relaxed resize-none" />
             </div>
             <label className="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 p-3 rounded-xl w-fit hover:bg-red-50 transition-colors">
               <input type="checkbox" checked={noticeForm.important} onChange={(e) => setNoticeForm({...noticeForm, important: e.target.checked})}
@@ -46,11 +46,11 @@ export default function NoticeModal({ isOpen, onClose, selectedNotice, noticeFor
               <span className="text-sm font-bold text-slate-700">중요 공지</span>
             </label>
           </div>
-
-          {/* ✅ 중복된 버튼 영역 삭제하고 완성도 높은 UI 하나만 남김 */}
-          <div className="p-5 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/50">
-            <button onClick={onClose} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">취소</button>
-            <button onClick={onSave} className="px-5 py-2.5 bg-red-600 text-white font-bold text-sm rounded-xl hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2">
+          <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2 bg-slate-50/50">
+            <button onClick={onClose} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">
+              취소
+            </button>
+            <button onClick={onSave} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-red-600 text-white font-bold text-sm rounded-xl hover:bg-red-700 transition-colors shadow-sm flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4" /> {selectedNotice ? '수정 완료' : '등록하기'}
             </button>
           </div>

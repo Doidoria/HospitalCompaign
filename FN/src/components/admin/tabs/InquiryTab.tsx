@@ -33,6 +33,10 @@ export default function InquiryTab() {
   const [answerInput, setAnswerInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [inquiryPage]);
+
   const fetchInquiries = useCallback(async () => {
     setLoading(true);
     try {

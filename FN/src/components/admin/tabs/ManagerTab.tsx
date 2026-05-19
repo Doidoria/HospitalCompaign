@@ -6,7 +6,8 @@ import { UserPlus, Loader2, FileText, CheckCircle2, XCircle } from 'lucide-react
 import { motion, Variants } from 'framer-motion';
 import { adminApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
-import EmptyState from '../ui/EmptyState'; // ✅ 누락된 EmptyState 추가
+import EmptyState from '../ui/EmptyState';
+import { div } from 'framer-motion/client';
 
 const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
@@ -16,6 +17,10 @@ export default function ManagerTab() {
   const [pendingManagers, setPendingManagers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mgrAppStatus, setMgrAppStatus] = useState('WAITING');
+
+  // useEffect(() => {
+  //     window.scrollTo({ top: 0, behavior: 'smooth' });
+  //   }, [inquiryPage]);
 
   const fetchManagerApplications = useCallback(async (status: string) => {
     setLoading(true);
@@ -112,7 +117,6 @@ export default function ManagerTab() {
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    {/* ✅ 누락되었던 근무 가능 요일(availableDays) UI 복구 */}
                     <div className="flex flex-col items-center gap-1.5">
                       <div className="flex gap-1 flex-wrap justify-center">
                         {mgr.availableDays?.split(',').map((day: string, idx: number) => (
@@ -192,7 +196,9 @@ export default function ManagerTab() {
               </div>
             </div>
           )) : (
-            <EmptyState message="대기 중인 지원서가 없습니다." />
+            <div className='flex justify-center'>
+              <EmptyState message="대기 중인 지원서가 없습니다." isTable={false} />
+            </div>
           )}
         </div>
       </motion.div>

@@ -37,6 +37,10 @@ export default function NoticeTab() {
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
   const [noticeForm, setNoticeForm] = useState({ title: '', content: '', important: false });
 
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [noticePage]);
+
   const fetchNotices = useCallback(async (page: number = 0) => {
     setLoading(true);
     try {

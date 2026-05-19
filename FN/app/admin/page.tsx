@@ -35,6 +35,11 @@ export default function AdminDashboardPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
+  // activeTab 상태가 바뀔 때마다 윈도우 스크롤을 부드럽게 최상단
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
+
   useEffect(() => {
     const loadGlobalData = async () => {
       setLoading(true);
@@ -74,17 +79,21 @@ export default function AdminDashboardPage() {
     }
     let confirmedEmail = ''; 
 
-    // 매니저 배정 버튼
     const result = await MySwal.fire({
       title: '매니저 배정',
       html: <ManagerListModalContent managers={allManagers} onSelect={(email) => { confirmedEmail = email; }} />,
-      width: '42em',
       showCancelButton: true,
       confirmButtonText: '배정하기',
       cancelButtonText: '취소',
+      buttonsStyling: false,
       customClass: { 
-        popup: 'bg-white rounded-[28px] shadow-2xl p-6 !max-w-4xl w-full' 
-      }, 
+        popup: '!bg-white !rounded-[16px] sm:!rounded-[24px] !shadow-2xl !shadow-slate-200/80 !border !border-slate-100 !p-3 !sm:p-6 !max-w-2xl !w-[92%] sm:!w-full',
+        title: '!text-3xl !font-extrabold !text-slate-800 !mt-3 sm:!mt-1 !mb-0',
+        htmlContainer: '!mx-0 !mt-0 !mb-0 !px-0',
+        actions: '!flex !gap-2 sm:!gap-3 !w-full !mt-4 !px-1 !pb-1',
+        confirmButton: '!flex-1 !bg-blue-600 !text-white !rounded-2xl !py-3 !sm:py-3.5 !px-4 !text-sm !font-bold !hover:bg-blue-700 !transition-all !shadow-md !shadow-blue-500/25 !whitespace-nowrap',
+        cancelButton: '!flex-1 !bg-slate-100 !text-slate-600 !rounded-2xl !py-3 sm:!py-3.5 !px-4 !text-sm !font-bold !hover:bg-slate-200 !transition-all !whitespace-nowrap'
+      },
       preConfirm: () => {
         if (!confirmedEmail) {
           WideSwal.showValidationMessage('매니저를 선택해주세요.');
@@ -123,72 +132,80 @@ export default function AdminDashboardPage() {
   };
 
   const handleViewMemberProfile = (member: any) => {
+    const isAdmin = member.role.includes('ADMIN');
+    const isManager = member.role.includes('MANAGER');
+    
     MySwal.fire({
-      title: '회원 상세 정보',
+      title: '',
       html: (
-        <div className="text-left space-y-3 px-1 mt-0">
-          {/* 1. 기본 정보 */}
-          <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.03)]">
-            <h4 className="text-sm font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-              <div className="p-1.5 bg-slate-50 rounded-lg border border-slate-100"><User className="w-4 h-4 text-slate-600"/></div>
-              기본 정보
-            </h4>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-50">
-                <span className="font-bold text-slate-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5"/> 이름</span>
-                <span className="font-extrabold text-slate-800">{member.name}</span>
-              </div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-50">
-                <span className="font-bold text-slate-400 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5"/> 이메일</span>
-                <span className="font-medium text-slate-600">{member.email}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-400 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5"/> 연락처</span>
-                <span className="font-extrabold text-blue-600">{member.phoneNumber || member.phone || '정보 없음'}</span>
-              </div>
+        <div className="text-left w-full">
+          {/* 1. 상단 프로필 헤더 영역 */}
+          <div className="bg-slate-900 px-6 pt-10 pb-12 flex flex-col items-center justify-center text-center">
+            {/* 이니셜 아바타 */}
+            <div className="w-16 h-16 bg-white/10 text-white rounded-full flex items-center justify-center text-2xl font-black mb-3 border border-white/20 shadow-inner">
+              {member.name.substring(0, 1)}
             </div>
+            {/* 권한 뱃지 */}
+            <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-extrabold mb-1.5 border ${
+              isAdmin ? 'bg-purple-500/20 text-purple-200 border-purple-500/30' :
+              isManager ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30' :
+              'bg-slate-500/30 text-slate-300 border-slate-500/30'
+            }`}>
+              {isAdmin ? '최고 관리자' : isManager ? '동행 매니저' : '일반 고객'}
+            </span>
+            <h3 className="text-white text-xl font-extrabold">{member.name}</h3>
+            <p className="text-slate-400 text-xs mt-0.5">{member.email}</p>
           </div>
-          {/* 2. 보호자 정보 */}
-          <div className="bg-white p-5 rounded-[20px] border border-blue-50 shadow-[0_2px_10px_rgb(59,130,246,0.04)] relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-400"></div>
-            <h4 className="text-sm font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-              <div className="p-1.5 bg-blue-50 rounded-lg"><ShieldCheck className="w-4 h-4 text-blue-600"/></div>
-              보호자 정보
-            </h4>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-50">
-                <span className="font-bold text-slate-400">보호자 성함</span>
-                <span className="font-bold text-slate-700">{member.guardianName || '정보 없음'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-400">보호자 연락처</span>
-                <span className="font-bold text-slate-700">{member.guardianPhone || '정보 없음'}</span>
+
+          {/* 2. 하단 상세 정보 영역 */}
+          <div className="bg-white p-5 -mt-6 rounded-t-[24px] relative z-10 flex flex-col gap-3">
+            
+            {/* 연락처 */}
+            <div className="flex items-center gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Phone className="w-4 h-4"/></div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold mb-0.5">연락처</p>
+                <p className="text-sm font-bold text-slate-800">{member.phoneNumber || member.phone || '정보 없음'}</p>
               </div>
             </div>
-          </div>
-          {/* 3. 자택 주소지 */}
-          <div className="bg-white p-5 rounded-[20px] border border-emerald-50 shadow-[0_2px_10px_rgb(16,185,129,0.04)] relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
-            <h4 className="text-sm font-extrabold text-slate-800 mb-3 flex items-center gap-2">
-              <div className="p-1.5 bg-emerald-50 rounded-lg"><Home className="w-4 h-4 text-emerald-600"/></div>
-              자택 주소지
-            </h4>
-            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-sm">
-              {member.zipCode && <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[11px] font-extrabold rounded-md mb-2 border border-emerald-100">우편번호 {member.zipCode}</span>}
-              <p className="text-slate-700 font-bold leading-relaxed break-words">
-                {member.address || '등록된 주소 정보가 없습니다.'} 
-                {member.detailAddress ? ` ${member.detailAddress}` : ''}
-              </p>
+
+            {/* 보호자 정보 (존재할 때만 표시) */}
+            {(member.guardianName || member.guardianPhone) && (
+              <div className="flex items-center gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="p-2 bg-orange-100 text-orange-600 rounded-lg"><ShieldCheck className="w-4 h-4"/></div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold mb-0.5">보호자 (비상연락처)</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {member.guardianName || '-'} <span className="text-xs text-slate-500 font-medium ml-1">({member.guardianPhone || '-'})</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 자택 주소지 */}
+            <div className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg shrink-0 mt-0.5"><Home className="w-4 h-4"/></div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold mb-1">등록된 주소지</p>
+                {member.zipCode && <span className="inline-block px-1.5 py-0.5 bg-white border border-slate-200 text-slate-500 text-[9px] font-bold rounded mb-1">우편번호 {member.zipCode}</span>}
+                <p className="text-sm font-bold text-slate-800 leading-tight">
+                  {member.address || '주소 정보가 없습니다.'} {member.detailAddress}
+                </p>
+              </div>
             </div>
+
           </div>
         </div>
       ),
+      showConfirmButton: true,
       confirmButtonText: '확인 완료',
       buttonsStyling: false,
       customClass: { 
-        popup: 'bg-[#F8FAFC] rounded-[32px] shadow-2xl border border-slate-100 p-4 !max-w-md w-full',
-        title: 'text-xl font-extrabold text-slate-800 pt-2 pb-0',
-        confirmButton: 'w-full bg-slate-800 text-white rounded-2xl py-4 px-4 text-sm font-bold hover:bg-slate-900 transition-colors shadow-md active:scale-[0.98]'
+        popup: '!bg-[#F8FAFC] !rounded-[32px] !shadow-2xl !p-0 !max-w-md !w-[90%] !overflow-hidden',
+        title: '!text-xl !font-extrabold !text-slate-800 !pt-6 !pb-2',
+        htmlContainer: '!m-0 !p-0',
+        actions: '!flex !flex-col !w-full !mt-0 !mb-2 !gap-0 !px-4',
+        confirmButton: '!w-full !bg-slate-800 !text-white !rounded-2xl !py-4 !px-4 !text-sm !font-bold hover:!bg-slate-900 !transition-colors !shadow-md active:!scale-[0.98]'
       },
     });
   };
@@ -210,7 +227,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-slate-50/50 font-sans text-gray-900 flex flex-col md:flex-row relative">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} pendingManagerCount={pendingManagerCount} />
 
-      <main className="flex-1 p-4 md:p-8 w-full overflow-x-hidden">
+      <main className="flex-1 p-4 md:p-8 w-full overflow-x-hidden pb-24 md:pb-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex flex-col gap-6">
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">

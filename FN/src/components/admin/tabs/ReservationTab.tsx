@@ -33,6 +33,10 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedReportResId, setSelectedReportResId] = useState<number | null>(null);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   const fetchReservations = useCallback(async (page: number, keyword: string, status: string) => {
     setLoading(true);
     try {
@@ -226,10 +230,20 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
                 </div>
                 {(res.status === 'CONFIRMED' || res.status === 'COMPLETED') && res.manager !== '-' && (
                   <div className="flex items-center justify-between mt-1">
-                     <span className="text-slate-500 text-xs font-bold">담당 매니저</span>
-                     <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> {res.manager}
-                     </span>
+                    <span className="text-slate-500 text-xs font-bold">담당 매니저</span>
+                    <button
+                      onClick={() => {
+                        const managerInfo = members.find((m: any) => m.name === res.manager && m.role.includes('MANAGER'));
+                        if (managerInfo) {
+                          handleViewMemberProfile(managerInfo);
+                        } else {
+                          YesAlert.fire({ icon: 'warning', title: '알림', html: '매니저 상세 정보를 찾을 수 없습니다.' });
+                        }
+                      }}
+                      className="text-emerald-600 font-bold text-xs flex items-center gap-1 hover:text-emerald-700 hover:underline transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {res.manager} 배정됨
+                    </button>
                   </div>
                 )}
               </div>

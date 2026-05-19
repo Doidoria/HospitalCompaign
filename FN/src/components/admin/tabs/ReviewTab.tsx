@@ -23,6 +23,10 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
   const [reviewTotalPages, setReviewTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [reviewPage]);
+
   const fetchReviews = useCallback(async (page: number = 0) => {
     setLoading(true);
     try {
@@ -90,12 +94,12 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
       </motion.div>
 
       <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
-        <div className="p-5 border-b border-slate-100 bg-amber-50/30 flex flex-col items-center justify-center gap-3">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center justify-center gap-2 text-center">
+        <div className="p-5 border-b border-slate-100 bg-amber-50/30 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <h2 className="w-full sm:w-auto text-lg font-bold text-slate-800 flex items-center justify-start gap-2">
             <Star className="w-5 h-5 text-amber-500 shrink-0" /> 
             <span className="leading-tight break-keep">리뷰 모니터링</span>
           </h2>
-          <div className="relative w-full max-w-auto">
+          <div className="relative w-full sm:w-64">
             <input type="text" placeholder="예약번호 또는 내용 검색..." value={reviewSearchTerm} onChange={(e) => setReviewSearchTerm(e.target.value)} 
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm" />
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />

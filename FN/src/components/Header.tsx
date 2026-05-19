@@ -67,6 +67,10 @@ export default function Header() {
   // 현재 경로인지 확인하는 헬퍼 함수
   const isActive = (path: string) => pathname === path;
 
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <>
       {/* 1. 상단 고정 헤더 바 */}

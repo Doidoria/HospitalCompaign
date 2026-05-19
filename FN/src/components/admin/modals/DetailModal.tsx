@@ -107,7 +107,7 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                           if (!searchTarget) return Toast.fire({ icon: 'warning', title: '주소 정보가 없습니다.' });
                           window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
                         }}
-                        className="shrink-0 px-2 py-1.5 bg-[#FEE500] hover:bg-[#FADA0A] text-[#191919] text-[10px] font-extrabold rounded-md transition-colors flex items-center gap-1 shadow-sm"
+                        className="shrink-0 px-3 py-2 sm:px-2 sm:py-1.5 bg-[#FEE500] hover:bg-[#FADA0A] text-[#191919] text-[10px] font-extrabold rounded-md transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Navigation className="w-3 h-3" /> 지도 열기
                       </button>

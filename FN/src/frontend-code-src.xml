@@ -1,0 +1,3360 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+api/auth.ts
+api/client.ts
+api/index.ts
+components/admin/modals/DetailModal.tsx
+components/admin/modals/InquiryModal.tsx
+components/admin/modals/ManagerListModalContent.tsx
+components/admin/modals/NoticeModal.tsx
+components/admin/modals/ReportModal.tsx
+components/admin/popup/page.tsx
+components/admin/tabs/InquiryTab.tsx
+components/admin/tabs/ManagerTab.tsx
+components/admin/tabs/MemberTab.tsx
+components/admin/tabs/NoticeTab.tsx
+components/admin/tabs/PopupTab.tsx
+components/admin/tabs/ReservationTab.tsx
+components/admin/tabs/ReviewTab.tsx
+components/admin/ui/EmptyState.tsx
+components/admin/ui/Sidebar.tsx
+components/admin/ui/StatusBadge.tsx
+components/EventPopup.tsx
+components/Footer.tsx
+components/Header.tsx
+constants/statusMap.ts
+utils/alert.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="api/auth.ts">
+// src/api/auth.ts
+import { apiClient } from './client';
+
+export const authApi = {
+  // 카카오 인가 코드를 백엔드로 보내서 JWT를 받아오는 함수
+  loginWithKakao: async (code: string) => {
+    const response = await apiClient.post('/api/members/auth/kakao', { code });
+    return response.data;
+  },
+};
+</file>
+
+<file path="api/client.ts">
+import axios from 'axios';
+
+// 1. 기본 인스턴스 생성
+export const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '69420', 
+  },
+  withCredentials: true, // 쿠키 기반 세션/CORS 처리 시 필요
+});
+
+// 2. 요청(Request) 인터셉터: 모든 API 요청 직전에 실행됨
+apiClient.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// 3. 응답(Response) 인터셉터: 데이터 정제 및 공통 에러 처리
+let isAlertOpen = false; 
+
+apiClient.interceptors.response.use(
+  (response) => {
+    if (response.data && typeof response.data.success !== 'undefined') {
+      if (response.data.success) {
+        response.data = response.data.data;
+      } else {
+        return Promise.reject(new Error(response.data.error || 'API 요청 실패'));
+      }
+    }
+    return response;
+  },
+  (error) => {
+    // 에러가 난 API 주소가 무엇인지 확인합니다.
+    const originalRequestUrl = error.config?.url;
+
+    if (error.response?.status === 401) {
+      // 로그인 API(/api/members/login 등)에서 터진 401 에러가 "아닐 때만" 만료 처리!
+      if (originalRequestUrl && !originalRequestUrl.includes('/login')) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          if (!isAlertOpen) {
+            isAlertOpen = true;
+            alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+            window.location.href = '/login';
+          }
+        }
+      }
+    }
+    
+    // 에러를 그대로 통과시켜서 LoginPage의 catch 블록이 잡을 수 있게 해줍니다.
+    return Promise.reject(error);
+  }
+);
+</file>
+
+<file path="api/index.ts">
+import { apiClient } from './client';
+
+// ==========================================
+// 1. Auth & Users (인증/회원)
+// ==========================================
+export const authApi = {  
+  // 1. 로그인 (성공 시 토큰 발급)
+  login: (data: any) => apiClient.post('/api/members/login', data),  
+  
+  // 2. 회원가입
+  signup: (data: any) => apiClient.post('/api/members/join', data),
+  
+  // 3. 내 예약 목록 가져오기 (마이페이지 기능)
+  getMe: () => apiClient.get('/api/members/me'),
+  checkEmail: (email: string) => apiClient.get(`/api/members/check-email?email=${email}`),
+  sendSms: (phone: string) => apiClient.post('/api/members/sms/send', { phone }),
+  verifySms: (phone: string, code: string) => apiClient.post('/api/members/sms/verify', { phone, code }),
+  verifyPassword: (password: string) => apiClient.post('/api/members/verify-password', { password }),
+  changePassword: (newPassword: string) => apiClient.put('/api/members/password', { newPassword }),
+  updateMe: (data: any) => apiClient.put('/api/members/me', data),
+  getManagerAppStatus: () => apiClient.get('/api/members/me/manager-application'),
+};
+
+// ==========================================
+// 2. Reservations (동행 예약)
+// ==========================================
+export const reservationApi = {
+  create: (data: any) => apiClient.post('/api/reservations', data),
+  getMyList: () => apiClient.get('/api/reservations/me'),
+  getAll: (page: number = 0, size: number = 10) => 
+    apiClient.get(`/api/reservations?page=${page}&size=${size}`),
+  
+  // 예약 상태 변경 (PATCH /api/reservations/{id}/status)
+  updateStatus: (id: number, status: string) => 
+    apiClient.patch(`/api/reservations/${id}/status`, { status }),
+  accept: (id: number) => apiClient.patch(`/api/reservations/${id}/accept`),
+  getDetail: (id: string) => apiClient.get(`/api/reservations/${id}`),
+  cancel: (id: string) => apiClient.delete(`/api/reservations/${id}`),
+  update: (id: string, data: any) => apiClient.put(`/api/reservations/${id}`, data),
+  getWaiting: () => apiClient.get('/api/reservations/waiting'),
+  getManagerSchedules: () => apiClient.get('/api/reservations/manager/me'),
+  createProxy: (id: number, data: any) => apiClient.post(`/api/reservations/${id}/proxy`, data),
+  submitReview: (id: number, data: { rating: number; comment: string }) => 
+    apiClient.post(`/api/reservations/${id}/reviews`, data),
+};
+
+// ==========================================
+// 3. Reports (케어 리포트)
+// ==========================================
+export const reportApi = {
+  create: (data: any) => apiClient.post('/api/reports', data),
+  getDetail: (reservationId: string) => apiClient.get(`/api/reports/reservation/${reservationId}`), 
+  getReportByReservationId: (reservationId: string) => apiClient.get(`/api/reports/reservation/${reservationId}`),
+  createWithPdf: (formData: FormData) => apiClient.post('/api/reports', formData),
+  updateWithPdf: (reportId: number, formData: FormData) => 
+    apiClient.put(`/api/reports/${reportId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+};
+
+// ==========================================
+// 4. Admin (최고 관리자)
+// ==========================================
+export const adminApi = {
+  getReservations: (page: number) => reservationApi.getAll(page),
+  getPendingManagers: (status: string = 'WAITING') => 
+    apiClient.get(`/api/members/manager-applications?status=${status}`),
+  approveManager: (memberId: number) => apiClient.patch(`/api/members/${memberId}/approve`),
+  rejectManager: (applicationId: number) => apiClient.delete(`/api/members/manager-applications/${applicationId}`),
+  getManagerCount: () => apiClient.get('/api/members/managers/count'),
+  rejectManagerApp: (id: number, data: { rejectionReason: string }) => 
+    apiClient.post(`/api/members/manager-applications/${id}/reject`, data),
+
+  // 전체 회원 조회
+  getAllMembers: (page: number = 0, role?: string) => 
+    apiClient.get(`/api/members/all?page=${page}${role ? `&role=${role}` : ''}`),
+  
+  // 예약 상태 및 키워드 검색
+  searchReservations: (keyword: string, status?: string, page: number = 0) => {
+    let url = `/api/reservations/search?page=${page}`;
+    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+    if (status) url += `&status=${status}`;
+    return apiClient.get(url);
+  },
+
+  // 리뷰 및 리포트 모니터링
+  getAllReviews: (page: number = 0) => apiClient.get(`/api/reservations/reviews/all?page=${page}`),
+  deleteReview: (reviewId: number) => apiClient.delete(`/api/reservations/reviews/${reviewId}`),
+  
+  // 계정 상태 업데이트 (status: true면 정지 해제, false면 정지)
+  updateMemberStatus: (memberId: number, activate: boolean) => 
+    apiClient.patch(`/api/members/${memberId}/status`, { activate }),
+    
+  changeMemberRole: (memberId: number, role: string) => 
+    apiClient.patch(`/api/members/${memberId}/role`, { role }),
+
+  // 매니저 강제 배정/취소
+  assignManager: (reservationId: number, managerEmail: string) => 
+    apiClient.patch(`/api/reservations/${reservationId}/assign`, { managerEmail }),
+    
+  cancelAssignManager: (reservationId: number) => 
+    apiClient.patch(`/api/reservations/${reservationId}/cancel-assign`),
+
+  // 전체 1:1 문의 내역 조회 (페이징 및 상태 필터링)
+  getAllInquiries: (page: number = 0, status?: string) => {
+    let url = `/api/admin/inquiries?page=${page}`;
+    if (status) url += `&status=${status}`;
+    return apiClient.get(url);
+  },
+  // 1:1 문의에 답변 달기 및 상태 변경
+  answerInquiry: (inquiryId: number, answer: string) =>
+    apiClient.patch(`/api/admin/inquiries/${inquiryId}/answer`, { answer }),
+
+  // 공지사항 관리
+  getAllNotices: (page: number = 0) => apiClient.get(`/api/admin/notices?page=${page}`),
+  createNotice: (data: { title: string; content: string; important: boolean }) => 
+    apiClient.post('/api/admin/notices', data),
+  updateNotice: (id: number, data: { title: string; content: string; important: boolean }) => 
+    apiClient.put(`/api/admin/notices/${id}`, data),
+  deleteNotice: (id: number) => apiClient.delete(`/api/admin/notices/${id}`),
+};
+
+export const managerApi = {
+  // 매니저 상세 프로필 정보 가져오기
+  getManagerProfile: (managerId: number) => 
+    apiClient.get(`/api/managers/${managerId}/profile`),
+
+  // 2. 매니저가 자신의 프로필을 수정/저장
+  updateManagerProfile: (data: { introduction: string; career: string; certifications: string }) => 
+    apiClient.put(`/api/managers/profile`, data),
+};
+
+// ==========================================
+// 리뷰 (review)
+// ==========================================
+export const reviewApi = {
+  // 리뷰 목록 조회
+  getReviews: (page = 0, size = 10) => 
+    apiClient.get(`/api/reviews?page=${page}&size=${size}`),
+
+  // 리뷰 작성 (URL에 reservationId 포함)
+  createReview: (reservationId: number, data: { rating: number; comment: string }) => 
+    apiClient.post(`/api/reviews/${reservationId}`, data),
+};
+
+export const categoryApi = {
+  // 서비스 카테고리 전체 목록 조회
+  getAll: () => apiClient.get('/api/categories'), 
+};
+
+// ==========================================
+// 공지사항 (notice)
+// ==========================================
+export const noticeApi = {
+  // 일반 유저용 공지사항 목록 조회
+  getNotices: (page: number = 0) => apiClient.get(`/api/notices?page=${page}`),
+
+  // 일반 유저용 공지사항 단건 상세 조회
+  getNotice: (id: number) => apiClient.get(`/api/notices/${id}`),
+};
+
+// ==========================================
+// 1:1 문의 (Inquiry)
+// ==========================================
+export const inquiryApi = {
+  submitInquiry: (formData: FormData) => 
+    apiClient.post('/api/inquiries', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+
+  // 내 문의 내역 가져오기
+  getMyInquiries: () => apiClient.get('/api/inquiries/me'),
+
+  // 상세 조회
+  getInquiry: (id: number) => apiClient.get(`/api/inquiries/${id}`),
+
+  // 비밀글 비밀번호 확인 API
+  checkPassword: (id: number, password: string) => 
+    apiClient.post(`/api/inquiries/${id}/check-password`, { password }),
+};
+
+// ==========================================
+// 팝업창 (Popup)
+// ==========================================
+export const popupApi = {
+  // 클라이언트: 현재 활성화된 팝업 정보 가져오기
+  getActivePopup: () => apiClient.get('/api/popups/active'),
+  
+  // 어드민: 모든 팝업 설정 조회
+  getPopupSettings: () => apiClient.get('/api/admin/popups'),
+  
+  // 어드민: 팝업 이미지 업로드 및 정보 수정
+  updatePopup: (formData: FormData) => apiClient.post('/api/admin/popups', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  
+  // 어드민: 사용 여부(상태) 즉시 변경
+  togglePopupStatus: (id: number, isActive: boolean) => 
+    apiClient.patch(`/api/admin/popups/${id}/status`, { isActive })
+};
+</file>
+
+<file path="components/admin/modals/DetailModal.tsx">
+// src/components/admin/modals/DetailModal.tsx
+'use client';
+
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FileText, X, Loader2, Users, MapPin, CalendarDays, Navigation, Stethoscope, AlertCircle, HelpCircle } from 'lucide-react';
+import { Toast } from '@/src/utils/alert';
+
+interface DetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedRequest: any | null;
+}
+
+export default function DetailModal({ isOpen, onClose, selectedRequest }: DetailModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6"
+      >
+        <motion.div 
+          initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+          className="bg-[#F8FAFC] rounded-[28px] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]"
+        >
+          {/* 헤더 영역 */}
+          <div className="flex justify-between items-center px-6 py-5 bg-white border-b border-slate-100 relative z-10 shadow-sm">
+            <h3 className="font-extrabold text-lg text-slate-800 flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-100/50">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                예약 상세 정보
+                {selectedRequest && <p className="text-xs font-bold text-slate-400 mt-0.5 tracking-wide">예약번호 #{selectedRequest.id}</p>}
+              </div>
+            </h3>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* 본문 영역 */}
+          {!selectedRequest ? (
+            <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-white flex-1">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+              <p className="text-slate-400 font-bold text-sm">상세 정보를 불러오는 중입니다...</p>
+            </div>
+          ) : (
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. 고객 정보 카드 */}
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-100 rounded-lg"><Users className="w-4 h-4 text-slate-600"/></div>
+                    고객 정보
+                  </h4>
+                  <div className="space-y-2.5 text-sm">
+                    <div className="flex justify-between items-center pb-2.5 border-b border-slate-50">
+                      <span className="font-bold text-slate-400">환자명</span>
+                      <span className="font-bold text-slate-800">{selectedRequest.patientName} <span className="font-medium text-slate-500 text-xs ml-1">({selectedRequest.patientPhone})</span></span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-400">보호자</span>
+                      <span className="font-bold text-slate-800">{selectedRequest.guardianName || '-'} <span className="font-medium text-slate-500 text-xs ml-1">({selectedRequest.guardianPhone || '-'})</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. 일정 및 장소 요약 카드 */}
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-100 rounded-lg"><CalendarDays className="w-4 h-4 text-slate-600"/></div>
+                    일정 및 수단
+                  </h4>
+                  <div className="space-y-2.5 text-sm">
+                    <div className="flex justify-between items-center pb-2.5 border-b border-slate-50">
+                      <span className="font-bold text-slate-400">일시</span>
+                      <span className="font-extrabold text-blue-600">{selectedRequest.reservationTime.replace('T', ' ').substring(0, 16)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-400">이동 수단</span>
+                      <span className="font-bold text-slate-800 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">{selectedRequest.transportation || '미기재'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. 장소 상세 카드 */}
+              <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-50 rounded-lg"><MapPin className="w-4 h-4 text-indigo-500"/></div>
+                  장소 정보
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                    <span className="font-bold text-slate-400 text-xs block mb-1.5">만나는 장소</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-slate-800 text-sm truncate">
+                        {selectedRequest.meetingPoint ? selectedRequest.meetingPoint.replace(' /// ', ' ') : '자택'}
+                      </span>
+                      <button onClick={() => {
+                          const rawPoint = selectedRequest.meetingPoint || '자택';
+                          const searchTarget = rawPoint === '자택' ? selectedRequest.patientAddress : rawPoint.split(' /// ')[0];
+                          if (!searchTarget) return Toast.fire({ icon: 'warning', title: '주소 정보가 없습니다.' });
+                          window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
+                        }}
+                        className="shrink-0 px-3 py-2 sm:px-2 sm:py-1.5 bg-[#FEE500] hover:bg-[#FADA0A] text-[#191919] text-[10px] font-extrabold rounded-md transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Navigation className="w-3 h-3" /> 지도 열기
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                    <span className="font-bold text-slate-400 text-xs block mb-1.5">목적지 (방문 병원)</span>
+                    <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(selectedRequest.hospitalName)}`, '_blank')} 
+                      className="w-full text-left font-bold text-blue-600 text-sm truncate hover:text-blue-800 transition-colors flex items-center gap-1.5"
+                    >
+                      {selectedRequest.hospitalName} <MapPin className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. 진료 및 요청사항 상세 카드 영역 */}
+              <div className="space-y-4">
+                {/* 보호자 특별 요청사항 */}
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-100 rounded-lg"><AlertCircle className="w-4 h-4 text-slate-600"/></div>
+                    보호자 특별 요청사항
+                  </h4>
+                  <div className="bg-slate-50/50 p-4 rounded-xl text-sm text-slate-700 whitespace-pre-wrap border border-slate-100 font-medium leading-relaxed">
+                    {selectedRequest.requirements || selectedRequest.memo || '요청사항이 없습니다.'}
+                  </div>
+                </div>
+
+                {/* 상세 진료 및 검사 내용 */}
+                <div className="bg-white p-5 rounded-[20px] border border-blue-50 shadow-[0_2px_10px_rgb(59,130,246,0.04)] relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-400"></div>
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-50 rounded-lg"><Stethoscope className="w-4 h-4 text-blue-600"/></div>
+                    상세 진료 및 검사 내용
+                  </h4>
+                  <div className="bg-blue-50/30 p-4 rounded-xl text-sm text-blue-900 whitespace-pre-wrap border border-blue-100/50 font-bold leading-relaxed">
+                    {selectedRequest.detailedContent || '상세 내용이 없습니다.'}
+                  </div>
+                </div>
+
+                {/* 의사 선생님께 여쭤봐야 할 질문 */}
+                <div className="bg-white p-5 rounded-[20px] border border-orange-50 shadow-[0_2px_10px_rgb(249,115,22,0.04)] relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-400"></div>
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-orange-50 rounded-lg"><HelpCircle className="w-4 h-4 text-orange-600"/></div>
+                    의사 선생님께 꼭 여쭤봐야 할 질문
+                  </h4>
+                  <div className="bg-orange-50/30 p-4 rounded-xl text-sm text-orange-900 whitespace-pre-wrap border border-orange-100/50 font-bold leading-relaxed">
+                    {selectedRequest.doctorInquiry || '질문 사항이 없습니다.'}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+</file>
+
+<file path="components/admin/modals/InquiryModal.tsx">
+// src/components/admin/modals/InquiryModal.tsx
+'use client';
+
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircleQuestion, X, Loader2, Send, PenSquare } from 'lucide-react';
+
+interface InquiryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedInquiry: any | null;
+  answerInput: string;
+  setAnswerInput: React.Dispatch<React.SetStateAction<string>>;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}
+
+export default function InquiryModal({ isOpen, onClose, selectedInquiry, answerInput, setAnswerInput, onSubmit, isSubmitting }: InquiryModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
+          <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-blue-50/30">
+            <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+              <MessageCircleQuestion className="w-5 h-5 text-blue-600" /> 문의 상세 및 답변
+            </h3>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="p-6">
+            {!selectedInquiry ? (
+              <div className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-blue-500 w-8 h-8"/></div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold text-slate-900">{selectedInquiry.title}</h2>
+                <div className="p-4 bg-slate-50 rounded-xl text-sm text-slate-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
+                  {selectedInquiry.content}
+                </div>
+                
+                {/* 첨부 이미지 영역 (필요시) */}
+                {selectedInquiry.imageUrls && selectedInquiry.imageUrls.length > 0 && (
+                  <div className="mt-4 flex gap-3 overflow-x-auto">
+                    {selectedInquiry.imageUrls.map((url: string, idx: number) => (
+                      <img key={idx} src={url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL}${url}`} alt="첨부" 
+                           className="w-24 h-24 object-cover rounded-xl border border-slate-200 cursor-pointer hover:opacity-80" 
+                           onClick={() => window.open(url, '_blank')} />
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-slate-200/60 pt-6 mt-4">
+                  <h4 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-1.5">
+                    <PenSquare className="w-4 h-4" /> 관리자 답변 작성
+                  </h4>
+                  <textarea 
+                    value={answerInput} 
+                    onChange={(e) => setAnswerInput(e.target.value)} 
+                    placeholder="고객의 문의에 대한 친절한 답변을 작성해주세요." 
+                    className="w-full h-40 p-4 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm text-slate-800 resize-none shadow-sm" 
+                  />
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-5">
+                    <button onClick={onClose} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">
+                      취소
+                    </button>
+                    <button onClick={onSubmit} disabled={isSubmitting} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/30 flex items-center justify-center gap-2 disabled:opacity-50">
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4"/>} 
+                      {selectedInquiry.status === 'PENDING' ? '답변 등록' : '답변 수정'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+</file>
+
+<file path="components/admin/modals/ManagerListModalContent.tsx">
+// src/components/admin/modals/ManagerListModalContent.tsx
+'use client';
+
+import React, { useState } from 'react';
+import { UserCheck, Clock, CalendarDays, CheckCircle2 } from 'lucide-react';
+
+interface ManagerListModalProps {
+  managers: any[];
+  onSelect: (email: string) => void;
+}
+
+export default function ManagerListModalContent({ managers, onSelect }: ManagerListModalProps) {
+  const [selectedEmail, setSelectedEmail] = useState<string>('');
+
+  const handleSelect = (email: string) => {
+    setSelectedEmail(email);
+    onSelect(email);
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
+      {managers.map((manager) => {
+        const daysHtml = manager.availableDays 
+          ? manager.availableDays.split(',').map((day: string, idx: number) => (
+              <span key={idx} className="bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm text-[11px] px-2 py-1 rounded-md font-extrabold mr-1.5 inline-block mb-1">
+                {day.trim()}
+              </span>
+            ))
+          : <span className="bg-slate-100 text-slate-400 border border-dashed border-slate-300 text-[11px] px-2 py-1 rounded-md font-bold mr-1.5 inline-block mb-1">요일 미지정</span>;
+        
+        const timeText = manager.availableTime || '시간 미지정';
+        const isChecked = selectedEmail === manager.email;
+
+        return (
+          <div 
+            key={manager.id} 
+            onClick={() => handleSelect(manager.email)}
+            className={`relative flex flex-col p-4 rounded-[20px] border-2 cursor-pointer transition-all duration-200 overflow-hidden
+              ${isChecked 
+                ? 'bg-blue-50/50 border-blue-500 shadow-[0_4px_15px_rgba(59,130,246,0.15)] scale-[1.02] z-10' 
+                : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'}`}
+          >
+            {isChecked && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-[20px]"></div>}
+
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-2.5">
+                {/* 둥근 프로필 아이콘 */}
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center border shrink-0 transition-colors
+                  ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
+                  {isChecked ? <CheckCircle2 className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-extrabold text-slate-800 text-sm mb-0.5 flex items-center gap-1.5">
+                    <span className="truncate">{manager.name}</span>
+                    <span className="shrink-0 font-bold text-blue-600 text-[9px] bg-blue-100/50 px-1.5 py-0.5 rounded-full border border-blue-200/50">PRO</span>
+                  </h4>
+                  <p className="text-[11px] font-medium text-slate-400 truncate w-full">{manager.email}</p>
+                </div>
+              </div>
+              
+              <div className="text-[9px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold whitespace-nowrap border border-slate-200 shrink-0">
+                #{manager.id}
+              </div>
+            </div>
+            
+            {/* 하단 요일/시간 정보 박스 */}
+            <div className={`p-3 rounded-xl border space-y-2.5 mt-auto flex-1 transition-colors
+              ${isChecked ? 'bg-white border-blue-100' : 'bg-slate-50 border-slate-200/60'}`}>
+              
+              {/* 근무 요일 */}
+              <div>
+                <p className="text-[10px] font-extrabold text-slate-500 mb-1.5 flex items-center gap-1">
+                  <CalendarDays className="w-3.5 h-3.5 text-emerald-500" /> 근무 가능 요일
+                </p>
+                <div className="flex flex-wrap w-full">{daysHtml}</div>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60">
+                <p className="text-[10px] font-extrabold text-slate-500 mb-1.5 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-indigo-500" /> 근무 가능 시간
+                </p>
+                <span className="bg-indigo-50 text-indigo-600 border border-indigo-100 text-[11px] px-2 py-1 rounded-md font-extrabold inline-block shadow-sm">
+                  {timeText}
+                </span>
+              </div>
+            </div>
+
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+</file>
+
+<file path="components/admin/modals/NoticeModal.tsx">
+'use client';
+
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Megaphone, X, CheckCircle2 } from 'lucide-react';
+
+interface NoticeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedNotice: any | null;
+  noticeForm: { title: string; content: string; important: boolean };
+  setNoticeForm: React.Dispatch<React.SetStateAction<{ title: string; content: string; important: boolean }>>;
+  onSave: () => void;
+}
+
+export default function NoticeModal({ isOpen, onClose, selectedNotice, noticeForm, setNoticeForm, onSave }: NoticeModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
+          <div className="flex justify-between items-center p-5 bg-red-50/30 border-b border-slate-100">
+            <h3 className="font-bold text-lg text-slate-800">
+              <Megaphone className="w-5 h-5 inline text-red-600 mr-2"/> 
+              {selectedNotice ? '공지 수정' : '새 공지 작성'}
+            </h3>
+            <button onClick={onClose}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
+          </div>
+          <div className="p-6 space-y-5 bg-white">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">제목</label>
+              <input type="text" value={noticeForm.title} onChange={(e) => setNoticeForm({...noticeForm, title: e.target.value})}
+                placeholder="공지사항 제목을 입력하세요"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm font-medium" />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">내용</label>
+              <textarea value={noticeForm.content} onChange={(e) => setNoticeForm({...noticeForm, content: e.target.value})}
+                placeholder="공지사항 내용을 상세히 작성해주세요."
+                className="w-full h-48 sm:h-80 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm leading-relaxed resize-none" />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 p-3 rounded-xl w-fit hover:bg-red-50 transition-colors">
+              <input type="checkbox" checked={noticeForm.important} onChange={(e) => setNoticeForm({...noticeForm, important: e.target.checked})}
+                className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500" />
+              <span className="text-sm font-bold text-slate-700">중요 공지</span>
+            </label>
+          </div>
+          <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2 bg-slate-50/50">
+            <button onClick={onClose} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors">
+              취소
+            </button>
+            <button onClick={onSave} className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-red-600 text-white font-bold text-sm rounded-xl hover:bg-red-700 transition-colors shadow-sm flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> {selectedNotice ? '수정 완료' : '등록하기'}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+</file>
+
+<file path="components/admin/modals/ReportModal.tsx">
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  X, Loader2, FileCheck2, Building2, Activity, 
+  Stethoscope, Pill, MessageSquare, CalendarClock 
+} from 'lucide-react';
+import { reportApi } from '@/src/api/index';
+
+interface ReportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  reservationId: number | null;
+}
+
+export default function ReportModal({ isOpen, onClose, reservationId }: ReportModalProps) {
+  const [reportData, setReportData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && reservationId) {
+      const fetchReport = async () => {
+        setLoading(true);
+        try {
+          const res = await reportApi.getReportByReservationId(String(reservationId));
+          setReportData(res.data);
+        } catch (error) {
+          console.log("리포트를 불러올 수 없습니다.");
+          setReportData(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchReport();
+    } else {
+      setReportData(null);
+    }
+  }, [isOpen, reservationId]);
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6">
+        <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+          className="bg-[#F8FAFC] rounded-[28px] w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
+            
+          {/* 헤더 영역 */}
+          <div className="flex justify-between items-center px-6 py-5 bg-white border-b border-slate-100 relative z-10 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100/50">
+                <FileCheck2 className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-slate-800 leading-tight">
+                  케어 리포트 상세 내역
+                </h3>
+                {reservationId && <p className="text-xs font-bold text-slate-400 mt-0.5 tracking-wide">예약번호 #{reservationId}</p>}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* (재전송) 배지 - PC 화면용 */}
+              {reportData?.isModified && (
+                <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[11px] font-extrabold rounded-lg border border-orange-200/60 shadow-sm hidden sm:block">
+                  수정됨 (재전송)
+                </span>
+              )}
+              <button onClick={onClose} className="p-2 bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* 본문 영역 */}
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+                <p className="text-slate-400 font-bold text-sm">리포트 데이터를 불러오는 중입니다...</p>
+              </div>
+            ) : reportData ? (
+              <div className="space-y-4">
+                {/* (재전송) 배지 - 모바일 화면용 */}
+                {reportData.isModified && (
+                  <div className="sm:hidden mb-4">
+                    <span className="px-2.5 py-1 inline-block bg-orange-50 text-orange-600 text-[11px] font-extrabold rounded-lg border border-orange-200/60 shadow-sm">
+                      수정됨 (재전송)
+                    </span>
+                  </div>
+                )}
+
+                {/* 1. 상단 요약 정보 (방문 진료과, 환자 컨디션) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                    <p className="text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5" /> 방문 진료과
+                    </p>
+                    <p className="font-extrabold text-slate-800 text-base">{reportData.department}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                    <p className="text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5" /> 환자 컨디션
+                    </p>
+                    <p className="font-extrabold text-slate-800 text-base flex items-center gap-1">
+                      {reportData.patientCondition === 'good' ? '😊 매우 좋음' : reportData.patientCondition === 'normal' ? '😐 보통' : '😥 저하됨'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. 진료 요약 및 의사 소견 */}
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-50 rounded-lg"><Stethoscope className="w-4 h-4 text-blue-600" /></div>
+                    진료 요약 및 의사 소견
+                  </h4>
+                  <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100 font-medium">
+                    {reportData.doctorOpinion}
+                  </div>
+                </div>
+
+                {/* 3. 처방 및 다음 일정 */}
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-rose-50 rounded-lg"><Pill className="w-4 h-4 text-rose-500" /></div>
+                    처방 및 다음 일정
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100 font-medium">
+                      {reportData.prescription}
+                    </div>
+                    <div className={`flex items-center gap-2 p-3.5 rounded-xl border font-bold text-sm shadow-sm
+                      ${reportData.noNextSchedule ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
+                      <CalendarClock className="w-4 h-4" />
+                      {reportData.noNextSchedule ? '다음 진료 일정 없음' : `다음 방문일: ${reportData.nextSchedule}`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. 매니저 코멘트 */}
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-purple-400"></div>
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-purple-50 rounded-lg"><MessageSquare className="w-4 h-4 text-purple-600" /></div>
+                    매니저 동행 코멘트
+                  </h4>
+                  <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-purple-50/30 p-4 rounded-xl border border-purple-100/50 font-medium">
+                    {reportData.managerComment}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white p-12 rounded-[24px] border border-slate-100 shadow-sm text-center flex flex-col items-center justify-center mt-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <FileCheck2 className="w-8 h-8 text-slate-300" />
+                </div>
+                <h4 className="text-slate-700 font-bold mb-1 text-lg">작성된 리포트가 없습니다</h4>
+                <p className="text-slate-400 text-sm">해당 예약건에 대한 리포트 정보를 찾을 수 없습니다.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+</file>
+
+<file path="components/admin/popup/page.tsx">
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { popupApi } from '@/src/api/index';
+import { Save, Image as ImageIcon, Power } from 'lucide-react';
+import { Toast } from '@/src/utils/alert';
+
+export default function AdminPopupPage() {
+  const [isActive, setIsActive] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // 초기 설정 로드
+  useEffect(() => {
+    popupApi.getPopupSettings().then(res => {
+      setIsActive(res.data.isActive);
+      setPreviewUrl(res.data.imageUrl);
+    });
+  }, []);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const formData = new FormData();
+      if (imageFile) formData.append('image', imageFile);
+      formData.append('isActive', String(isActive));
+
+      await popupApi.updatePopup(formData);
+      Toast.fire({ icon: 'success', title: '팝업 설정이 저장되었습니다.' });
+    } catch (err) {
+      Toast.fire({ icon: 'error', title: '저장에 실패했습니다.' });
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 mt-10">
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+        <ImageIcon className="text-blue-600" /> 이벤트 팝업 관리
+      </h2>
+
+      <div className="space-y-8">
+        {/* 사용 여부 토글 */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p className="font-bold text-gray-800">팝업 노출 상태</p>
+            <p className="text-sm text-gray-500">현재 메인 페이지에 팝업을 띄울지 결정합니다.</p>
+          </div>
+          <button 
+            onClick={() => setIsActive(!isActive)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {/* 이미지 업로드 및 미리보기 */}
+        <div>
+          <p className="font-bold text-gray-800 mb-3">팝업 이미지 (포스터)</p>
+          <div 
+            className="relative aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden hover:border-blue-400 transition-colors group cursor-pointer"
+            onClick={() => document.getElementById('poster-upload')?.click()}
+          >
+            {previewUrl ? (
+              <img src={previewUrl} alt="미리보기" className="w-full h-full object-cover" />
+            ) : (
+              <div className="text-center">
+                <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-400">이미지를 업로드하려면 클릭하세요</p>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white font-medium">
+              이미지 변경
+            </div>
+          </div>
+          <input id="poster-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+        </div>
+
+        <button 
+          onClick={handleSave}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+        >
+          <Save className="w-5 h-5" /> 설정 저장하기
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/InquiryTab.tsx">
+// src/components/admin/tabs/InquiryTab.tsx
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, Variants } from 'framer-motion';
+import { MessageCircleQuestion, Loader2, Lock, Activity, CheckCircle2 } from 'lucide-react';
+import { adminApi, inquiryApi } from '@/src/api/index';
+import InquiryModal from '../modals/InquiryModal';
+import { Toast, YesAlert } from '@/src/utils/alert';
+
+const containerVariants: Variants = { 
+  hidden: { opacity: 0 }, 
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } } 
+};
+const itemVariants: Variants = { 
+  hidden: { opacity: 0, y: 10 }, 
+  visible: { opacity: 1, y: 0 } 
+};
+const tabVariants: Variants = { 
+  hidden: { opacity: 0, y: 15 }, 
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } 
+};
+
+export default function InquiryTab() {
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [inquiryPage, setInquiryPage] = useState(0);
+  const [inquiryTotalPages, setInquiryTotalPages] = useState(0); // ✅ 누락된 페이지네이션 상태 복구
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [answerInput, setAnswerInput] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [inquiryPage]);
+
+  const fetchInquiries = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAllInquiries(inquiryPage, inquiryStatusFilter);
+      setInquiries(res.data?.content || []);
+      setInquiryTotalPages(res.data?.totalPages || 0); // ✅ 총 페이지 수 업데이트 복구
+    } finally { setLoading(false); }
+  }, [inquiryPage, inquiryStatusFilter]);
+
+  useEffect(() => { fetchInquiries(); }, [fetchInquiries]);
+
+  const handleOpenDetail = async (id: number) => {
+    setIsInquiryModalOpen(true);
+    setSelectedInquiry(null);
+    setAnswerInput('');
+    try {
+      const res = await inquiryApi.getInquiry(id);
+      setSelectedInquiry(res.data);
+      if (res.data.answer) setAnswerInput(res.data.answer);
+    } catch {
+      setIsInquiryModalOpen(false);
+      YesAlert.fire({ icon: 'error', title: '오류', html: '정보를 불러올 수 없습니다.' });
+    }
+  };
+
+  const submitAnswer = async () => {
+    if (!answerInput.trim()) return YesAlert.fire({ icon: 'warning', title: '알림', html: '답변을 입력해주세요.' });
+    
+    setIsSubmitting(true);
+    try {
+      await adminApi.answerInquiry(selectedInquiry.id, answerInput);
+      Toast.fire({ icon: 'success', title: '답변이 등록되었습니다.' });
+      setIsInquiryModalOpen(false);
+      fetchInquiries();
+    } catch {
+      YesAlert.fire({ icon: 'error', title: '오류', html: '등록에 실패했습니다.' });
+    } finally { 
+      setIsSubmitting(false); 
+    }
+  };
+
+  return (
+    <>
+      <motion.div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+        {[
+          { title: '전체 문의', value: `${inquiries.length}건`, icon: <MessageCircleQuestion className="w-6 h-6 text-blue-500" /> },
+          { title: '답변 대기', value: `${inquiries.filter(i => i.status === 'PENDING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
+          { title: '답변 완료', value: `${inquiries.filter(i => i.status === 'ANSWERED').length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+        ].map((stat, idx) => (
+          <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
+              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
+        <div className="p-5 border-b border-slate-100 bg-blue-50/30 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <MessageCircleQuestion className="w-5 h-5 text-blue-600" /> 고객센터 관리
+          </h2>
+          <select value={inquiryStatusFilter} onChange={(e) => {setInquiryStatusFilter(e.target.value); setInquiryPage(0);}} 
+          className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+            <option value="">모든 상태</option>
+            <option value="PENDING">답변 대기</option>
+            <option value="ANSWERED">답변 완료</option>
+          </select>
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="p-4 font-bold pl-6">ID / 분류</th>
+                <th className="p-4 font-bold">제목 / 작성자</th>
+                <th className="p-4 font-bold">상태 / 작성일</th>
+                <th className="p-4 font-bold text-center pr-6">답변 관리</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm bg-white">
+              {loading ? (
+                <tr><td colSpan={4} className="p-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></td></tr>
+              ) : inquiries.length > 0 ? (
+                inquiries.map((inq) => (
+                  <tr key={inq.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 pl-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 font-medium">#{inq.id}</span>
+                        {/* 카테고리(분류) 뱃지 */}
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md whitespace-nowrap">
+                          {inq.category === 'RESERVATION' ? '예약/매칭' : 
+                           inq.category === 'PAYMENT' ? '결제/환불' : 
+                           inq.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <p className="font-bold text-slate-800 cursor-pointer hover:underline flex items-center gap-1.5" onClick={() => handleOpenDetail(inq.id)}>
+                        {inq.isPrivate && <Lock className="w-4 h-4 text-slate-400" />}
+                        {inq.title}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">{inq.authorName} ({inq.authorEmail || '이메일 없음'})</p>
+                    </td>
+                    <td className="p-4">
+                      {/* 상태 뱃지 테두리 디자인 및 작성일자 */}
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                        {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
+                      </span>
+                      <p className="text-xs text-slate-400 mt-1">{inq.createdAt?.substring(0, 10)}</p>
+                    </td>
+                    <td className="p-4 pr-6 text-center">
+                      {/* 답변 수정 버튼 오리지널 테마(흰 배경 + 회색 테두리) */}
+                      {inq.status === 'PENDING' ? (
+                        <button onClick={() => handleOpenDetail(inq.id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
+                          답변 달기
+                        </button>
+                      ) : (
+                        <button onClick={() => handleOpenDetail(inq.id)} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm">
+                          답변 수정
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={4} className="p-16 text-center text-slate-400">조건에 맞는 문의 내역이 없습니다.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></div>
+          ) : inquiries.length > 0 ? inquiries.map((inq) => (
+            <div key={inq.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-bold text-xs">#{inq.id}</span>
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
+                    {inq.category === 'RESERVATION' ? '예약/매칭' : inq.category === 'PAYMENT' ? '결제/환불' : inq.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                  </span>
+                </div>
+                <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                  {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
+                </span>
+              </div>
+              
+              <div onClick={() => handleOpenDetail(inq.id)} className="cursor-pointer group">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5 text-sm group-hover:text-blue-600 transition-colors">
+                  {inq.isPrivate && <Lock className="w-3.5 h-3.5 text-slate-400" />} {inq.title}
+                </p>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-xs font-medium text-slate-600">{inq.authorName}</span>
+                  <span className="text-[11px] text-slate-400">{inq.createdAt?.substring(0, 10)}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-50">
+                <button onClick={() => handleOpenDetail(inq.id)} className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1 ${inq.status === 'PENDING' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  {inq.status === 'PENDING' ? '답변 달기' : '답변 수정'}
+                </button>
+              </div>
+            </div>
+          )) : (
+            <div className="py-16 text-center text-slate-400 text-sm">조건에 맞는 문의 내역이 없습니다.</div>
+          )}
+        </div>
+
+        {/* 페이지네이션 블록 */}
+        {inquiryTotalPages > 0 && (
+          <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+            <button disabled={inquiryPage === 0} onClick={() => setInquiryPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+            {[...Array(inquiryTotalPages)].map((_, i) => (
+              <button key={i} onClick={() => setInquiryPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${inquiryPage === i ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>
+                {i + 1}
+              </button>
+            ))}
+            <button disabled={inquiryPage >= inquiryTotalPages - 1} onClick={() => setInquiryPage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+          </div>
+        )}
+      </motion.div>
+
+      <InquiryModal
+        isOpen={isInquiryModalOpen}
+        onClose={() => setIsInquiryModalOpen(false)}
+        selectedInquiry={selectedInquiry}
+        answerInput={answerInput}
+        setAnswerInput={setAnswerInput}
+        onSubmit={submitAnswer}
+        isSubmitting={isSubmitting}
+      />
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/ManagerTab.tsx">
+// src/components/admin/tabs/ManagerTab.tsx
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserPlus, Loader2, FileText, CheckCircle2, XCircle } from 'lucide-react';
+import { motion, Variants } from 'framer-motion';
+import { adminApi } from '@/src/api/index';
+import { Toast, YesAlert } from '@/src/utils/alert';
+import EmptyState from '../ui/EmptyState';
+import { div } from 'framer-motion/client';
+
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
+const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
+
+export default function ManagerTab() {
+  const [pendingManagers, setPendingManagers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mgrAppStatus, setMgrAppStatus] = useState('WAITING');
+
+  // useEffect(() => {
+  //     window.scrollTo({ top: 0, behavior: 'smooth' });
+  //   }, [inquiryPage]);
+
+  const fetchManagerApplications = useCallback(async (status: string) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getPendingManagers(status);
+      setPendingManagers(res.data);
+    } catch (error) { 
+      Toast.fire({ icon: 'error', title: '지원서 목록을 불러오지 못했습니다.' });
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchManagerApplications(mgrAppStatus); }, [mgrAppStatus, fetchManagerApplications]);
+
+  const handleApprove = async (memberId: number, name: string) => {
+    const result = await YesAlert.fire({
+      title: '매니저 승인', html: `${name} 님의 매니저 자격을 승인하시겠습니까?`, icon: 'question',
+      showCancelButton: true, confirmButtonText: '승인',
+    });
+    if (result.isConfirmed) {
+      await adminApi.approveManager(memberId);
+      Toast.fire({ icon: 'success', title: `${name} 님이 승인되었습니다.` });
+      fetchManagerApplications(mgrAppStatus);
+    }
+  };
+
+  const handleReject = async (applicationId: number, name: string) => {
+    const { value: reason } = await YesAlert.fire({
+      title: '반려 사유 입력', input: 'textarea',
+      showCancelButton: true, confirmButtonText: '반려 처리',
+      inputValidator: (value) => !value ? '반려 사유를 입력해야 합니다!' : null
+    });
+    if (reason) {
+      await adminApi.rejectManagerApp(applicationId, { rejectionReason: reason });
+      Toast.fire({ icon: 'success', title: '지원이 반려되었습니다.' });
+      fetchManagerApplications(mgrAppStatus);
+    }
+  };
+
+  return (
+    <>
+      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+        {[
+          { title: '총 지원자', value: `${pendingManagers.length}명`, icon: <FileText className="w-6 h-6 text-slate-500" /> },
+          { title: '요양보호사', value: `${pendingManagers.filter(m => m.licenseName === 'caregiver').length}명`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+          { title: '사회복지사', value: `${pendingManagers.filter(m => m.licenseName === 'socialworker').length}명`, icon: <CheckCircle2 className="w-6 h-6 text-blue-500" /> },
+          { title: '자격 미지정', value: `${pendingManagers.filter(m => !m.licenseName || m.licenseName === 'none').length}명`, icon: <UserPlus className="w-6 h-6 text-orange-500" /> },
+        ].map((stat, idx) => (
+          <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
+              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+      
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6">
+        <div className="p-5 border-b border-slate-100 bg-emerald-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-emerald-600" /> 가입 승인 대기 목록
+          </h2>
+          <div className="flex gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-fit">
+            {['WAITING', 'APPROVED', 'REJECTED'].map(s => (
+              <button key={s} onClick={() => setMgrAppStatus(s)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mgrAppStatus === s ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+                {s === 'WAITING' ? '신규 대기' : s === 'APPROVED' ? '승인 완료' : '반려 내역'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
+              <tr>
+                <th className="p-4 font-bold pl-6">지원일자</th>
+                <th className="p-4 font-bold">이름/연락처</th>
+                <th className="p-4 font-bold">보유 자격증</th>
+                <th className="p-4 font-bold text-center">근무 가능 시간</th>
+                <th className="p-4 font-bold text-center">첨부파일</th>
+                <th className="p-4 font-bold text-right pr-6">계정 승인</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm bg-white">
+              {loading ? (
+                <tr><td colSpan={6} className="p-16 text-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" /></td></tr>
+              ) : pendingManagers.length > 0 ? pendingManagers.map((mgr) => (
+                <tr key={mgr.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="p-4 pl-6 text-slate-500 font-medium">{mgr.applyDate}</td>
+                  <td className="p-4"><p className="font-bold text-slate-800">{mgr.name}</p><p className="text-xs text-slate-500 mt-0.5">{mgr.phone}</p></td>
+                  <td className="p-4">
+                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100">
+                      {mgr.licenseName === 'caregiver' ? '요양보호사' : mgr.licenseName === 'socialworker' ? '사회복지사' : mgr.licenseName === 'none' ? '없음' : mgr.licenseName}
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="flex gap-1 flex-wrap justify-center">
+                        {mgr.availableDays?.split(',').map((day: string, idx: number) => (
+                          <span key={idx} className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                            {day.trim()}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="text-[11px] text-slate-500 font-medium">{mgr.availableTime}</span>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    {mgr.certificateUrl ? (
+                      <a href={`${process.env.NEXT_PUBLIC_API_URL}${mgr.certificateUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"><FileText className="w-3.5 h-3.5" /> 보기</a>
+                    ) : <span className="text-slate-300 text-xs font-medium">없음</span>}
+                  </td>
+                  <td className="p-4 pr-6 text-right">
+                    {mgrAppStatus === 'WAITING' && (
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleApprove(mgr.memberId, mgr.name)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm"><CheckCircle2 className="w-4 h-4" /> 승인</button>
+                        <button onClick={() => handleReject(mgr.id, mgr.name)} className="flex items-center gap-1 bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50 shadow-sm"><XCircle className="w-4 h-4" /> 반려</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )) : (
+                <EmptyState message="대기 중인 지원서가 없습니다." colSpan={6} />
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" /></div>
+          ) : pendingManagers.length > 0 ? pendingManagers.map((mgr) => (
+            <div key={mgr.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                <div>
+                  <p className="font-extrabold text-slate-800 text-sm">{mgr.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{mgr.phone}</p>
+                </div>
+                <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-bold border border-emerald-100">
+                  {mgr.licenseName === 'caregiver' ? '요양보호사' : mgr.licenseName === 'socialworker' ? '사회복지사' : mgr.licenseName === 'none' ? '없음' : mgr.licenseName}
+                </span>
+              </div>
+              
+              <div className="bg-slate-50 p-3 rounded-lg flex flex-col gap-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold">지원일자</span>
+                  <span className="text-slate-700 font-medium">{mgr.applyDate}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block mb-1">근무 가능 시간</span>
+                  <div className="flex gap-1 flex-wrap mb-1">
+                    {mgr.availableDays?.split(',').map((day: string, idx: number) => (
+                      <span key={idx} className="bg-white border border-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{day.trim()}</span>
+                    ))}
+                  </div>
+                  <span className="text-[11px] text-slate-600 font-medium">{mgr.availableTime}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                {mgr.certificateUrl && (
+                  <a href={`${process.env.NEXT_PUBLIC_API_URL}${mgr.certificateUrl}`} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
+                    증명서 보기
+                  </a>
+                )}
+                {mgrAppStatus === 'WAITING' && (
+                  <>
+                    <button onClick={() => handleApprove(mgr.memberId, mgr.name)} className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm">승인</button>
+                    <button onClick={() => handleReject(mgr.id, mgr.name)} className="flex-1 bg-white border border-red-200 text-red-600 py-2 rounded-lg text-xs font-bold hover:bg-red-50 shadow-sm">반려</button>
+                  </>
+                )}
+              </div>
+            </div>
+          )) : (
+            <div className='flex justify-center'>
+              <EmptyState message="대기 중인 지원서가 없습니다." isTable={false} />
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/MemberTab.tsx">
+// src/components/admin/tabs/MemberTab.tsx
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Users, UserCog, CheckCircle2, XCircle, Search, Loader2, FileText } from 'lucide-react';
+import { motion, Variants } from 'framer-motion';
+import { adminApi } from '@/src/api/index';
+import { Toast, YesAlert } from '@/src/utils/alert';
+import EmptyState from '../ui/EmptyState';
+
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
+const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
+
+export default function MemberTab({ handleViewMemberProfile }: any) {
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [memberRoleFilter, setMemberRoleFilter] = useState('');
+  const [memberPage, setMemberPage] = useState(0);
+  const [memberTotalPages, setMemberTotalPages] = useState(0);
+
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [memberPage]);
+
+  const fetchMembers = useCallback(async (page: number, role: string) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAllMembers(page, role);
+      setMembers(res.data?.content || []); 
+      setMemberTotalPages(res.data?.totalPages || 0);
+    } catch (error) {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchMembers(memberPage, memberRoleFilter);
+  }, [memberPage, memberRoleFilter, fetchMembers]);
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => 
+      (m.name || '').toLowerCase().includes(memberSearchTerm.toLowerCase()) || 
+      (m.email || '').toLowerCase().includes(memberSearchTerm.toLowerCase())
+    );
+  }, [members, memberSearchTerm]);
+
+  const handleChangeRole = async (memberId: number, newRole: string) => {
+    const result = await YesAlert.fire({
+      title: '권한 변경',
+      html: '해당 회원의 권한을 정말 변경하시겠습니까?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '변경하기',
+      cancelButtonText: '취소'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await adminApi.changeMemberRole(memberId, newRole);
+        Toast.fire({ icon: 'success', title: '권한이 변경되었습니다.' });
+        fetchMembers(memberPage, memberRoleFilter);
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '오류', html: '권한 변경에 실패했습니다.' });
+      }
+    }
+  };
+
+  const handleToggleStatus = async (member: any) => {
+    const currentActive = member.active ?? member.isActive ?? true; 
+    const targetActivate = !currentActive;
+
+    const result = await YesAlert.fire({ 
+      title: currentActive ? '계정 정지' : '정지 해제', 
+      html: `${member.name} 회원을 처리하시겠습니까?`, icon: 'warning', 
+      showCancelButton: true, confirmButtonText: '확인' 
+    });
+    
+    if (result.isConfirmed) {
+      await adminApi.updateMemberStatus(member.id, targetActivate);
+      Toast.fire({ icon: 'success', title: '성공적으로 처리되었습니다.' });
+      fetchMembers(memberPage, memberRoleFilter);
+    }
+  };
+
+  return (
+    <>
+      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+        {[
+          { title: '전체 회원', value: `${members.length}명`, icon: <Users className="w-6 h-6 text-purple-500" /> },
+          { title: '일반 고객', value: `${members.filter(m => m.role.includes('USER')).length}명`, icon: <UserCog className="w-6 h-6 text-slate-500" /> },
+          { title: '매니저', value: `${members.filter(m => m.role.includes('MANAGER')).length}명`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+          { title: '정지 계정', value: `${members.filter(m => m.active === false).length}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
+        ].map((stat, idx) => (
+          <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
+              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+      
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col mt-6">
+        <div className="p-5 border-b border-slate-100 bg-purple-50/30 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h2 className="w-full sm:w-auto text-lg font-bold text-slate-800 flex items-center justify-start gap-2">
+            <UserCog className="w-5 h-5 text-purple-600 shrink-0" /> 전체 회원 목록
+          </h2>
+          <div className="flex items-center w-full sm:w-auto gap-2">
+            <select value={memberRoleFilter} onChange={(e) => {setMemberRoleFilter(e.target.value); setMemberPage(0);}} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer">
+              <option value="">전체 권한</option>
+              <option value="USER">일반 고객</option>
+              <option value="MANAGER">매니저</option>
+              <option value="ADMIN">관리자</option>
+            </select>
+            <div className="relative w-full sm:w-64">
+              <input type="text" placeholder="이름/이메일 검색..." value={memberSearchTerm} onChange={(e) => setMemberSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm placeholder:text-slate-400" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
+              <tr>
+                <th className="p-4 font-bold pl-6">회원 ID</th>
+                <th className="p-4 font-bold">이메일</th>
+                <th className="p-4 font-bold">이름</th>
+                <th className="p-4 font-bold">권한</th>
+                <th className="p-4 font-bold text-center pr-6">관리</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm bg-white">
+              {loading ? (
+                <tr><td colSpan={5} className="p-16 text-center"><Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto" /></td></tr>
+              ) : filteredMembers.length > 0 ? filteredMembers.map((member) => {
+                const isAccountActive = member.active ?? member.isActive ?? true;
+                return (
+                  <tr key={member.id} className={`border-b border-slate-100 ${!isAccountActive ? 'bg-red-50/50' : 'hover:bg-slate-50/50 transition-colors'}`}>
+                    <td className="p-4 pl-6 text-slate-400 font-medium">#{member.id}</td>
+                    <td className="p-4 text-slate-600">{member.email}</td>
+                    <td className="p-4 text-slate-800 font-bold">{member.name}</td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${member.role.includes('ADMIN') ? 'bg-purple-50 text-purple-700 border-purple-200' : member.role.includes('MANAGER') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                        {member.role.includes('ADMIN') ? '관리자' : member.role.includes('MANAGER') ? '매니저' : '일반 고객'}
+                      </span>
+                    </td>
+                    <td className="p-4 pr-6 text-center">
+                      <div className="flex justify-center gap-2 items-center">
+                        <button onClick={() => handleViewMemberProfile(member)} className="text-xs text-blue-600 border border-blue-200 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-bold shadow-sm flex items-center gap-1">
+                          <FileText className="w-3.5 h-3.5" /> 프로필
+                        </button>
+                        
+                        {member.role.includes('ADMIN') ? (
+                          <span className="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60">관리 불가</span>
+                        ) : (
+                          <>
+                            <select
+                              value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'}
+                              onChange={(e) => handleChangeRole(member.id, e.target.value)}
+                              className="bg-white border border-slate-200 text-xs font-bold text-slate-600 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
+                            >
+                              <option value="USER">일반 고객</option>
+                              <option value="MANAGER">매니저</option>
+                              <option value="ADMIN">관리자</option>
+                            </select>
+
+                            <button onClick={() => handleToggleStatus(member)} className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/20'}`}>
+                              {isAccountActive ? '계정 정지' : '정지 해제'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }) : (
+                <EmptyState message="검색 결과가 없습니다." colSpan={5} />
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto" /></div>
+          ) : filteredMembers.length > 0 ? filteredMembers.map((member) => {
+            const isAccountActive = member.active ?? member.isActive ?? true;
+            return (
+              <div key={member.id} className={`p-4 rounded-xl border shadow-sm flex flex-col gap-3 ${!isAccountActive ? 'bg-red-50/30 border-red-100' : 'bg-white border-slate-200'}`}>
+                <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                  <div>
+                    <span className="text-slate-400 font-bold text-xs mr-1">#{member.id}</span>
+                    <span className="font-extrabold text-slate-800 text-sm">{member.name}</span>
+                    <p className="text-xs text-slate-500 mt-0.5">{member.email}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${member.role.includes('ADMIN') ? 'bg-purple-50 text-purple-700 border-purple-200' : member.role.includes('MANAGER') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                    {member.role.includes('ADMIN') ? '관리자' : member.role.includes('MANAGER') ? '매니저' : '일반 고객'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button onClick={() => handleViewMemberProfile(member)} className="flex-[0.5] py-2 px-0.5 text-xs text-blue-600 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100 font-bold shadow-sm flex justify-center items-center gap-1">
+                    <FileText className="w-3 h-3" /> 프로필
+                  </button>
+                  
+                  {member.role.includes('ADMIN') ? (
+                    <span className="flex-1 text-center py-2 text-xs font-bold text-slate-400 bg-slate-50 rounded-lg border border-slate-200">관리 불가</span>
+                  ) : (
+                    <>
+                      <select value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'} onChange={(e) => handleChangeRole(member.id, e.target.value)} className="flex-1 bg-white border border-slate-200 text-xs font-bold text-slate-600 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm">
+                        <option value="USER">일반 고객</option>
+                        <option value="MANAGER">매니저</option>
+                        <option value="ADMIN">관리자</option>
+                      </select>
+                      <button onClick={() => handleToggleStatus(member)} className={`flex-1 py-2 text-xs rounded-lg font-bold shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600' : 'bg-emerald-600 text-white'}`}>
+                        {isAccountActive ? '계정 정지' : '정지 해제'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          }) : (
+            <div className='flex justify-center'>
+              <EmptyState message="검색 결과가 없습니다." isTable={false} />
+            </div>
+          )}
+        </div>
+        
+        {memberTotalPages > 0 && (
+          <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+            <button disabled={memberPage === 0} onClick={() => setMemberPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+            {[...Array(memberTotalPages)].map((_, i) => (
+              <button key={i} onClick={() => setMemberPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${memberPage === i ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{i + 1}</button>
+            ))}
+            <button disabled={memberPage >= memberTotalPages - 1} onClick={() => setMemberPage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+          </div>
+        )}
+      </motion.div>
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/NoticeTab.tsx">
+// src/components/admin/tabs/NoticeTab.tsx
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, Variants } from 'framer-motion';
+import { Megaphone, Loader2, Activity, FileText, Search } from 'lucide-react';
+import { adminApi } from '@/src/api/index';
+import NoticeModal from '../modals/NoticeModal';
+import { Toast, YesAlert } from '@/src/utils/alert'; 
+
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
+const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
+
+const NOTICE_TEMPLATE = `■ 주요 안내 사항
+ - (공지하고자 하는 핵심 내용을 상세히 적어주세요.)
+
+■ 적용 일시
+ - 2024년 00월 00일 (요일) 00:00 부터 적용 예정
+
+■ 기타 문의
+ - 고객센터: 1588-0000 (운영시간: 평일 09:00 ~ 18:00)
+ - 1:1 문의 게시판을 이용해 주시면 순차적으로 답변해 드리겠습니다.`;
+
+export default function NoticeTab() {
+  const [notices, setNotices] = useState<any[]>([]);
+  const [noticePage, setNoticePage] = useState(0);
+  const [noticeTotalPages, setNoticeTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  // 검색 및 필터 상태
+  const [searchTerm, setSearchTerm] = useState('');
+  const [importanceFilter, setImportanceFilter] = useState(''); // '' | 'IMPORTANT' | 'GENERAL'
+
+  // 모달 상태
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  const [selectedNotice, setSelectedNotice] = useState<any>(null);
+  const [noticeForm, setNoticeForm] = useState({ title: '', content: '', important: false });
+
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [noticePage]);
+
+  const fetchNotices = useCallback(async (page: number = 0) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAllNotices(page);
+      setNotices(res.data.content);
+      setNoticeTotalPages(res.data.totalPages);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchNotices(noticePage); }, [fetchNotices, noticePage]);
+
+  // 필터링 로직 (검색어 + 중요/일반 여부)
+  const filteredNotices = useMemo(() => {
+    return notices.filter(n => {
+      const matchesSearch = (n.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = importanceFilter === 'IMPORTANT' ? n.important === true
+                          : importanceFilter === 'GENERAL' ? n.important === false
+                          : true;
+      return matchesSearch && matchesFilter;
+    });
+  }, [notices, searchTerm, importanceFilter]);
+
+  const handleSaveNotice = async () => {
+    if (!noticeForm.title || !noticeForm.content) {
+      return YesAlert.fire({ icon: 'warning', title: '알림', html: '제목과 내용을 입력해주세요.' });
+    }
+    try {
+      if (selectedNotice) {
+        await adminApi.updateNotice(selectedNotice.id, noticeForm);
+      } else {
+        await adminApi.createNotice(noticeForm);
+      }
+      Toast.fire({ icon: 'success', title: '저장되었습니다.' });
+      setIsNoticeModalOpen(false);
+      fetchNotices(0);
+    } catch (error) { 
+      YesAlert.fire({ icon: 'error', title: '오류', html: '처리에 실패했습니다.' }); 
+    }
+  };
+
+  const handleDeleteNotice = async (id: number) => {
+    const result = await YesAlert.fire({ title: '공지 삭제', html: '정말 삭제하시겠습니까?', icon: 'warning', showCancelButton: true });
+    if (result.isConfirmed) {
+      try {
+        await adminApi.deleteNotice(id);
+        Toast.fire({ icon: 'success', title: '삭제되었습니다.' });
+        fetchNotices(0);
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '오류', html: '삭제에 실패했습니다.' });
+      }
+    }
+  };
+
+  const openNewNoticeModal = () => {
+    setSelectedNotice(null);
+    setNoticeForm({ title: '', content: NOTICE_TEMPLATE, important: false });
+    setIsNoticeModalOpen(true);
+  };
+
+  // 7일 이내 새 글 체크 (NEW 뱃지 용도)
+  const isNewNotice = (dateString: string) => {
+    if (!dateString) return false;
+    const noticeDate = new Date(dateString);
+    const today = new Date();
+    const diffDays = Math.ceil(Math.abs(today.getTime() - noticeDate.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
+
+  return (
+    <>
+      <motion.div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+        {[
+          { title: '전체 공지', value: `${notices.length}건`, icon: <Megaphone className="w-6 h-6 text-red-500" /> },
+          { title: '중요 공지', value: `${notices.filter(n => n.important).length}건`, icon: <Activity className="w-6 h-6 text-red-600" /> },
+          { title: '일반 공지', value: `${notices.filter(n => !n.important).length}건`, icon: <FileText className="w-6 h-6 text-slate-500" /> },
+        ].map((stat, idx) => (
+          <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
+              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+      
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
+        <div className="p-5 border-b border-slate-100 bg-red-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center justify-center gap-2">
+            <Megaphone className="w-5 h-5 text-red-600" /> 공지사항 관리
+          </h2>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            <select value={importanceFilter} onChange={(e) => setImportanceFilter(e.target.value)}
+              className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm cursor-pointer w-full sm:w-auto">
+              <option value="">모든 공지</option>
+              <option value="IMPORTANT">중요 공지</option>
+              <option value="GENERAL">일반 공지</option>
+            </select>
+            <div className="relative w-full sm:w-64">
+              <input type="text" placeholder="제목 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm transition-all placeholder:text-slate-400"/>
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+            </div>
+            <button onClick={openNewNoticeModal} className="w-full sm:w-auto bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-red-700 shadow-sm whitespace-nowrap">
+              + 새 공지 작성
+            </button>
+          </div>
+        </div>
+        
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
+              <tr>
+                <th className="p-4 pl-6">구분</th>
+                <th className="p-4">제목</th>
+                <th className="p-4">작성일</th>
+                <th className="p-4 text-center pr-6">관리</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm bg-white">
+              {loading ? (
+                <tr><td colSpan={4} className="p-16 text-center"><Loader2 className="w-8 h-8 text-red-500 animate-spin mx-auto" /></td></tr>
+              ) : filteredNotices.length > 0 ? (
+                // notices 대신 filteredNotices 렌더링
+                filteredNotices.map((n) => {
+                  const createdDate = n.createdAt?.substring(0, 10);
+                  const updatedDate = n.updatedAt?.substring(0, 10);
+                  const isModified = updatedDate && createdDate !== updatedDate;
+
+                  return (
+                    <tr key={n.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4 pl-6">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {n.important ? (
+                            <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">중요</span>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] font-bold px-2 py-0.5 border border-slate-200 rounded whitespace-nowrap">일반</span>
+                          )}
+                          {isNewNotice(n.createdAt) && (
+                            <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shadow-sm">NEW</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 font-bold text-slate-800">{n.title}</td>
+                      <td className="p-4">
+                        <span className="text-slate-500 text-xs font-medium">{createdDate}</span>
+                        {isModified && (
+                          <span className="text-[10px] text-slate-400 ml-1.5 block sm:inline">
+                            (수정: {updatedDate})
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 pr-6 text-center">
+                        <div className="flex justify-center gap-3">
+                          <button onClick={() => { setSelectedNotice(n); setNoticeForm({ title: n.title, content: n.content, important: n.important }); setIsNoticeModalOpen(true); }} className="text-blue-600 hover:text-blue-800 font-bold text-xs transition-colors">수정</button>
+                          <button onClick={() => handleDeleteNotice(n.id)} className="text-red-500 hover:text-red-700 font-bold text-xs transition-colors">삭제</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              ) : (
+                <tr><td colSpan={4} className="p-16 text-center text-slate-400">조건에 맞는 공지사항이 없습니다.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-red-500 animate-spin mx-auto" /></div>
+          ) : filteredNotices.length > 0 ? filteredNotices.map((n) => {
+            const createdDate = n.createdAt?.substring(0, 10);
+            const updatedDate = n.updatedAt?.substring(0, 10);
+            const isModified = updatedDate && createdDate !== updatedDate;
+
+            return (
+              <div key={n.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                <div className="flex justify-between items-center mb-1">
+                  <div className="flex items-center gap-1.5">
+                    {n.important ? (
+                      <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold">중요</span>
+                    ) : (
+                      <span className="text-slate-400 text-[10px] font-bold px-2 py-0.5 border border-slate-200 rounded">일반</span>
+                    )}
+                    {isNewNotice(n.createdAt) && (
+                      <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">NEW</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-400 text-[10px] font-medium block">{createdDate}</span>
+                    {isModified && <span className="text-[9px] text-slate-300 block">(수정됨)</span>}
+                  </div>
+                </div>
+
+                <p className="font-bold text-slate-800 text-sm my-1">{n.title}</p>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-50 mt-1">
+                  <button onClick={() => { setSelectedNotice(n); setNoticeForm({ title: n.title, content: n.content, important: n.important }); setIsNoticeModalOpen(true); }} className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200">
+                    수정
+                  </button>
+                  <button onClick={() => handleDeleteNotice(n.id)} className="bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50">
+                    삭제
+                  </button>
+                </div>
+              </div>
+            );
+          }) : (
+            <div className="py-16 text-center text-slate-400 text-sm">조건에 맞는 공지사항이 없습니다.</div>
+          )}
+        </div>
+
+        {/* 페이지네이션 유지 */}
+        {noticeTotalPages > 0 && (
+          <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+            <button disabled={noticePage === 0} onClick={() => setNoticePage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+            {[...Array(noticeTotalPages)].map((_, i) => (
+              <button key={i} onClick={() => setNoticePage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${noticePage === i ? 'bg-red-600 text-white shadow-md shadow-red-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>
+                {i + 1}
+              </button>
+            ))}
+            <button disabled={noticePage >= noticeTotalPages - 1} onClick={() => setNoticePage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+          </div>
+        )}
+      </motion.div>
+
+      <NoticeModal
+        isOpen={isNoticeModalOpen}
+        onClose={() => setIsNoticeModalOpen(false)}
+        noticeForm={noticeForm}
+        setNoticeForm={setNoticeForm}
+        onSave={handleSaveNotice}
+        selectedNotice={selectedNotice}
+      />
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/PopupTab.tsx">
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { popupApi } from '@/src/api/index';
+import { Save, Image as ImageIcon, Type, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { Toast } from '@/src/utils/alert';
+
+export default function PopupTab() {
+  const [title, setTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [isActive, setIsActive] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    popupApi.getPopupSettings().then(res => {
+      // 배열로 올 경우를 대비해 첫 번째 데이터 추출
+      const data = Array.isArray(res.data) ? res.data[0] : res.data;
+      if (data) {
+        setTitle(data.title || '');
+        setLinkUrl(data.linkUrl || '');
+
+        const status = data.isActive !== undefined ? data.isActive : data.active;
+        setIsActive(status || false);
+
+        if (data.imageUrl) {
+          const fullImageUrl = data.imageUrl.startsWith('http') 
+            ? data.imageUrl 
+            : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${data.imageUrl}`;
+          setPreviewUrl(fullImageUrl);
+        }
+      }
+    }).catch(e => {
+      console.log("등록된 팝업이 없습니다.");
+    });
+  }, []);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // 용량 제한 검사 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        Toast.fire({ icon: 'warning', title: '5MB 이하의 이미지만 업로드 가능합니다.' });
+        return;
+      }
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSave = async () => {
+    // 필수값(제목) 체크
+    if (!title.trim()) {
+      Toast.fire({ icon: 'warning', title: '팝업 제목을 입력해주세요.' });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('title', title);
+      if (linkUrl) formData.append('linkUrl', linkUrl);
+      formData.append('isActive', String(isActive));
+      if (imageFile) formData.append('image', imageFile);
+
+      await popupApi.updatePopup(formData);
+      Toast.fire({ icon: 'success', title: '팝업 설정이 저장되었습니다.' });
+    } catch (err) {
+      Toast.fire({ icon: 'error', title: '저장에 실패했습니다.' });
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 mt-4">
+      <div className="space-y-8">
+        
+        {/* 디자이너 가이드 (앱/웹 호환 4:5 규격 안내 박스) */}
+        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3 text-sm text-blue-800">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold mb-1">팝업 이미지 등록 가이드</p>
+            <ul className="list-disc list-inside space-y-1 ml-1 text-blue-700">
+              <li>권장 사이즈: <b>가로 800px × 세로 1000px (4:5 비율)</b></li>
+              <li>로딩 속도를 위해 가급적 <b>500KB 이하</b>의 최적화된 이미지를 권장합니다.</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* 제목 입력 */}
+        <div>
+          <label className="block font-bold text-gray-800 mb-2 flex items-center gap-1">
+            <Type className="w-4 h-4 text-gray-500" /> 팝업 제목 <span className="text-red-500">*</span>
+          </label>
+          <input 
+            type="text" 
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="예) 예스케어 봄맞이 무료 동행 이벤트"
+            className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+          />
+        </div>
+
+        {/* 링크 입력 */}
+        <div>
+          <label className="block font-bold text-gray-800 mb-2 flex items-center gap-1">
+            <LinkIcon className="w-4 h-4 text-gray-500" /> 클릭 시 이동할 링크 (선택)
+          </label>
+          <input 
+            type="text" 
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            placeholder="https://yescare.com/event"
+            className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+          />
+        </div>
+
+        {/* 사용 여부 토글 */}
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl">
+          <div>
+            <p className="font-bold text-gray-800 text-sm sm:text-base">팝업 노출 상태</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">메인 페이지에 팝업을 띄울지 결정합니다.</p>
+          </div>
+          <button 
+            onClick={() => setIsActive(!isActive)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {/* 이미지 업로드 */}
+        <div>
+          <p className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" /> 팝업 포스터 이미지 <span className="text-red-500">*</span>
+          </p>
+          <div 
+            className="relative w-full max-w-[320px] aspect-[4/5] mx-auto rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden hover:border-blue-400 transition-colors group cursor-pointer bg-slate-50"
+            onClick={() => document.getElementById('poster-upload')?.click()}
+          >
+            {previewUrl ? (
+              <img src={previewUrl} alt="미리보기" className="w-full h-full object-cover" />
+            ) : (
+              <div className="text-center p-4">
+                <ImageIcon className="w-10 h-10 text-gray-300 mx-auto mb-2 group-hover:text-blue-400 transition-colors" />
+                <p className="text-gray-500 font-medium mb-1">클릭하여 이미지 업로드</p>
+                {/* 규격 안내 문구 */}
+                <p className="text-xs text-gray-400">
+                  권장 크기: 800 x 1000 px <br/>
+                  최대 용량: 5MB
+                </p>
+              </div>
+            )}
+          </div>
+          <input id="poster-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+        </div>
+
+        {/* 저장 버튼 */}
+        <button 
+          onClick={handleSave}
+          className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"
+        >
+          <Save className="w-5 h-5" /> 설정 저장하기
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/ReservationTab.tsx">
+// src/components/admin/tabs/ReservationTab.tsx
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { CalendarDays, Activity, Users, UserPlus, Search, Loader2, CheckCircle2, Send, UserMinus, FileText } from 'lucide-react';
+import { motion, Variants } from 'framer-motion';
+import { adminApi, reservationApi } from '@/src/api/index';
+import { Toast, YesAlert } from '@/src/utils/alert';
+import StatusBadge from '../ui/StatusBadge';
+import EmptyState from '../ui/EmptyState';
+import ReportModal from '../modals/ReportModal';
+
+const containerVariants: Variants = { 
+  hidden: { opacity: 0 }, 
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } } 
+};
+const itemVariants: Variants = { 
+  hidden: { opacity: 0, y: 10 }, 
+  visible: { opacity: 1, y: 0 } 
+};
+const tabVariants: Variants = { 
+  hidden: { opacity: 0, y: 15 }, 
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } 
+};
+
+export default function ReservationTab({ handleOpenDetail, members, handleAssignManager, handleCancelAssign, handleViewMemberProfile }: any) {
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedReportResId, setSelectedReportResId] = useState<number | null>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  const fetchReservations = useCallback(async (page: number, keyword: string, status: string) => {
+    setLoading(true);
+    try {
+      const res = (keyword || status) 
+        ? await adminApi.searchReservations(keyword, status, page)
+        : await adminApi.getReservations(page); 
+      
+      const formattedData = res.data.content.map((r: any) => {
+        const dateObj = new Date(r.reservationTime);
+        return {
+          id: r.id, 
+          date: dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+          time: dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+          patient: r.patientName,
+          hospital: r.hospitalName,
+          status: r.status, 
+          manager: r.managerName || (r.status === 'CONFIRMED' ? '배정완료' : '-') 
+        };
+      });
+      setReservations(formattedData);
+      setTotalPages(res.data.totalPages);
+    } catch (error) {
+      console.error('예약 로딩 에러:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchReservations(currentPage, searchTerm, statusFilter);
+    }, 400);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, statusFilter, currentPage, fetchReservations]);
+
+  const handleStatusChange = async (id: number, newStatus: string) => {
+    try {
+      await reservationApi.updateStatus(id, newStatus);
+      Toast.fire({ icon: 'success', title: '상태가 변경되었습니다.' });
+      fetchReservations(currentPage, searchTerm, statusFilter);
+    } catch (error) {
+      YesAlert.fire({ icon: 'error', title: '오류', html: '상태 변경에 실패했습니다.' });
+    }
+  };
+
+  const activeManagerCount = useMemo(() => {
+    if (!members || members.length === 0) return 0;
+    return members.filter((m: any) => m.role.includes('MANAGER')).length;
+  }, [members]);
+
+  return (
+    <>
+      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+        {[
+          { title: '전체 예약', value: `${reservations.length}건`, icon: <CalendarDays className="w-6 h-6 text-blue-500" /> },
+          { title: '매칭 대기', value: `${reservations.filter(r => r.status === 'WAITING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
+          { title: '활동 매니저', value: `${activeManagerCount}명`, icon: <Users className="w-6 h-6 text-emerald-500" /> },
+          { title: '신규 지원', value: `확인필요`, icon: <UserPlus className="w-6 h-6 text-purple-500" /> },
+        ].map((stat, idx) => (
+          <motion.div key={idx} variants={itemVariants} 
+            className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
+              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col mt-6">
+        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-lg font-bold text-slate-800">예약 리스트</h2>
+          <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full sm:w-auto gap-2">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+              <option value="">상태 전체</option>
+              <option value="WAITING">매칭 대기</option>
+              <option value="CONFIRMED">예약 확정</option>
+              <option value="COMPLETED">이용 완료</option>
+              <option value="CANCELLED">취소됨</option>
+            </select>
+            <div className="relative w-full sm:w-64">
+              <input type="text" placeholder="환자명, 병원명 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm placeholder:text-slate-400" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+            </div>
+          </form>
+        </div>
+
+        <div className="hidden md:block overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="bg-slate-50/90 text-slate-500 text-xs uppercase border-b border-slate-200">
+              <tr>
+                <th className="p-4 font-bold pl-6">예약번호</th>
+                <th className="p-4 font-bold">일시</th>
+                <th className="p-4 font-bold">환자/병원</th>
+                <th className="p-4 font-bold">상태 및 매니저</th>
+                <th className="p-4 font-bold text-center pr-6">상세 및 배정 관리</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm bg-white">
+              {loading && reservations.length === 0 ? (
+                <tr><td colSpan={5} className="p-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></td></tr>
+              ) : reservations.length > 0 ? reservations.map((res) => (
+                <tr key={res.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="p-4 pl-6 text-slate-400 font-medium">#{res.id}</td>
+                  <td className="p-4"><p className="font-semibold text-slate-800">{res.date}</p><p className="text-xs text-slate-500 mt-0.5">{res.time}</p></td>
+                  <td className="p-4"><p className="font-bold text-slate-800">{res.patient}</p><p className="text-xs text-slate-500 mt-0.5">{res.hospital}</p></td>
+                  <td className="p-4">
+                    <StatusBadge status={res.status} />
+                    {(res.status === 'CONFIRMED' || res.status === 'COMPLETED') && res.manager !== '-' && (
+                      <button onClick={() => {
+                          const managerInfo = members.find((m:any) => m.name === res.manager && m.role.includes('MANAGER'));
+                          if (managerInfo) {
+                            handleViewMemberProfile(managerInfo);
+                          } else {
+                            YesAlert.fire({ icon: 'warning', title: '알림', html: '매니저 상세 정보를 찾을 수 없습니다.' });
+                          }
+                        }}
+                        className="text-xs font-bold text-emerald-600 mt-1.5 flex items-center gap-1 hover:text-emerald-700 hover:underline cursor-pointer transition-colors"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {res.manager} 배정됨
+                      </button>
+                    )}
+                  </td>
+                    <td className="p-4 pr-6 text-center">
+                      <div className="flex justify-center items-center gap-2">
+                        <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">상세 보기</button>
+                        {res.status === 'WAITING' ? (
+                          <button onClick={async () => {
+                              const success = await handleAssignManager(res.id);
+                              if (success) fetchReservations(currentPage, searchTerm, statusFilter);
+                            }} 
+                            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
+                            <Send className="w-3.5 h-3.5" /> 매니저 배정
+                          </button>
+                        ) : res.status === 'CONFIRMED' ? (
+                          <button onClick={async () => {
+                              const success = await handleCancelAssign(res.id);
+                              if (success) fetchReservations(currentPage, searchTerm, statusFilter);
+                            }} 
+                            className="px-3 py-1.5 bg-white border border-red-200 text-red-500 text-xs font-bold rounded-lg hover:bg-red-50 transition-all shadow-sm flex items-center gap-1.5">
+                            <UserMinus className="w-3.5 h-3.5" /> 배정 취소
+                          </button>
+                        ) : res.status === 'COMPLETED' ? (
+                          <button onClick={() => {
+                              setSelectedReportResId(res.id);
+                              setIsReportModalOpen(true);
+                            }} 
+                            className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" /> 리포트 확인
+                          </button>
+                        ) : null}
+                        <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                          <option value="WAITING">매칭 대기</option>
+                          <option value="COMPLETED">이용 완료</option>
+                          <option value="CANCELLED">취소됨</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                <EmptyState message="조건에 맞는 예약이 없습니다." colSpan={5} />
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 (md:hidden) */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading && reservations.length === 0 ? (
+            <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></div>
+          ) : reservations.length > 0 ? reservations.map((res) => (
+            <div key={res.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold text-xs">#{res.id}</span>
+                <StatusBadge status={res.status} />
+              </div>
+              
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 text-xs font-bold">일시</span>
+                  <span className="text-slate-800 font-extrabold text-sm">{res.date} {res.time}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 text-xs font-bold">환자/병원</span>
+                  <span className="text-slate-800 font-bold text-sm truncate max-w-[200px]">{res.patient} / {res.hospital}</span>
+                </div>
+                {(res.status === 'CONFIRMED' || res.status === 'COMPLETED') && res.manager !== '-' && (
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-slate-500 text-xs font-bold">담당 매니저</span>
+                    <button
+                      onClick={() => {
+                        const managerInfo = members.find((m: any) => m.name === res.manager && m.role.includes('MANAGER'));
+                        if (managerInfo) {
+                          handleViewMemberProfile(managerInfo);
+                        } else {
+                          YesAlert.fire({ icon: 'warning', title: '알림', html: '매니저 상세 정보를 찾을 수 없습니다.' });
+                        }
+                      }}
+                      className="text-emerald-600 font-bold text-xs flex items-center gap-1 hover:text-emerald-700 hover:underline transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {res.manager} 배정됨
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 액션 버튼 그룹 */}
+              <div className="pt-2 flex flex-wrap gap-2">
+                <button onClick={() => handleOpenDetail(res.id)} className="flex-1 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
+                  상세 보기
+                </button>
+                {res.status === 'WAITING' ? (
+                  <button onClick={async () => {
+                      const success = await handleAssignManager(res.id);
+                      if (success) fetchReservations(currentPage, searchTerm, statusFilter);
+                    }} 
+                    className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
+                    <Send className="w-3.5 h-3.5" /> 매니저 배정
+                  </button>
+                ) : res.status === 'CONFIRMED' ? (
+                  <button onClick={async () => {
+                      const success = await handleCancelAssign(res.id);
+                      if (success) fetchReservations(currentPage, searchTerm, statusFilter);
+                    }} 
+                    className="flex-1 py-2 bg-white border border-red-200 text-red-500 text-xs font-bold rounded-lg hover:bg-red-50 shadow-sm flex items-center justify-center gap-1">
+                    <UserMinus className="w-3.5 h-3.5" /> 배정 취소
+                  </button>
+                ) : res.status === 'COMPLETED' && (
+                  <button onClick={() => {
+                      setSelectedReportResId(res.id);
+                      setIsReportModalOpen(true);
+                    }} 
+                    className="flex-1 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-1">
+                    <FileText className="w-3.5 h-3.5" /> 리포트
+                  </button>
+                )}
+                {/* 상태 변경 Select는 공간 차지가 크므로 하단에 전체 너비로 배치 */}
+                <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="WAITING">매칭 대기</option>
+                  <option value="COMPLETED">이용 완료</option>
+                  <option value="CANCELLED">취소됨</option>
+                </select>
+              </div>
+            </div>
+          )) : (
+            <div className="py-16 text-center text-slate-400 text-sm font-medium">조건에 맞는 예약이 없습니다.</div>
+          )}
+        </div>
+        
+        {totalPages > 0 && (
+          <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+            <button disabled={currentPage === 0} onClick={() => setCurrentPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+            {[...Array(totalPages)].map((_, i) => (
+              <button key={i} onClick={() => setCurrentPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{i + 1}</button>
+            ))}
+            <button disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+          </div>
+        )}
+      </motion.div>
+      <ReportModal 
+        isOpen={isReportModalOpen} 
+        onClose={() => setIsReportModalOpen(false)} 
+        reservationId={selectedReportResId} 
+      />
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/tabs/ReviewTab.tsx">
+// src/components/admin/tabs/ReviewTab.tsx
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, Star, FileText, UserCog, XCircle, Loader2, Inbox, Activity, CheckCircle2 } from 'lucide-react';
+import { adminApi } from '@/src/api/index';
+import { motion, Variants } from 'framer-motion';
+import { Toast, YesAlert } from '@/src/utils/alert';
+
+interface ReviewTabProps {
+  handleOpenDetail: (id: number) => void;
+  handleViewMemberProfile: (managerName: string) => void;
+}
+
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
+const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
+
+export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }: ReviewTabProps) {
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewSearchTerm, setReviewSearchTerm] = useState('');
+  const [reviewPage, setReviewPage] = useState(0);
+  const [reviewTotalPages, setReviewTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [reviewPage]);
+
+  const fetchReviews = useCallback(async (page: number = 0) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAllReviews(page);
+      setReviews(res.data?.content || []);
+      setReviewTotalPages(res.data?.totalPages || 0);
+    } catch (error) {
+      console.error(error);
+    } finally { 
+      setLoading(false); 
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReviews(reviewPage);
+  }, [fetchReviews, reviewPage]);
+
+  const avgRating = useMemo(() => {
+    if (reviews.length === 0) return "0.0";
+    const total = reviews.reduce((acc: number, cur: any) => acc + (cur.rating || 0), 0);
+    return (total / reviews.length).toFixed(1);
+  }, [reviews]);
+
+  const filteredReviews = useMemo(() => {
+    return reviews.filter(r => 
+      (r.comment || '').toLowerCase().includes(reviewSearchTerm.toLowerCase()) || 
+      String(r.reservationId || '').includes(reviewSearchTerm)
+    );
+  }, [reviews, reviewSearchTerm]);
+
+  const handleDeleteReview = async (id: number) => {
+    const result = await YesAlert.fire({
+      title: '리뷰 삭제', html: '정말 이 리뷰를 삭제하시겠습니까?', icon: 'warning',
+      showCancelButton: true, confirmButtonText: '삭제'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await adminApi.deleteReview(id);
+        Toast.fire({ icon: 'success', title: '삭제됨' });
+        fetchReviews(reviewPage); 
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '오류', html: '삭제 중 문제가 발생했습니다.' });
+      }
+    }
+  };
+
+  return (
+    <>
+      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+        {[
+          { title: '전체 리뷰', value: `${reviews.length}건`, icon: <Star className="w-6 h-6 text-amber-500" /> },
+          { title: '평균 평점', value: `${avgRating}점`, icon: <Activity className="w-6 h-6 text-blue-500" /> },
+          { title: '만점(5점) 리뷰', value: `${reviews.filter(r => r.rating === 5).length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+          { title: '주의(2점 이하) 리뷰', value: `${reviews.filter(r => r.rating <= 2).length}건`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
+        ].map((stat, idx) => (
+          <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
+              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden mt-6 flex flex-col">
+        <div className="p-5 border-b border-slate-100 bg-amber-50/30 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <h2 className="w-full sm:w-auto text-lg font-bold text-slate-800 flex items-center justify-start gap-2">
+            <Star className="w-5 h-5 text-amber-500 shrink-0" /> 
+            <span className="leading-tight break-keep">리뷰 모니터링</span>
+          </h2>
+          <div className="relative w-full sm:w-64">
+            <input type="text" placeholder="예약번호 또는 내용 검색..." value={reviewSearchTerm} onChange={(e) => setReviewSearchTerm(e.target.value)} 
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+          </div>
+        </div>
+        
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[850px]">
+            <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
+              <tr>
+                <th className="p-4 pl-6">리뷰 ID</th>
+                <th className="p-4">예약 번호 / 작성자</th>
+                <th className="p-4 text-center">동행 매니저</th>
+                <th className="p-4">평점</th>
+                <th className="p-4 w-2/5">리뷰 내용</th>
+                <th className="p-4 text-center pr-6">관리</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm bg-white">
+              {loading ? (
+                <tr><td colSpan={6} className="p-16 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></td></tr>
+              ) : filteredReviews.length > 0 ? (
+                filteredReviews.map((review) => (
+                  <tr key={review.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 pl-6 font-medium text-slate-400">#{review.id}</td>
+                    <td className="p-4">
+                      <button className="text-blue-600 font-bold hover:underline flex items-center gap-1" onClick={() => handleOpenDetail(review.reservationId)}>
+                        예약 #{review.reservationId} <FileText className="w-3 h-3" />
+                      </button>
+                      <p className="text-xs text-slate-500 mt-1">{review.authorName}</p>
+                    </td>
+                    <td className="p-4 text-center">
+                      {review.managerName ? (
+                        <button onClick={() => handleViewMemberProfile(review.managerName)} className="text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-bold flex items-center gap-1 mx-auto">
+                          <UserCog className="w-3.5 h-3.5" /> {review.managerName}
+                        </button>
+                      ) : <span className="text-slate-400 text-xs">배정 안됨</span>}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center text-amber-400">
+                        {[...Array(5)].map((_, i) => <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-current' : 'text-slate-200'}`} />)}
+                        <span className="ml-1.5 text-slate-700 font-bold text-xs">{review.rating}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-slate-600 font-medium break-all">{review.comment}</td>
+                    <td className="p-4 text-center">
+                      <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center justify-center gap-1 mx-auto bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-50">
+                        <XCircle className="w-3.5 h-3.5" /> 삭제
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={6} className="py-16 text-center text-slate-400">등록된 리뷰가 없습니다.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. 모바일 뷰: 카드형 리스트 (md:hidden) */}
+        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+          {loading ? (
+             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></div>
+          ) : filteredReviews.length > 0 ? (
+            filteredReviews.map((review) => (
+              <div key={review.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <span className="text-slate-400 font-bold text-xs mr-2">#{review.id}</span>
+                    <button className="text-blue-600 font-bold text-sm hover:underline" onClick={() => handleOpenDetail(review.reservationId)}>
+                      예약 #{review.reservationId}
+                    </button>
+                    <p className="text-xs text-slate-500 mt-0.5">작성자: {review.authorName}</p>
+                  </div>
+                  <div className="flex items-center text-amber-400 bg-amber-50 px-2 py-1 rounded-md">
+                     <Star className="w-3.5 h-3.5 fill-current" />
+                     <span className="ml-1 text-slate-700 font-bold text-xs">{review.rating}</span>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 font-medium break-all my-1">
+                  {review.comment}
+                </div>
+
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                  {review.managerName ? (
+                    <button onClick={() => handleViewMemberProfile(review.managerName)} className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1">
+                      <UserCog className="w-3 h-3" /> {review.managerName}
+                    </button>
+                  ) : <span className="text-slate-400 text-xs">매니저 없음</span>}
+
+                  <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center gap-1 bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold">
+                    <XCircle className="w-3 h-3" /> 삭제
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-16 text-center text-slate-400 text-sm font-medium">등록된 리뷰가 없습니다.</div>
+          )}
+        </div>
+        
+        {reviewTotalPages > 0 && (
+          <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
+            <button disabled={reviewPage === 0} onClick={() => setReviewPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
+            {[...Array(reviewTotalPages)].map((_, i) => (
+              <button key={i} onClick={() => setReviewPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${reviewPage === i ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{i + 1}</button>
+            ))}
+            <button disabled={reviewPage >= reviewTotalPages - 1} onClick={() => setReviewPage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
+          </div>
+        )}
+      </motion.div>
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/ui/EmptyState.tsx">
+'use client';
+
+import React from 'react';
+import { Inbox } from 'lucide-react';
+
+interface EmptyStateProps {
+  message: string;
+  colSpan?: number; 
+  isTable?: boolean;
+}
+
+export default function EmptyState({ message, colSpan = 10, isTable = true }: EmptyStateProps) {
+  const content = (
+    <div className="flex flex-col items-center justify-center py-16 text-slate-400 w-full">
+      <Inbox className="w-12 h-12 mb-3 text-slate-300 opacity-80" />
+      <p className="text-sm font-medium">{message}</p>
+    </div>
+  );
+
+  if (!isTable) {
+    return content;
+  }
+
+  return (
+    <tr>
+      <td colSpan={colSpan}>
+        {content}
+      </td>
+    </tr>
+  );
+}
+</file>
+
+<file path="components/admin/ui/Sidebar.tsx">
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { 
+  LayoutDashboard, Users, CalendarDays, UserPlus, UserCog, Star, Megaphone, 
+  MessageCircleQuestion, ImageIcon, Home 
+} from 'lucide-react';
+
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups';
+
+interface SidebarProps {
+  activeTab: AdminTab;
+  setActiveTab: (tab: AdminTab) => void;
+  pendingManagerCount: number; 
+}
+
+export default function Sidebar({ activeTab, setActiveTab, pendingManagerCount }: SidebarProps) {
+  const navItems = [
+    { id: 'dashboard', icon: CalendarDays, label: '예약 관리' },
+    { id: 'managers', icon: UserPlus, label: '승인 관리', badge: pendingManagerCount },
+    { id: 'members', icon: UserCog, label: '회원 관리' },
+    { id: 'reviews', icon: Star, label: '리뷰 관리' },
+    { id: 'notices', icon: Megaphone, label: '공지사항' },
+    { id: 'inquiries', icon: MessageCircleQuestion, label: '고객센터' },
+    { id: 'popups', icon: ImageIcon, label: '팝업 관리' },
+  ];
+
+  return (
+    <>
+      {/* 1. 모바일 전용 상단 앱바 (PC에서는 숨김) */}
+      <div className="md:hidden sticky top-0 z-[90] w-full bg-slate-900 flex items-center justify-between px-5 py-3 shadow-md">
+        <Link href="/" className="text-lg font-black text-white tracking-tight flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div className="bg-blue-600 p-1 rounded-lg text-white">
+            <LayoutDashboard className="w-4 h-4" />
+          </div>
+          Ye'sCare <span className="text-blue-400 text-[10px] font-bold ml-0.5 px-1.5 py-0.5 bg-blue-900/50 rounded-md">Admin</span>
+        </Link>
+        <Link href="/" className="p-2 bg-slate-800 text-slate-300 rounded-full hover:bg-slate-700 hover:text-white transition-colors shadow-sm">
+          <Home className="w-4 h-4" />
+        </Link>
+      </div>
+
+      {/* 2. 하단 탭바 / PC 사이드바 */}
+      <aside className="fixed bottom-0 left-0 z-[100] w-full bg-slate-900 text-slate-300 md:sticky md:top-0 md:h-screen md:w-64 md:flex md:flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-2xl">
+        
+        {/* 로고 영역 (PC에서만 노출) */}
+        <div className="hidden md:flex flex-col gap-1 px-6 py-8 border-b border-slate-800/80">
+          <Link href="/" className="text-2xl font-black text-white tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <div className="bg-blue-600 p-1.5 rounded-lg text-white">
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            Ye'sCare
+          </Link>
+          <p className="text-slate-400 text-[11px] font-medium tracking-wide pl-10">통합 관리 시스템</p>
+        </div>
+        
+        {/* 메뉴 리스트 */}
+        <nav className="flex flex-row md:flex-col gap-1 md:gap-1.5 p-2 md:p-4 overflow-x-auto no-scrollbar md:flex-1 md:overflow-y-auto pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+          {navItems.map((item) => (
+            <button 
+              key={item.id}
+              onClick={() => setActiveTab(item.id as AdminTab)} 
+              className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 px-3 md:px-4 py-2 md:py-3.5 rounded-xl transition-all whitespace-nowrap outline-none min-w-[72px] md:min-w-0 relative
+                ${activeTab === item.id 
+                  ? 'text-white md:bg-blue-600 md:font-bold md:shadow-md md:shadow-blue-900/20' 
+                  : 'text-slate-500 md:text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 font-medium'}`}
+            >
+              {/* 모바일 탭 활성화 시 상단 포인트 바 */}
+              {activeTab === item.id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-500 rounded-b-md md:hidden"></div>}
+              
+              <div className="relative flex items-center justify-center">
+                <item.icon className={`w-5 h-5 md:w-5 md:h-5 ${activeTab === item.id ? 'text-blue-500 md:text-blue-200' : ''}`} /> 
+                {item.badge ? (
+                  <span className={`absolute -top-1.5 -right-2.5 md:static text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-bold 
+                    ${activeTab === item.id ? 'bg-blue-500 text-white md:bg-white md:text-blue-600' : 'bg-red-500 text-white md:bg-blue-500/20 md:text-blue-400'}`}>
+                    {item.badge}
+                  </span>
+                ) : null}
+              </div>
+              
+              <span className={`text-[10px] md:text-sm mt-0.5 md:mt-0 ${activeTab === item.id ? 'font-extrabold text-blue-500 md:text-white' : ''}`}>
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+    </>
+  );
+}
+</file>
+
+<file path="components/admin/ui/StatusBadge.tsx">
+// src/components/admin/ui/StatusBadge.tsx
+'use client';
+
+import React from 'react';
+
+interface StatusBadgeProps {
+  status: string;
+}
+
+export default function StatusBadge({ status }: StatusBadgeProps) {
+  const isWaiting = status === 'WAITING' || status === '매칭 대기';
+  const isConfirmed = status === 'CONFIRMED' || status === '예약 확정';
+  const isCompleted = status === 'COMPLETED' || status === '이용 완료';
+  const isCanceled = status === 'CANCELLED' || status === '취소됨';
+
+  const colorClass = isWaiting ? 'bg-orange-100 text-orange-700 border-orange-200' 
+    : isConfirmed ? 'bg-blue-100 text-blue-700 border-blue-200' 
+    : isCompleted ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+    : isCanceled ? 'bg-red-100 text-red-700 border-red-200' 
+    : 'bg-gray-100 text-gray-700 border-gray-200';
+    
+  const displayStatus = isWaiting ? '매칭 대기' 
+    : isConfirmed ? '예약 확정' 
+    : isCompleted ? '이용 완료' 
+    : isCanceled ? '취소됨' 
+    : status;
+
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${colorClass} shadow-sm`}>
+      {displayStatus}
+    </span>
+  );
+}
+</file>
+
+<file path="components/EventPopup.tsx">
+'use client';
+
+import { useEffect, useState } from 'react';
+import { popupApi } from '@/src/api/index';
+import { X } from 'lucide-react';
+
+export default function EventPopup() {
+  const [popup, setPopup] = useState<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    // 1. 로컬 스토리지에서 '오늘 하루 안 보기' 체크
+    const hidePopup = localStorage.getItem('hide_popup_today');
+    if (hidePopup === 'true') return;
+
+    // 2. 백엔드에서 활성화된 팝업 가져오기
+    popupApi.getActivePopup().then(res => {
+      const data = Array.isArray(res.data) ? res.data[0] : res.data;
+      
+      if (data && (data.isActive || data.active)) {
+        const fullImageUrl = data.imageUrl?.startsWith('http') 
+          ? data.imageUrl 
+          : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${data.imageUrl}`;
+          
+        setPopup({ ...data, imageUrl: fullImageUrl });
+        setIsOpen(true);
+      }
+    }).catch(e => console.log('팝업 데이터를 불러오지 못했습니다.'));
+  }, []);
+
+  const closeToday = () => {
+    // 24시간 동안 안 보기 설정 (임시로 true값만 저장)
+    localStorage.setItem('hide_popup_today', 'true');
+    setIsOpen(false);
+  };
+
+  if (!isOpen || !popup) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-full max-w-md sm:max-w-lg animate__animated animate__zoomIn">
+        
+        {/* 팝업 이미지 클릭 시 링크 이동 */}
+        <a href={popup.linkUrl || '#'} target={popup.linkUrl ? "_blank" : "_self"} rel="noreferrer" className="block cursor-pointer">
+          <img 
+            src={popup.imageUrl} 
+            alt={popup.title || '이벤트 팝업'} 
+            className="w-full aspect-[4/5] object-cover" 
+          />
+        </a>
+
+        {/* 팝업 하단 컨트롤 버튼 */}
+        <div className="flex bg-white border-t border-gray-100">
+          <button onClick={closeToday}
+            className="flex-1 py-3 text-sm text-gray-600 hover:bg-gray-100 transition-colors border-r border-gray-100">
+              오늘 하루 보지 않기
+          </button>
+          <button onClick={() => setIsOpen(false)}
+            className="flex-1 py-3 text-sm font-bold text-gray-800 hover:bg-gray-100 transition-colors">
+              닫기
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/Footer.tsx">
+'use client';
+
+import React from 'react';
+import { usePathname } from 'next/navigation';
+
+export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
+  return (
+    <footer className="bg-gray-950 text-gray-400 py-16 px-6 mt-auto text-sm border-t border-gray-800 relative z-0">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
+        <div className="space-y-1.5">
+          <p className="font-bold text-white text-lg">예스케어 <span className="text-gray-400 font-medium text-sm">| 병원동행서비스</span></p>
+          <div className="flex justify-center md:justify-start gap-4 text-xs font-medium">
+            <a href="/terms" className="hover:text-white transition-colors">이용약관</a>
+            <a href="/privacy" className="text-gray-300 hover:text-white transition-colors font-bold">개인정보처리방침</a>
+            <a href="/support/faq" className="hover:text-white transition-colors">고객센터(FAQ)</a>
+          </div>
+          <p>고객센터 : 053-982-2778 | 이메일 : wellcommunity982@gmail.com</p>
+        </div>
+        <div className="text-xs text-gray-500 md:text-right space-y-1.5">
+          <p>© 2026 Ye'sCare. All rights reserved.</p>
+          <p>대구광역시 동구 해동로123 1층 | 사업자등록번호 : 123-45-67890</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+</file>
+
+<file path="components/Header.tsx">
+'use client'; 
+
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, Menu, X, LogOut, ShieldAlert, User, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { authApi } from '@/src/api/index';
+
+export default function Header() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState('USER');
+  const [userName, setUserName] = useState('');
+  const [isAuthChecking, setIsAuthChecking] = useState(true); // 깜빡임 방지용 로딩 상태
+
+  // 마운트 및 라우트 변경 시 로그인 상태 확인
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      authApi.getMe()
+        .then((res) => {
+          setIsLoggedIn(true);
+          setUserRole(res.data.role);
+          setUserName(res.data.name);
+        })
+        .catch(() => {
+          localStorage.removeItem('accessToken');
+          setIsLoggedIn(false);
+          setUserName('');
+          setUserRole('USER');
+        })
+        .finally(() => {
+          setIsAuthChecking(false);
+        });
+    } else {
+      setIsLoggedIn(false);
+      setUserName('');
+      setUserRole('USER');
+      setIsAuthChecking(false);
+    }
+  }, [pathname]);
+
+  // 로그아웃 처리 (팝업 없이 즉시 처리하여 UX 흐름 유지)
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    setIsLoggedIn(false);
+    setUserRole('USER');
+    setUserName('');
+    setIsMobileMenuOpen(false);
+    router.push('/login');
+  };
+
+  // 모바일 메뉴 오픈 시 배경 스크롤 방지 완벽 처리
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileMenuOpen]);
+
+  // 현재 경로인지 확인하는 헬퍼 함수
+  const isActive = (path: string) => pathname === path;
+
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* 1. 상단 고정 헤더 바 */}
+      <header className="bg-white/95 shadow-sm sticky top-0 z-40 border-b border-gray-100 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
+          
+          {/* 로고 */}
+          <Link href="/" className="flex items-center gap-1.5 z-50 relative group">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-blue-950 tracking-tight transition-transform group-hover:scale-[1.02]">
+              예스케어<span className="font-semibold text-emerald-600 text-sm md:text-base hidden sm:inline ml-1">병원동행</span>
+            </h1>
+          </Link>
+
+          {/* PC 전용 네비게이션 */}
+          <nav className="hidden md:flex items-center gap-8 whitespace-nowrap">
+            <div className="flex items-center gap-8 text-base font-bold">
+              <Link href="/guide" className={`transition duration-300 ${isActive('/guide') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+                서비스 안내
+              </Link>
+              <Link href="/support/faq" className={`transition duration-300 ${isActive('/support/faq') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+                고객센터
+              </Link>
+              {userRole !== 'ADMIN' && userRole !== 'MANAGER' && (
+                <Link href="/manager" className={`transition duration-300 ${isActive('/manager') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+                  매니저 교육신청
+                </Link>
+              )}
+            </div>
+            
+            {/* 로그인 / 사용자 영역 */}
+            <div className="border-l border-gray-200 pl-8 flex items-center min-w-[120px] justify-end">
+              {isAuthChecking ? (
+                // 로딩 중일 때 깜빡임 방지용 Skeleton
+                <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
+              ) : isLoggedIn ? (
+                <div className="flex items-center gap-5">
+                  <Link href="/mypage" className={`font-bold transition duration-300 ${isActive('/mypage') ? 'text-blue-800' : 'text-blue-600 hover:text-blue-800'}`}>
+                    마이페이지
+                  </Link>
+
+                  {userRole === 'ADMIN' && (
+                    <Link href="/admin" className="text-red-500 font-bold hover:text-red-700 flex items-center gap-1 transition duration-300 bg-red-50 px-3 py-1.5 rounded-full text-sm">
+                      <ShieldAlert className="w-4 h-4" /> 관리자
+                    </Link>
+                  )}
+                  {userRole === 'MANAGER' && (
+                    <Link href="/manager/dashboard" className="text-emerald-600 font-bold hover:text-emerald-800 transition duration-300 bg-emerald-50 px-3 py-1.5 rounded-full text-sm">
+                      매니저 시스템
+                    </Link>
+                  )}
+                  
+                  <div className="flex items-center gap-4 border-l border-gray-100 pl-5">
+                    <span className="text-sm font-bold text-gray-800"><span className="text-blue-700">{userName}</span>님</span>
+                    <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition duration-300 group">
+                      <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" /> 로그아웃
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Link href="/login" className="px-6 py-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 font-bold active:scale-95">
+                  로그인 / 가입
+                </Link>
+              )}
+            </div>
+          </nav>
+          
+          {/* 모바일 햄버거 버튼 */}
+          <button 
+            className="md:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none transition-transform active:scale-90" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="w-7 h-7 text-gray-500" /> : <Menu className="w-7 h-7 text-blue-950" />}
+          </button>
+        </div>
+      </header>
+
+      {/* 2. 모바일 전용 서랍(Drawer) 메뉴 */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            {/* 반투명 배경 */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsMobileMenuOpen(false)} 
+              className="fixed inset-0 bg-gray-900/40 z-40 md:hidden backdrop-blur-sm" 
+            />
+            
+            {/* 슬라이드 메뉴판 */}
+            <motion.div 
+              initial={{ x: '100%' }} 
+              animate={{ x: 0 }} 
+              exit={{ x: '100%' }} 
+              transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 md:hidden flex flex-col pt-24 px-6 overflow-y-auto pb-10"
+            >
+              {/* 모바일 프로필 영역 */}
+              {isLoggedIn ? (
+                <div className="mb-8 p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 flex items-center gap-4 shadow-sm">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-sm">
+                    <User className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-600/80 font-bold mb-0.5">환영합니다</p>
+                    <p className="text-lg font-extrabold text-blue-950">{userName} 님</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-8">
+                  <p className="text-gray-500 text-sm mb-3">서비스를 이용하시려면 로그인해주세요.</p>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                    <button className="w-full bg-blue-600 text-white py-3.5 rounded-xl shadow-md font-bold text-base active:scale-[0.98] transition-transform">
+                      로그인 / 회원가입
+                    </button>
+                  </Link>
+                </div>
+              )}
+
+              {/* 모바일 메뉴 리스트 */}
+              <nav className="flex flex-col gap-2 text-lg font-bold text-gray-800 flex-1">
+                <Link href="/guide" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/guide') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
+                  서비스 안내 <ChevronRight className={`w-5 h-5 ${isActive('/guide') ? 'text-blue-400' : 'text-gray-300'}`} />
+                </Link>
+                <Link href="/apply" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/apply') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
+                  동행 예약하기 <ChevronRight className={`w-5 h-5 ${isActive('/apply') ? 'text-blue-400' : 'text-gray-300'}`} />
+                </Link>
+                <Link href="/support/faq" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/support/faq') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
+                  고객센터(FAQ) <ChevronRight className={`w-5 h-5 ${isActive('/support/faq') ? 'text-blue-400' : 'text-gray-300'}`} />
+                </Link>
+                {userRole !== 'ADMIN' && userRole !== 'MANAGER' && (
+                  <Link href="/manager" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/manager') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
+                    매니저 교육신청 <ChevronRight className={`w-5 h-5 ${isActive('/manager') ? 'text-blue-400' : 'text-gray-300'}`} />
+                  </Link>
+                )}
+
+                {/* 하단 관리자/매니저/마이페이지 메뉴 (로그인 시) */}
+                {isLoggedIn && (
+                  <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
+                    <Link href="/mypage" onClick={() => setIsMobileMenuOpen(false)}>
+                      <button className="w-full bg-blue-900 text-white py-4 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 font-bold text-base">
+                        <User className="w-5 h-5" /> 마이페이지
+                      </button>
+                    </Link>
+                    
+                    {userRole === 'ADMIN' && (
+                      <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)}>
+                        <button className="w-full bg-red-50 text-red-600 py-3.5 rounded-xl border border-red-100 flex items-center justify-center gap-2 mt-3 font-bold">
+                          <ShieldAlert className="w-5 h-5" /> 관리자 대시보드
+                        </button>
+                      </Link>
+                    )}
+                    
+                    {userRole === 'MANAGER' && (
+                      <Link href="/manager/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                        <button className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-xl border border-emerald-100 mt-3 font-bold">
+                          매니저 시스템
+                        </button>
+                      </Link>
+                    )}
+                    
+                    <button onClick={handleLogout} className="w-full bg-gray-50 text-gray-500 py-3.5 rounded-xl font-bold mt-3 flex items-center justify-center gap-2 active:bg-gray-100 transition-colors">
+                      <LogOut className="w-5 h-5" /> 로그아웃
+                    </button>
+                  </div>
+                )}
+              </nav>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+</file>
+
+<file path="constants/statusMap.ts">
+// src/constants/statusMap.ts
+
+export type StatusKey = 'WAITING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+
+export const STATUS_MAP: Record<StatusKey, { label: string; colorClass: string }> = {
+  WAITING: { 
+    label: '매칭 대기', 
+    colorClass: 'bg-orange-100 text-orange-600 border-orange-200' 
+  },
+  CONFIRMED: { 
+    label: '예약 확정', 
+    colorClass: 'bg-blue-100 text-blue-700 border-blue-200' 
+  },
+  COMPLETED: { 
+    label: '이용 완료', 
+    colorClass: 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+  },
+  CANCELLED: { 
+    label: '예약 취소', 
+    colorClass: 'bg-red-50 text-red-600 border-red-200' 
+  }
+};
+</file>
+
+<file path="utils/alert.ts">
+// src/utils/alert.ts
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+import 'animate.css';
+
+// 예스케어 전용 알림창 (프리미엄 모던 UI 적용)
+export const YesAlert = Swal.mixin({
+  customClass: {
+    // 팝업 창 전체: 여백(p-6)을 늘려 숨통을 틔우고 부드러운 그림자 적용
+    popup: 'bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 p-4 md:p-6',
+    
+    // 제목: 색상을 살짝 부드러운 다크 그레이로 변경
+    title: 'text-xl font-bold text-slate-800 mt-4',
+    
+    // 본문 내용: 자간(leading-relaxed)을 넓혀 가독성 향상
+    htmlContainer: 'text-slate-500 text-sm mt-2 mb-6 leading-relaxed',
+    
+    // 확인 버튼: 5:5 비율(flex-1), 파란색 글로우 그림자
+    confirmButton: 'flex-1 bg-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/30 whitespace-nowrap',
+    
+    // 취소 버튼: 5:5 비율(flex-1)
+    cancelButton: 'flex-1 bg-slate-100 text-slate-600 px-5 py-3.5 rounded-2xl font-bold hover:bg-slate-200 transition-all whitespace-nowrap',
+    
+    // 버튼 컨테이너: 간격을 살짝 벌리고 위쪽 마진 제거
+    actions: 'w-full flex gap-3 px-2 pb-2 mt-0'
+  },
+  buttonsStyling: false,
+  // 배경: 흰색보다 살짝 어두운 톤의 블러가 훨씬 세련됨
+  backdrop: 'rgba(15, 23, 42, 0.4) backdrop-blur-sm', 
+  showClass: {
+    // 튀어나오는 효과 대신 부드럽게 올라오는 효과
+    popup: 'animate__animated animate__fadeInUp animate__faster'
+  },
+  hideClass: {
+    popup: 'animate__animated animate__fadeOutDown animate__faster'
+  }
+});
+
+// 우측 상단 토스트 알림 (UI 전면 개편)
+export const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2500, // 2.5초
+  timerProgressBar: true,
+  customClass: {
+    // 토스트 전용 테일윈드 디자인 추가
+    popup: 'rounded-2xl shadow-lg border border-slate-100 bg-white py-3 px-4',
+    title: 'text-sm font-bold text-slate-800',
+    timerProgressBar: 'bg-blue-500',
+  },
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
+
+export const MySwal = withReactContent(Swal);
+
+// ==========================================
+// 넓은 화면용 React 컴포넌트 모달 (매니저 배정)
+// ==========================================
+export const WideSwal = withReactContent(Swal.mixin({
+  width: '56em', // (약 900px)
+  customClass: {
+    popup: 'bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 p-4 md:p-6 !max-w-4xl w-full',
+    title: 'text-xl font-extrabold text-slate-800 mt-2',
+    htmlContainer: 'mt-4 mb-6', // 컴포넌트가 들어가므로 글자색 스타일 제외
+    confirmButton: 'flex-1 bg-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/30 whitespace-nowrap',
+    cancelButton: 'flex-1 bg-slate-100 text-slate-600 px-5 py-3.5 rounded-2xl font-bold hover:bg-slate-200 transition-all whitespace-nowrap',
+    actions: 'w-full flex gap-3 px-2 pb-2 mt-0'
+  },
+  buttonsStyling: false,
+  backdrop: 'rgba(15, 23, 42, 0.4) backdrop-blur-sm', 
+  showClass: {
+    popup: 'animate__animated animate__fadeInUp animate__faster'
+  },
+  hideClass: {
+    popup: 'animate__animated animate__fadeOutDown animate__faster'
+  }
+}));
+</file>
+
+</files>
