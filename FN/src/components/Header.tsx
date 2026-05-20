@@ -1,11 +1,12 @@
+// src/components/Header.tsx
 'use client'; 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronRight, Menu, X, LogOut, ShieldAlert, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authApi } from '@/src/api/index';
+import Link from 'next/link';
 
 export default function Header() {
   const router = useRouter();
@@ -15,36 +16,42 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('USER');
   const [userName, setUserName] = useState('');
-  const [isAuthChecking, setIsAuthChecking] = useState(true); // 깜빡임 방지용 로딩 상태
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  // 마운트 및 라우트 변경 시 로그인 상태 확인
+  // [최적화 1] 경로 변경 시 불필요한 API 중복 호출 방지
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (token) {
-      authApi.getMe()
-        .then((res) => {
-          setIsLoggedIn(true);
-          setUserRole(res.data.role);
-          setUserName(res.data.name);
-        })
-        .catch(() => {
-          localStorage.removeItem('accessToken');
-          setIsLoggedIn(false);
-          setUserName('');
-          setUserRole('USER');
-        })
-        .finally(() => {
-          setIsAuthChecking(false);
-        });
-    } else {
+    
+    if (!token) {
       setIsLoggedIn(false);
       setUserName('');
       setUserRole('USER');
       setIsAuthChecking(false);
+      return;
     }
-  }, [pathname]);
 
-  // 로그아웃 처리 (팝업 없이 즉시 처리하여 UX 흐름 유지)
+    // 이미 로그인 데이터가 로드된 상태면 경로 이동 시 재호출 생략 (UX 깜빡임 방지)
+    if (isLoggedIn && userName) return;
+
+    setIsAuthChecking(true);
+    authApi.getMe()
+      .then((res) => {
+        setIsLoggedIn(true);
+        setUserRole(res.data.role);
+        setUserName(res.data.name);
+      })
+      .catch(() => {
+        localStorage.removeItem('accessToken');
+        setIsLoggedIn(false);
+        setUserName('');
+        setUserRole('USER');
+      })
+      .finally(() => {
+        setIsAuthChecking(false);
+      });
+  }, [pathname, isLoggedIn, userName]); // 의존성 조건 개선
+
+  // 로그아웃 처리
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     setIsLoggedIn(false);
@@ -54,22 +61,22 @@ export default function Header() {
     router.push('/login');
   };
 
-  // 모바일 메뉴 오픈 시 배경 스크롤 방지 완벽 처리
+  // 모바일 메뉴 오픈 시 배경 스크롤 방지
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isMobileMenuOpen]);
 
-  // 현재 경로인지 확인하는 헬퍼 함수
   const isActive = (path: string) => pathname === path;
 
-  if (pathname?.startsWith('/admin')) {
-    return null;
-  }
+  // [최적화 2] 모바일 메뉴 설정 배열화 (유지보수성 향상)
+  const NAV_ITEMS = useMemo(() => [
+    { name: '서비스 안내', path: '/guide', show: true },
+    { name: '고객센터(FAQ)', path: '/support/faq', show: true },
+    { name: '매니저 교육신청', path: '/manager', show: userRole !== 'ADMIN' && userRole !== 'MANAGER' },
+  ], [userRole]);
+
+  if (pathname?.startsWith('/admin')) return null;
 
   return (
     <>
@@ -77,46 +84,35 @@ export default function Header() {
       <header className="bg-white/95 shadow-sm sticky top-0 z-40 border-b border-gray-100 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-4 z-50 relative group">
-
-            {/* 회사 로고 */}
             <div className="flex items-center gap-2 opacity-90">
               <img src="/wel_logo.svg" alt="wel logo" className="h-8 w-auto"/>
             </div>
-
             <div className="h-8 w-px bg-gray-200" />
-
-            {/* 서비스 브랜드 */}
             <div className="flex items-center gap-2">
               <img src="/yescare.svg" alt="yescare logo" className="h-10 w-auto"/>
               <h1 className="text-xl md:text-2xl font-extrabold text-blue-950 tracking-tight mt-1">
                 예스케어
-                <span className="font-semibold text-emerald-600 text-sm hidden sm:inline ml-1">
-                  병원동행
-                </span>
+                <span className="font-semibold text-emerald-600 text-sm hidden sm:inline ml-1">병원동행</span>
               </h1>
             </div>
           </Link>
 
-          {/* PC 전용 네비게이션 */}
+          {/* PC 네비게이션 */}
           <nav className="hidden md:flex items-center gap-6 whitespace-nowrap">
             <div className="flex items-center gap-6 text-base font-bold">
-              <Link href="/guide" className={`transition duration-300 ${isActive('/guide') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
-                서비스 안내
-              </Link>
-              <Link href="/support/faq" className={`transition duration-300 ${isActive('/support/faq') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
-                고객센터
-              </Link>
-              {userRole !== 'ADMIN' && userRole !== 'MANAGER' && (
-                <Link href="/manager" className={`transition duration-300 ${isActive('/manager') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
-                  매니저 교육신청
+              {NAV_ITEMS.filter(item => item.show).map((item) => (
+                <Link 
+                  key={item.path} 
+                  href={item.path} 
+                  className={`transition duration-300 ${isActive(item.path) ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                >
+                  {item.name}
                 </Link>
-              )}
+              ))}
             </div>
             
-            {/* 로그인 / 사용자 영역 */}
             <div className="border-l border-gray-200 pl-8 flex items-center min-w-[120px] justify-end">
               {isAuthChecking ? (
-                // 로딩 중일 때 깜빡임 방지용 Skeleton
                 <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
               ) : isLoggedIn ? (
                 <div className="flex items-center gap-5">
@@ -150,36 +146,28 @@ export default function Header() {
             </div>
           </nav>
           
-          {/* 모바일 햄버거 버튼 */}
-          <button className="md:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none transition-transform active:scale-90" 
+          <button className="md:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none active:scale-90" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
             {isMobileMenuOpen ? <X className="w-7 h-7 text-gray-500" /> : <Menu className="w-7 h-7 text-blue-950" />}
           </button>
         </div>
       </header>
 
-      {/* 2. 모바일 전용 서랍(Drawer) 메뉴 */}
+      {/* 2. 모바일 서랍 메뉴 */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* 반투명 배경 */}
             <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
               onClick={() => setIsMobileMenuOpen(false)} 
               className="fixed inset-0 bg-gray-900/40 z-40 md:hidden backdrop-blur-sm" 
             />
             
-            {/* 슬라이드 메뉴판 */}
             <motion.div 
-              initial={{ x: '100%' }} 
-              animate={{ x: 0 }} 
-              exit={{ x: '100%' }} 
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} 
               transition={{ type: "spring", damping: 25, stiffness: 200 }} 
               className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 md:hidden flex flex-col pt-12 px-6 overflow-y-auto pb-10"
             >
-              {/* 모바일 프로필 영역 */}
               {isLoggedIn ? (
                 <div className="mb-8 p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 flex items-center gap-4 shadow-sm">
                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-sm">
@@ -201,24 +189,18 @@ export default function Header() {
                 </div>
               )}
 
-              {/* 모바일 메뉴 리스트 */}
               <nav className="flex flex-col gap-2 text-lg font-bold text-gray-800 flex-1">
-                <Link href="/guide" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/guide') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
-                  서비스 안내 <ChevronRight className={`w-5 h-5 ${isActive('/guide') ? 'text-blue-400' : 'text-gray-300'}`} />
-                </Link>
-                <Link href="/apply" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/apply') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
-                  동행 예약하기 <ChevronRight className={`w-5 h-5 ${isActive('/apply') ? 'text-blue-400' : 'text-gray-300'}`} />
-                </Link>
-                <Link href="/support/faq" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/support/faq') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
-                  고객센터(FAQ) <ChevronRight className={`w-5 h-5 ${isActive('/support/faq') ? 'text-blue-400' : 'text-gray-300'}`} />
-                </Link>
-                {userRole !== 'ADMIN' && userRole !== 'MANAGER' && (
-                  <Link href="/manager" onClick={() => setIsMobileMenuOpen(false)} className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive('/manager') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}>
-                    매니저 교육신청 <ChevronRight className={`w-5 h-5 ${isActive('/manager') ? 'text-blue-400' : 'text-gray-300'}`} />
+                {NAV_ITEMS.filter(item => item.show).map((item) => (
+                  <Link 
+                    key={item.path} 
+                    href={item.path} 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                    className={`p-4 rounded-xl flex justify-between items-center transition-colors ${isActive(item.path) ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}`}
+                  >
+                    {item.name} <ChevronRight className={`w-5 h-5 ${isActive(item.path) ? 'text-blue-400' : 'text-gray-300'}`} />
                   </Link>
-                )}
+                ))}
 
-                {/* 하단 관리자/매니저/마이페이지 메뉴 (로그인 시) */}
                 {isLoggedIn && (
                   <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
                     <Link href="/mypage" onClick={() => setIsMobileMenuOpen(false)}>

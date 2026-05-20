@@ -1,64 +1,69 @@
 // src/components/admin/tabs/ManagerTab.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserPlus, Loader2, FileText, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import { adminApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
 
+// ==========================================
+// 1. 타입 정의
+// ==========================================
+interface ManagerApplication {
+  id: number;
+  memberId: number;
+  name: string;
+  phone: string;
+  licenseName: string;
+  applyDate: string;
+  availableDays: string;
+  availableTime: string;
+  certificateUrl: string | null;
+}
+
+const ITEMS_PER_PAGE = 10;
+
 const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
 
-// 페이지당 보여줄 아이템 수
-const ITEMS_PER_PAGE = 10;
+const getLicenseName = (code: string) => {
+  const licenseMap: Record<string, string> = {
+    caregiver: '요양보호사',
+    socialworker: '사회복지사',
+    nurse: '간호사/간호조무사',
+    none: '없음',
+  };
+  return licenseMap[code] || '기타';
+};
+
+const getFileUrl = (path: string) => {
+  if (!path) return '#';
+  if (path.startsWith('http')) return path;
+  
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+  const cleanPath = path.replace(/^\/?(uploads\/)?/, 'uploads/');
+    
+  return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
+};
 
 export default function ManagerTab() {
-  const [pendingManagers, setPendingManagers] = useState<any[]>([]);
+  const [pendingManagers, setPendingManagers] = useState<ManagerApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [mgrAppStatus, setMgrAppStatus] = useState('WAITING');
   const [stats, setStats] = useState({ total: 0, waiting: 0, approved: 0, rejected: 0 });
-
-  useEffect(() => {
-    adminApi.getManagerStats().then(res => setStats(res.data));
-  }, []);  // 마운트 시 1회만, 탭 변경과 무관하게
-
-  const fetchStats = useCallback(async () => {
-    const res = await adminApi.getManagerStats();
-    setStats(res.data);
-  }, []);
-
-  useEffect(() => { fetchStats(); }, [fetchStats]);
-  
-  // 페이지네이션 상태 추가
   const [currentPage, setCurrentPage] = useState(1);
 
-  const getLicenseName = (code: string) => {
-    switch (code) {
-      case 'caregiver': return '요양보호사';
-      case 'socialworker': return '사회복지사';
-      case 'nurse': return '간호사/간호조무사';
-      case 'other': return '기타';
-      case 'none': return '없음';
-      default: return code;
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await adminApi.getManagerStats();
+      setStats(res.data);
+    } catch (error) {
+      console.error('통계 로드 실패', error);
     }
-  };
-
-  const getFileUrl = (path: string) => {
-    if (!path) return '#';
-    if (path.startsWith('http')) return path;
-    
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-    
-    // DB에 'uploads/'가 없이 파일명만 있을 경우를 대비해 강제로 붙여주는 로직
-    const cleanPath = path.startsWith('/uploads/') || path.startsWith('uploads/')
-      ? path.replace(/^\//, '')
-      : `uploads/${path.replace(/^\//, '')}`;
-      
-    return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
-  };
+  }, []);
 
   const fetchManagerApplications = useCallback(async (status: string) => {
     setLoading(true);
@@ -66,11 +71,25 @@ export default function ManagerTab() {
       const res = await adminApi.getPendingManagers(status);
       setPendingManagers(res.data);
     } catch (error) { 
-      Toast.fire({ icon: 'error', title: '지원서 목록을 불러오지 못했습니다.' });
-    } finally { setLoading(false); }
+      Toast.fire({ icon: 'error', title: '목록을 불러오지 못했습니다.' });
+    } finally { 
+      setLoading(false); 
+    }
   }, []);
 
+  useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchManagerApplications(mgrAppStatus); }, [mgrAppStatus, fetchManagerApplications]);
+
+  const adjustPaginationAfterAction = useCallback(() => {
+    setPendingManagers((prev) => {
+      const newLength = prev.length - 1;
+      const newTotalPages = Math.ceil(newLength / ITEMS_PER_PAGE);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
+      return prev;
+    });
+  }, [currentPage]);
 
   const handleApprove = async (memberId: number, name: string) => {
     const result = await YesAlert.fire({
@@ -80,6 +99,7 @@ export default function ManagerTab() {
     if (result.isConfirmed) {
       await adminApi.approveManager(memberId);
       Toast.fire({ icon: 'success', title: `${name} 님이 승인되었습니다.` });
+      adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();
     }
@@ -94,27 +114,36 @@ export default function ManagerTab() {
     if (reason) {
       await adminApi.rejectManagerApp(applicationId, { reason: reason });
       Toast.fire({ icon: 'success', title: '지원이 반려되었습니다.' });
+      adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();
     }
   };
 
-  // 탭 변경 시 페이지 1로 초기화하는 핸들러
   const handleTabChange = (status: string) => {
+    if (mgrAppStatus === status) return;
+    
+    // [최적화] 이전 탭의 잔상(데이터)이 남아서 깜빡이는 현상 제거
+    setLoading(true);
+    setPendingManagers([]); 
+    
     setMgrAppStatus(status);
     setCurrentPage(1);
   };
 
-  // ==========================================
-  // 페이지네이션 계산 로직
-  // ==========================================
   const totalPages = Math.ceil(pendingManagers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  // 현재 페이지에 보여줄 데이터만 슬라이스
   const currentManagers = pendingManagers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  const statsCards = useMemo(() => [
+    { title: '총 지원자 (전체)', value: `${stats.total}명`, icon: <FileText className="w-6 h-6 text-slate-500" /> },
+    { title: '신규 대기', value: `${stats.waiting}명`, icon: <UserPlus className="w-6 h-6 text-emerald-500" /> },
+    { title: '승인 완료', value:  `${stats.approved}명`, icon: <CheckCircle2 className="w-6 h-6 text-blue-500" /> },
+    { title: '반려 내역', value: `${stats.rejected}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
+  ], [stats]);
+
   const renderPagination = () => {
-    if (totalPages <= 1) return null; // 1페이지 이하면 버튼 숨김
+    if (totalPages <= 1) return null;
 
     return (
       <div className="flex items-center justify-center gap-2 py-6 border-t border-slate-100 bg-white">
@@ -132,9 +161,7 @@ export default function ManagerTab() {
               key={page}
               onClick={() => setCurrentPage(page)}
               className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                currentPage === page 
-                  ? 'bg-emerald-600 text-white shadow-sm' 
-                  : 'text-slate-600 hover:bg-slate-100'
+                currentPage === page ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               {page}
@@ -153,15 +180,13 @@ export default function ManagerTab() {
     );
   };
 
+  // 테이블 컬럼 수 (계정 승인 열이 포함되는지 여부에 따라 계산)
+  const tableColSpan = mgrAppStatus === 'WAITING' ? 6 : 5;
+
   return (
     <>
       <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
-        {[
-          { title: '총 지원자 (전체)', value: `${stats.total}명`, icon: <FileText className="w-6 h-6 text-slate-500" /> },
-          { title: '신규 대기', value: `${stats.waiting}명`, icon: <UserPlus className="w-6 h-6 text-emerald-500" /> },
-          { title: '승인 완료', value:  `${stats.approved}명`, icon: <CheckCircle2 className="w-6 h-6 text-blue-500" /> },
-          { title: '반려 내역', value: `${stats.rejected}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
-        ].map((stat, idx) => (
+        {statsCards.map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
             <div>
@@ -194,22 +219,27 @@ export default function ManagerTab() {
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
               <tr>
-                <th className="p-4 font-bold pl-6">지원일자</th>
-                <th className="p-4 font-bold">이름/연락처</th>
-                <th className="p-4 font-bold">보유 자격증</th>
+                <th className="p-4 font-bold pl-6 text-center">지원일자</th>
+                <th className="p-4 font-bold text-center">이름/연락처</th>
+                <th className="p-4 font-bold text-center">보유 자격증</th>
                 <th className="p-4 font-bold text-center">근무 가능 시간</th>
                 <th className="p-4 font-bold text-center">첨부파일</th>
-                <th className="p-4 font-bold text-center pr-6">계정 승인</th>
+                {/* [최적화] 대기 상태일 때만 '계정 승인' 헤더 노출 */}
+                {mgrAppStatus === 'WAITING' && <th className="p-4 font-bold text-center pr-6">계정 승인</th>}
               </tr>
             </thead>
             <tbody className="text-sm bg-white">
               {loading ? (
-                <tr><td colSpan={6} className="p-16 text-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" /></td></tr>
+                <tr>
+                  <td colSpan={tableColSpan} className="p-16 text-center">
+                    <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" />
+                  </td>
+                </tr>
               ) : currentManagers.length > 0 ? currentManagers.map((mgr) => (
                 <tr key={mgr.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 pl-6 text-slate-500 font-medium">{mgr.applyDate}</td>
-                  <td className="p-4"><p className="font-bold text-slate-800">{mgr.name}</p><p className="text-xs text-slate-500 mt-0.5">{mgr.phone}</p></td>
-                  <td className="p-4">
+                  <td className="p-4 pl-6 text-slate-500 font-medium text-center">{mgr.applyDate}</td>
+                  <td className="p-4 text-center"><p className="font-bold text-slate-800">{mgr.name}</p><p className="text-xs text-slate-500 mt-0.5">{mgr.phone}</p></td>
+                  <td className="p-4 text-center">
                     <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100">
                       {getLicenseName(mgr.licenseName)}
                     </span>
@@ -217,7 +247,7 @@ export default function ManagerTab() {
                   <td className="p-4 text-center">
                     <div className="flex flex-col items-center gap-1.5">
                       <div className="flex gap-1 flex-wrap justify-center">
-                        {mgr.availableDays?.split(',').map((day: string, idx: number) => (
+                        {mgr.availableDays?.split(',').map((day, idx) => (
                           <span key={idx} className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-bold">
                             {day.trim()}
                           </span>
@@ -231,17 +261,19 @@ export default function ManagerTab() {
                       <a href={getFileUrl(mgr.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"><FileText className="w-3.5 h-3.5" /> 보기</a>
                     ) : <span className="text-slate-300 text-xs font-medium">없음</span>}
                   </td>
-                  <td className="p-4 pr-6 text-center">
-                    {mgrAppStatus === 'WAITING' && (
+                  
+                  {/* [최적화] 대기 상태일 때만 '계정 승인' td 노출 */}
+                  {mgrAppStatus === 'WAITING' && (
+                    <td className="p-4 pr-6 text-center">
                       <div className="flex justify-center gap-2">
                         <button onClick={() => handleApprove(mgr.memberId, mgr.name)} className="flex items-center gap-1 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm"><CheckCircle2 className="w-4 h-4" /> 승인</button>
                         <button onClick={() => handleReject(mgr.id, mgr.name)} className="flex items-center gap-1 bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50 shadow-sm"><XCircle className="w-4 h-4" /> 반려</button>
                       </div>
-                    )}
-                  </td>
+                    </td>
+                  )}
                 </tr>
               )) : (
-                <EmptyState message="대기 중인 지원서가 없습니다." isTable={true} />
+                <EmptyState message="해당하는 지원 내역이 없습니다." isTable={true} />
               )}
             </tbody>
           </table>
@@ -271,7 +303,7 @@ export default function ManagerTab() {
                 <div>
                   <span className="text-slate-500 font-bold block mb-1">근무 가능 시간</span>
                   <div className="flex gap-1 flex-wrap mb-1">
-                    {mgr.availableDays?.split(',').map((day: string, idx: number) => (
+                    {mgr.availableDays?.split(',').map((day, idx) => (
                       <span key={idx} className="bg-white border border-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{day.trim()}</span>
                     ))}
                   </div>
@@ -285,6 +317,7 @@ export default function ManagerTab() {
                     증명서 보기
                   </a>
                 )}
+                {/* 모바일에서도 버튼 영역 숨김 */}
                 {mgrAppStatus === 'WAITING' && (
                   <>
                     <button onClick={() => handleApprove(mgr.memberId, mgr.name)} className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm">승인</button>
@@ -294,13 +327,12 @@ export default function ManagerTab() {
               </div>
             </div>
           )) : (
-            <div className='flex justify-center'>
-              <EmptyState message="대기 중인 지원서가 없습니다." isTable={false} />
+            <div className='flex justify-center py-8'>
+              <EmptyState message="해당하는 지원 내역이 없습니다." isTable={false} />
             </div>
           )}
         </div>
         
-        {/* 페이지네이션 UI 렌더링 영역 (PC/모바일 공통 적용) */}
         {!loading && renderPagination()}
 
       </motion.div>

@@ -2,39 +2,65 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Star, FileText, UserCog, XCircle, Loader2, Inbox, Activity, CheckCircle2 } from 'lucide-react';
+import { Search, Star, FileText, UserCog, XCircle, Loader2, Activity, CheckCircle2 } from 'lucide-react';
 import { adminApi } from '@/src/api/index';
 import { motion, Variants } from 'framer-motion';
 import { Toast, YesAlert } from '@/src/utils/alert';
+import EmptyState from '../ui/EmptyState';
+
+// ==========================================
+// 1. 타입 정의 (Type Safety)
+// ==========================================
+export interface Review {
+  id: number;
+  reservationId: number;
+  authorName: string;
+  managerName?: string;
+  rating: number;
+  comment: string;
+}
 
 interface ReviewTabProps {
   handleOpenDetail: (id: number) => void;
   handleViewMemberProfile: (managerName: string) => void;
 }
 
+// ==========================================
+// 2. 외부 분리 (렌더링마다 재생성 방지)
+// ==========================================
 const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
 
 export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }: ReviewTabProps) {
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewSearchTerm, setReviewSearchTerm] = useState('');
   const [reviewPage, setReviewPage] = useState(0);
   const [reviewTotalPages, setReviewTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // 페이지 이동 시 최상단 스크롤
   useEffect(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [reviewPage]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [reviewPage]);
 
+  // [최적화 2] 데이터 페치 및 페이지네이션 UX 자동 보정
   const fetchReviews = useCallback(async (page: number = 0) => {
     setLoading(true);
     try {
       const res = await adminApi.getAllReviews(page);
-      setReviews(res.data?.content || []);
+      const content = res.data?.content || [];
+
+      // 마지막 남은 리뷰 삭제 시 이전 페이지로 자동 이동
+      if (content.length === 0 && page > 0) {
+        setReviewPage(prev => prev - 1);
+        return;
+      }
+
+      setReviews(content);
       setReviewTotalPages(res.data?.totalPages || 0);
     } catch (error) {
-      console.error(error);
+      console.error('리뷰 로드 실패:', error);
     } finally { 
       setLoading(false); 
     }
@@ -46,16 +72,26 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
 
   const avgRating = useMemo(() => {
     if (reviews.length === 0) return "0.0";
-    const total = reviews.reduce((acc: number, cur: any) => acc + (cur.rating || 0), 0);
+    const total = reviews.reduce((acc, cur) => acc + (cur.rating || 0), 0);
     return (total / reviews.length).toFixed(1);
   }, [reviews]);
 
   const filteredReviews = useMemo(() => {
+    const term = reviewSearchTerm.toLowerCase();
+    if (!term) return reviews;
     return reviews.filter(r => 
-      (r.comment || '').toLowerCase().includes(reviewSearchTerm.toLowerCase()) || 
-      String(r.reservationId || '').includes(reviewSearchTerm)
+      (r.comment || '').toLowerCase().includes(term) || 
+      String(r.reservationId || '').includes(term)
     );
   }, [reviews, reviewSearchTerm]);
+
+  // [최적화 3] 상단 통계 카드 배열 메모이제이션
+  const statsCards = useMemo(() => [
+    { title: '조회된 리뷰', value: `${reviews.length}건`, icon: <Star className="w-6 h-6 text-amber-500" /> },
+    { title: '평균 평점', value: `${avgRating}점`, icon: <Activity className="w-6 h-6 text-blue-500" /> },
+    { title: '만점(5점) 리뷰', value: `${reviews.filter(r => r.rating === 5).length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+    { title: '주의(2점 이하)', value: `${reviews.filter(r => r.rating <= 2).length}건`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
+  ], [reviews, avgRating]);
 
   const handleDeleteReview = async (id: number) => {
     const result = await YesAlert.fire({
@@ -66,7 +102,7 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
     if (result.isConfirmed) {
       try {
         await adminApi.deleteReview(id);
-        Toast.fire({ icon: 'success', title: '삭제됨' });
+        Toast.fire({ icon: 'success', title: '삭제되었습니다.' });
         fetchReviews(reviewPage); 
       } catch (error) {
         YesAlert.fire({ icon: 'error', title: '오류', html: '삭제 중 문제가 발생했습니다.' });
@@ -77,12 +113,7 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
   return (
     <>
       <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
-        {[
-          { title: '전체 리뷰', value: `${reviews.length}건`, icon: <Star className="w-6 h-6 text-amber-500" /> },
-          { title: '평균 평점', value: `${avgRating}점`, icon: <Activity className="w-6 h-6 text-blue-500" /> },
-          { title: '만점(5점) 리뷰', value: `${reviews.filter(r => r.rating === 5).length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
-          { title: '주의(2점 이하) 리뷰', value: `${reviews.filter(r => r.rating <= 2).length}건`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
-        ].map((stat, idx) => (
+        {statsCards.map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
             <div>
@@ -100,12 +131,18 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
             <span className="leading-tight break-keep">리뷰 모니터링</span>
           </h2>
           <div className="relative w-full sm:w-64">
-            <input type="text" placeholder="예약번호 또는 내용 검색..." value={reviewSearchTerm} onChange={(e) => setReviewSearchTerm(e.target.value)} 
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm" />
+            <input 
+              type="text" 
+              placeholder="예약번호 또는 내용 검색..." 
+              value={reviewSearchTerm} 
+              onChange={(e) => setReviewSearchTerm(e.target.value)} 
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm" 
+            />
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
           </div>
         </div>
         
+        {/* 1. PC 뷰: 테이블 */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[850px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
@@ -133,7 +170,7 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
                     </td>
                     <td className="p-4 text-center">
                       {review.managerName ? (
-                        <button onClick={() => handleViewMemberProfile(review.managerName)} className="text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-bold flex items-center gap-1 mx-auto">
+                        <button onClick={() => handleViewMemberProfile(review.managerName!)} className="text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-bold flex items-center gap-1 mx-auto transition-colors">
                           <UserCog className="w-3.5 h-3.5" /> {review.managerName}
                         </button>
                       ) : <span className="text-slate-400 text-xs">배정 안됨</span>}
@@ -146,20 +183,20 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
                     </td>
                     <td className="p-4 text-slate-600 font-medium break-all">{review.comment}</td>
                     <td className="p-4 text-center">
-                      <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center justify-center gap-1 mx-auto bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-50">
+                      <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center justify-center gap-1 mx-auto bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-50 transition-colors">
                         <XCircle className="w-3.5 h-3.5" /> 삭제
                       </button>
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={6} className="py-16 text-center text-slate-400">등록된 리뷰가 없습니다.</td></tr>
+                <EmptyState message="검색된 리뷰가 없습니다." isTable={true} colSpan={6} />
               )}
             </tbody>
           </table>
         </div>
 
-        {/* 2. 모바일 뷰: 카드형 리스트 (md:hidden) */}
+        {/* 2. 모바일 뷰: 카드형 리스트 */}
         <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
           {loading ? (
              <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></div>
@@ -186,27 +223,30 @@ export default function ReviewTab({ handleOpenDetail, handleViewMemberProfile }:
 
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
                   {review.managerName ? (
-                    <button onClick={() => handleViewMemberProfile(review.managerName)} className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1">
+                    <button onClick={() => handleViewMemberProfile(review.managerName!)} className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-colors">
                       <UserCog className="w-3 h-3" /> {review.managerName}
                     </button>
                   ) : <span className="text-slate-400 text-xs">매니저 없음</span>}
 
-                  <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center gap-1 bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold">
+                  <button onClick={() => handleDeleteReview(review.id)} className="text-xs flex items-center gap-1 bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-50 transition-colors">
                     <XCircle className="w-3 h-3" /> 삭제
                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <div className="py-16 text-center text-slate-400 text-sm font-medium">등록된 리뷰가 없습니다.</div>
+            <div className='flex justify-center py-8'>
+              <EmptyState message="검색된 리뷰가 없습니다." isTable={false} />
+            </div>
           )}
         </div>
         
-        {reviewTotalPages > 0 && (
+        {/* 페이지네이션 */}
+        {reviewTotalPages > 0 && !loading && (
           <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
             <button disabled={reviewPage === 0} onClick={() => setReviewPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
             {[...Array(reviewTotalPages)].map((_, i) => (
-              <button key={i} onClick={() => setReviewPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${reviewPage === i ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{i + 1}</button>
+              <button key={i} onClick={() => setReviewPage(i)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${reviewPage === i ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{i + 1}</button>
             ))}
             <button disabled={reviewPage >= reviewTotalPages - 1} onClick={() => setReviewPage(prev => prev + 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">다음</button>
           </div>

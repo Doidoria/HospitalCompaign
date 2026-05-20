@@ -8,50 +8,102 @@ import { adminApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
 
+// ==========================================
+// 1. 타입 정의 (Type Safety)
+// ==========================================
+export interface Member {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  active?: boolean;
+  isActive?: boolean;
+}
+
+interface MemberTabProps {
+  handleViewMemberProfile: (member: Member) => void;
+}
+
+// ==========================================
+// 2. 외부 분리 (렌더링마다 재생성 방지)
+// ==========================================
 const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
 
-export default function MemberTab({ handleViewMemberProfile }: any) {
-  const [members, setMembers] = useState<any[]>([]);
+const getRoleName = (role: string) => {
+  if (role.includes('ADMIN')) return '관리자';
+  if (role.includes('MANAGER')) return '매니저';
+  return '일반 고객';
+};
+
+const getRoleStyles = (role: string) => {
+  if (role.includes('ADMIN')) return 'bg-purple-50 text-purple-700 border-purple-200';
+  if (role.includes('MANAGER')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+};
+
+export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [memberRoleFilter, setMemberRoleFilter] = useState('');
   const [memberPage, setMemberPage] = useState(0);
   const [memberTotalPages, setMemberTotalPages] = useState(0);
 
+  // 페이지 변경 시 스크롤 최상단 이동
   useEffect(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [memberPage]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [memberPage]);
 
+  // [최적화 3] 데이터 페치 및 페이지네이션 UX 자동 보정
   const fetchMembers = useCallback(async (page: number, role: string) => {
     setLoading(true);
     try {
       const res = await adminApi.getAllMembers(page, role);
-      setMembers(res.data?.content || []); 
+      const content = res.data?.content || [];
+      
+      // 권한 변경 등으로 현재 페이지 데이터가 0개가 되었을 때 이전 페이지로 자동 이동
+      if (content.length === 0 && page > 0) {
+        setMemberPage(page - 1);
+        return; 
+      }
+      
+      setMembers(content); 
       setMemberTotalPages(res.data?.totalPages || 0);
-    } catch (error) {} finally { setLoading(false); }
+    } catch (error) {
+      console.error('회원 목록 조회 실패:', error);
+    } finally { 
+      setLoading(false); 
+    }
   }, []);
 
   useEffect(() => {
     fetchMembers(memberPage, memberRoleFilter);
   }, [memberPage, memberRoleFilter, fetchMembers]);
 
+  // 프론트엔드 검색 필터링 최적화
   const filteredMembers = useMemo(() => {
+    const term = memberSearchTerm.toLowerCase();
+    if (!term) return members;
     return members.filter(m => 
-      (m.name || '').toLowerCase().includes(memberSearchTerm.toLowerCase()) || 
-      (m.email || '').toLowerCase().includes(memberSearchTerm.toLowerCase())
+      (m.name || '').toLowerCase().includes(term) || 
+      (m.email || '').toLowerCase().includes(term)
     );
   }, [members, memberSearchTerm]);
 
+  // [최적화 4] 상단 통계 카드 배열 메모이제이션
+  const statsCards = useMemo(() => [
+    { title: '조회된 회원', value: `${members.length}명`, icon: <Users className="w-6 h-6 text-purple-500" /> },
+    { title: '일반 고객', value: `${members.filter(m => m.role.includes('USER')).length}명`, icon: <UserCog className="w-6 h-6 text-slate-500" /> },
+    { title: '매니저', value: `${members.filter(m => m.role.includes('MANAGER')).length}명`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+    { title: '정지 계정', value: `${members.filter(m => m.active === false || m.isActive === false).length}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
+  ], [members]);
+
   const handleChangeRole = async (memberId: number, newRole: string) => {
     const result = await YesAlert.fire({
-      title: '권한 변경',
-      html: '해당 회원의 권한을 정말 변경하시겠습니까?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: '변경하기',
-      cancelButtonText: '취소'
+      title: '권한 변경', html: '해당 회원의 권한을 정말 변경하시겠습니까?', icon: 'warning',
+      showCancelButton: true, confirmButtonText: '변경하기', cancelButtonText: '취소'
     });
 
     if (result.isConfirmed) {
@@ -65,7 +117,7 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
     }
   };
 
-  const handleToggleStatus = async (member: any) => {
+  const handleToggleStatus = async (member: Member) => {
     const currentActive = member.active ?? member.isActive ?? true; 
     const targetActivate = !currentActive;
 
@@ -76,21 +128,20 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
     });
     
     if (result.isConfirmed) {
-      await adminApi.updateMemberStatus(member.id, targetActivate);
-      Toast.fire({ icon: 'success', title: '성공적으로 처리되었습니다.' });
-      fetchMembers(memberPage, memberRoleFilter);
+      try {
+        await adminApi.updateMemberStatus(member.id, targetActivate);
+        Toast.fire({ icon: 'success', title: '성공적으로 처리되었습니다.' });
+        fetchMembers(memberPage, memberRoleFilter);
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '오류', html: '상태 변경에 실패했습니다.' });
+      }
     }
   };
 
   return (
     <>
       <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
-        {[
-          { title: '전체 회원', value: `${members.length}명`, icon: <Users className="w-6 h-6 text-purple-500" /> },
-          { title: '일반 고객', value: `${members.filter(m => m.role.includes('USER')).length}명`, icon: <UserCog className="w-6 h-6 text-slate-500" /> },
-          { title: '매니저', value: `${members.filter(m => m.role.includes('MANAGER')).length}명`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
-          { title: '정지 계정', value: `${members.filter(m => m.active === false).length}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
-        ].map((stat, idx) => (
+        {statsCards.map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
             <div>
@@ -107,19 +158,30 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
             <UserCog className="w-5 h-5 text-purple-600 shrink-0" /> 전체 회원 목록
           </h2>
           <div className="flex items-center w-full sm:w-auto gap-2">
-            <select value={memberRoleFilter} onChange={(e) => {setMemberRoleFilter(e.target.value); setMemberPage(0);}} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer">
+            <select 
+              value={memberRoleFilter} 
+              onChange={(e) => { setMemberRoleFilter(e.target.value); setMemberPage(0); }} 
+              className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer"
+            >
               <option value="">전체 권한</option>
               <option value="USER">일반 고객</option>
               <option value="MANAGER">매니저</option>
               <option value="ADMIN">관리자</option>
             </select>
             <div className="relative w-full sm:w-64">
-              <input type="text" placeholder="이름/이메일 검색..." value={memberSearchTerm} onChange={(e) => setMemberSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm placeholder:text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="이름/이메일 검색..." 
+                value={memberSearchTerm} 
+                onChange={(e) => setMemberSearchTerm(e.target.value)} 
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm placeholder:text-slate-400" 
+              />
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
             </div>
           </div>
         </div>
 
+        {/* 1. PC 뷰: 테이블 */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
@@ -142,13 +204,14 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
                     <td className="p-4 text-slate-600">{member.email}</td>
                     <td className="p-4 text-slate-800 font-bold">{member.name}</td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${member.role.includes('ADMIN') ? 'bg-purple-50 text-purple-700 border-purple-200' : member.role.includes('MANAGER') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                        {member.role.includes('ADMIN') ? '관리자' : member.role.includes('MANAGER') ? '매니저' : '일반 고객'}
+                      {/* [최적화 2] 헬퍼 함수 적용으로 UI 렌더링 깔끔화 */}
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${getRoleStyles(member.role)}`}>
+                        {getRoleName(member.role)}
                       </span>
                     </td>
                     <td className="p-4 pr-6 text-center">
                       <div className="flex justify-center gap-2 items-center">
-                        <button onClick={() => handleViewMemberProfile(member)} className="text-xs text-blue-600 border border-blue-200 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-bold shadow-sm flex items-center gap-1">
+                        <button onClick={() => handleViewMemberProfile(member)} className="text-xs text-blue-600 border border-blue-200 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-all font-bold shadow-sm flex items-center gap-1">
                           <FileText className="w-3.5 h-3.5" /> 프로필
                         </button>
                         
@@ -166,7 +229,7 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
                               <option value="ADMIN">관리자</option>
                             </select>
 
-                            <button onClick={() => handleToggleStatus(member)} className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/20'}`}>
+                            <button onClick={() => handleToggleStatus(member)} className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
                               {isAccountActive ? '계정 정지' : '정지 해제'}
                             </button>
                           </>
@@ -176,7 +239,7 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
                   </tr>
                 );
               }) : (
-                <EmptyState message="검색 결과가 없습니다." colSpan={5} />
+                <EmptyState message="검색 결과가 없습니다." isTable={true} />
               )}
             </tbody>
           </table>
@@ -196,8 +259,8 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
                     <span className="font-extrabold text-slate-800 text-sm">{member.name}</span>
                     <p className="text-xs text-slate-500 mt-0.5">{member.email}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${member.role.includes('ADMIN') ? 'bg-purple-50 text-purple-700 border-purple-200' : member.role.includes('MANAGER') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                    {member.role.includes('ADMIN') ? '관리자' : member.role.includes('MANAGER') ? '매니저' : '일반 고객'}
+                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${getRoleStyles(member.role)}`}>
+                    {getRoleName(member.role)}
                   </span>
                 </div>
 
@@ -210,13 +273,13 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
                     <span className="flex-1 text-center py-2 text-xs font-bold text-slate-400 bg-slate-50 rounded-lg border border-slate-200">관리 불가</span>
                   ) : (
                     <>
-                      <select value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'} onChange={(e) => handleChangeRole(member.id, e.target.value)} className="flex-1 bg-white border border-slate-200 text-xs font-bold text-slate-600 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm">
-                        <option value="USER">일반 고객</option>
+                      <select value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'} onChange={(e) => handleChangeRole(member.id, e.target.value)} className="flex-1 bg-white border border-slate-200 text-xs font-bold text-slate-600 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer">
+                        <option value="USER">일반</option>
                         <option value="MANAGER">매니저</option>
                         <option value="ADMIN">관리자</option>
                       </select>
                       <button onClick={() => handleToggleStatus(member)} className={`flex-1 py-2 text-xs rounded-lg font-bold shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600' : 'bg-emerald-600 text-white'}`}>
-                        {isAccountActive ? '계정 정지' : '정지 해제'}
+                        {isAccountActive ? '정지' : '해제'}
                       </button>
                     </>
                   )}
@@ -224,13 +287,14 @@ export default function MemberTab({ handleViewMemberProfile }: any) {
               </div>
             );
           }) : (
-            <div className='flex justify-center'>
+            <div className='flex justify-center py-8'>
               <EmptyState message="검색 결과가 없습니다." isTable={false} />
             </div>
           )}
         </div>
         
-        {memberTotalPages > 0 && (
+        {/* 페이지네이션 */}
+        {memberTotalPages > 0 && !loading && (
           <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
             <button disabled={memberPage === 0} onClick={() => setMemberPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
             {[...Array(memberTotalPages)].map((_, i) => (

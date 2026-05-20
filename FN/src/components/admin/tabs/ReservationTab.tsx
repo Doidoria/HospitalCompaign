@@ -10,6 +10,37 @@ import StatusBadge from '../ui/StatusBadge';
 import EmptyState from '../ui/EmptyState';
 import ReportModal from '../modals/ReportModal';
 
+// ==========================================
+// 1. 타입 정의 (Type Safety)
+// ==========================================
+export interface Member {
+  id: number;
+  name: string;
+  role: string;
+  email?: string;
+}
+
+export interface Reservation {
+  id: number;
+  date: string;
+  time: string;
+  patient: string;
+  hospital: string;
+  status: string; // 'WAITING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+  manager: string;
+}
+
+interface ReservationTabProps {
+  handleOpenDetail: (id: number) => void;
+  members: Member[];
+  handleAssignManager: (id: number) => Promise<boolean>;
+  handleCancelAssign: (id: number) => Promise<boolean>;
+  handleViewMemberProfile: (member: Member) => void;
+}
+
+// ==========================================
+// 2. 애니메이션 Variants
+// ==========================================
 const containerVariants: Variants = { 
   hidden: { opacity: 0 }, 
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } } 
@@ -23,20 +54,34 @@ const tabVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } 
 };
 
-export default function ReservationTab({ handleOpenDetail, members, handleAssignManager, handleCancelAssign, handleViewMemberProfile }: any) {
-  const [reservations, setReservations] = useState<any[]>([]);
+export default function ReservationTab({ 
+  handleOpenDetail, 
+  members, 
+  handleAssignManager, 
+  handleCancelAssign, 
+  handleViewMemberProfile 
+}: ReservationTabProps) {
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedReportResId, setSelectedReportResId] = useState<number | null>(null);
 
+  // 페이지 이동 시 최상단 스크롤
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
+  // 검색어/필터 변경 시 1페이지(0)로 초기화
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, statusFilter]);
+
+  // [최적화 1] 데이터 페치 및 페이지네이션 보정
   const fetchReservations = useCallback(async (page: number, keyword: string, status: string) => {
     setLoading(true);
     try {
@@ -44,7 +89,15 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
         ? await adminApi.searchReservations(keyword, status, page)
         : await adminApi.getReservations(page); 
       
-      const formattedData = res.data.content.map((r: any) => {
+      const content = res.data?.content || [];
+
+      // 필터링 등으로 현재 페이지 결과가 0개가 되면 이전 페이지로 자동 보정
+      if (content.length === 0 && page > 0) {
+        setCurrentPage(prev => prev - 1);
+        return;
+      }
+
+      const formattedData = content.map((r: any): Reservation => {
         const dateObj = new Date(r.reservationTime);
         return {
           id: r.id, 
@@ -56,8 +109,9 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
           manager: r.managerName || (r.status === 'CONFIRMED' ? '배정완료' : '-') 
         };
       });
+      
       setReservations(formattedData);
-      setTotalPages(res.data.totalPages);
+      setTotalPages(res.data?.totalPages || 0);
     } catch (error) {
       console.error('예약 로딩 에러:', error);
     } finally {
@@ -65,16 +119,33 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
     }
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(0);
-  }, [searchTerm, statusFilter]);
-
+  // 디바운스 훅 로직 적용
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchReservations(currentPage, searchTerm, statusFilter);
     }, 400);
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, statusFilter, currentPage, fetchReservations]);
+
+  // [최적화 2] JSX 인라인 함수 외부 분리로 가독성 향상 및 렌더링 최적화
+  const onAssign = async (id: number) => {
+    const success = await handleAssignManager(id);
+    if (success) fetchReservations(currentPage, searchTerm, statusFilter);
+  };
+
+  const onCancelAssign = async (id: number) => {
+    const success = await handleCancelAssign(id);
+    if (success) fetchReservations(currentPage, searchTerm, statusFilter);
+  };
+
+  const onViewManager = (managerName: string) => {
+    const managerInfo = members.find(m => m.name === managerName && m.role.includes('MANAGER'));
+    if (managerInfo) {
+      handleViewMemberProfile(managerInfo);
+    } else {
+      YesAlert.fire({ icon: 'warning', title: '알림', html: '매니저 상세 정보를 찾을 수 없습니다.' });
+    }
+  };
 
   const handleStatusChange = async (id: number, newStatus: string) => {
     try {
@@ -88,18 +159,21 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
 
   const activeManagerCount = useMemo(() => {
     if (!members || members.length === 0) return 0;
-    return members.filter((m: any) => m.role.includes('MANAGER')).length;
+    return members.filter(m => m.role.includes('MANAGER')).length;
   }, [members]);
+
+  // [최적화 3] 통계 카드 메모이제이션
+  const statsCards = useMemo(() => [
+    { title: '조회된 예약', value: `${reservations.length}건`, icon: <CalendarDays className="w-6 h-6 text-blue-500" /> },
+    { title: '매칭 대기', value: `${reservations.filter(r => r.status === 'WAITING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
+    { title: '활동 매니저', value: `${activeManagerCount}명`, icon: <Users className="w-6 h-6 text-emerald-500" /> },
+    { title: '신규 지원', value: `확인필요`, icon: <UserPlus className="w-6 h-6 text-purple-500" /> },
+  ], [reservations, activeManagerCount]);
 
   return (
     <>
       <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
-        {[
-          { title: '전체 예약', value: `${reservations.length}건`, icon: <CalendarDays className="w-6 h-6 text-blue-500" /> },
-          { title: '매칭 대기', value: `${reservations.filter(r => r.status === 'WAITING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
-          { title: '활동 매니저', value: `${activeManagerCount}명`, icon: <Users className="w-6 h-6 text-emerald-500" /> },
-          { title: '신규 지원', value: `확인필요`, icon: <UserPlus className="w-6 h-6 text-purple-500" /> },
-        ].map((stat, idx) => (
+        {statsCards.map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} 
             className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
@@ -129,6 +203,7 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
           </form>
         </div>
 
+        {/* 1. PC 뷰: 테이블 */}
         <div className="hidden md:block overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-slate-50/90 text-slate-500 text-xs uppercase border-b border-slate-200">
@@ -151,58 +226,43 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
                   <td className="p-4">
                     <StatusBadge status={res.status} />
                     {(res.status === 'CONFIRMED' || res.status === 'COMPLETED') && res.manager !== '-' && (
-                      <button onClick={() => {
-                          const managerInfo = members.find((m:any) => m.name === res.manager && m.role.includes('MANAGER'));
-                          if (managerInfo) {
-                            handleViewMemberProfile(managerInfo);
-                          } else {
-                            YesAlert.fire({ icon: 'warning', title: '알림', html: '매니저 상세 정보를 찾을 수 없습니다.' });
-                          }
-                        }}
+                      <button 
+                        onClick={() => onViewManager(res.manager)}
                         className="text-xs font-bold text-emerald-600 mt-1.5 flex items-center gap-1 hover:text-emerald-700 hover:underline cursor-pointer transition-colors"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" /> {res.manager} 배정됨
                       </button>
                     )}
                   </td>
-                    <td className="p-4 pr-6 text-center">
-                      <div className="flex justify-center items-center gap-2">
-                        <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">상세 보기</button>
-                        {res.status === 'WAITING' ? (
-                          <button onClick={async () => {
-                              const success = await handleAssignManager(res.id);
-                              if (success) fetchReservations(currentPage, searchTerm, statusFilter);
-                            }} 
-                            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
-                            <Send className="w-3.5 h-3.5" /> 매니저 배정
-                          </button>
-                        ) : res.status === 'CONFIRMED' ? (
-                          <button onClick={async () => {
-                              const success = await handleCancelAssign(res.id);
-                              if (success) fetchReservations(currentPage, searchTerm, statusFilter);
-                            }} 
-                            className="px-3 py-1.5 bg-white border border-red-200 text-red-500 text-xs font-bold rounded-lg hover:bg-red-50 transition-all shadow-sm flex items-center gap-1.5">
-                            <UserMinus className="w-3.5 h-3.5" /> 배정 취소
-                          </button>
-                        ) : res.status === 'COMPLETED' ? (
-                          <button onClick={() => {
-                              setSelectedReportResId(res.id);
-                              setIsReportModalOpen(true);
-                            }} 
-                            className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" /> 리포트 확인
-                          </button>
-                        ) : null}
-                        <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
-                          <option value="WAITING">매칭 대기</option>
-                          <option value="COMPLETED">이용 완료</option>
-                          <option value="CANCELLED">취소됨</option>
-                        </select>
-                      </div>
-                    </td>
-                  </tr>
-                )) : (
-                <EmptyState message="조건에 맞는 예약이 없습니다." colSpan={5} />
+                  <td className="p-4 pr-6 text-center">
+                    <div className="flex justify-center items-center gap-2">
+                      <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">상세 보기</button>
+                      
+                      {res.status === 'WAITING' ? (
+                        <button onClick={() => onAssign(res.id)} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
+                          <Send className="w-3.5 h-3.5" /> 매니저 배정
+                        </button>
+                      ) : res.status === 'CONFIRMED' ? (
+                        <button onClick={() => onCancelAssign(res.id)} className="px-3 py-1.5 bg-white border border-red-200 text-red-500 text-xs font-bold rounded-lg hover:bg-red-50 transition-all shadow-sm flex items-center gap-1.5">
+                          <UserMinus className="w-3.5 h-3.5" /> 배정 취소
+                        </button>
+                      ) : res.status === 'COMPLETED' ? (
+                        <button onClick={() => { setSelectedReportResId(res.id); setIsReportModalOpen(true); }} className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5" /> 리포트 확인
+                        </button>
+                      ) : null}
+                      
+                      <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                        <option value="WAITING">매칭 대기</option>
+                        <option value="CONFIRMED">예약 확정</option>
+                        <option value="COMPLETED">이용 완료</option>
+                        <option value="CANCELLED">취소됨</option>
+                      </select>
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <EmptyState message="조건에 맞는 예약이 없습니다." colSpan={5} isTable={true} />
               )}
             </tbody>
           </table>
@@ -232,14 +292,7 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-slate-500 text-xs font-bold">담당 매니저</span>
                     <button
-                      onClick={() => {
-                        const managerInfo = members.find((m: any) => m.name === res.manager && m.role.includes('MANAGER'));
-                        if (managerInfo) {
-                          handleViewMemberProfile(managerInfo);
-                        } else {
-                          YesAlert.fire({ icon: 'warning', title: '알림', html: '매니저 상세 정보를 찾을 수 없습니다.' });
-                        }
-                      }}
+                      onClick={() => onViewManager(res.manager)}
                       className="text-emerald-600 font-bold text-xs flex items-center gap-1 hover:text-emerald-700 hover:underline transition-colors"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" /> {res.manager} 배정됨
@@ -254,44 +307,36 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
                   상세 보기
                 </button>
                 {res.status === 'WAITING' ? (
-                  <button onClick={async () => {
-                      const success = await handleAssignManager(res.id);
-                      if (success) fetchReservations(currentPage, searchTerm, statusFilter);
-                    }} 
-                    className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
+                  <button onClick={() => onAssign(res.id)} className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
                     <Send className="w-3.5 h-3.5" /> 매니저 배정
                   </button>
                 ) : res.status === 'CONFIRMED' ? (
-                  <button onClick={async () => {
-                      const success = await handleCancelAssign(res.id);
-                      if (success) fetchReservations(currentPage, searchTerm, statusFilter);
-                    }} 
-                    className="flex-1 py-2 bg-white border border-red-200 text-red-500 text-xs font-bold rounded-lg hover:bg-red-50 shadow-sm flex items-center justify-center gap-1">
+                  <button onClick={() => onCancelAssign(res.id)} className="flex-1 py-2 bg-white border border-red-200 text-red-500 text-xs font-bold rounded-lg hover:bg-red-50 shadow-sm flex items-center justify-center gap-1">
                     <UserMinus className="w-3.5 h-3.5" /> 배정 취소
                   </button>
-                ) : res.status === 'COMPLETED' && (
-                  <button onClick={() => {
-                      setSelectedReportResId(res.id);
-                      setIsReportModalOpen(true);
-                    }} 
-                    className="flex-1 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-1">
+                ) : res.status === 'COMPLETED' ? (
+                  <button onClick={() => { setSelectedReportResId(res.id); setIsReportModalOpen(true); }} className="flex-1 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-1">
                     <FileText className="w-3.5 h-3.5" /> 리포트
                   </button>
-                )}
+                ) : null}
+                
                 {/* 상태 변경 Select는 공간 차지가 크므로 하단에 전체 너비로 배치 */}
                 <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="WAITING">매칭 대기</option>
+                  <option value="CONFIRMED">예약 확정</option>
                   <option value="COMPLETED">이용 완료</option>
                   <option value="CANCELLED">취소됨</option>
                 </select>
               </div>
             </div>
           )) : (
-            <div className="py-16 text-center text-slate-400 text-sm font-medium">조건에 맞는 예약이 없습니다.</div>
+            <div className='flex justify-center py-8'>
+               <EmptyState message="조건에 맞는 예약이 없습니다." isTable={false} />
+            </div>
           )}
         </div>
         
-        {totalPages > 0 && (
+        {totalPages > 0 && !loading && (
           <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
             <button disabled={currentPage === 0} onClick={() => setCurrentPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
             {[...Array(totalPages)].map((_, i) => (
@@ -301,6 +346,7 @@ export default function ReservationTab({ handleOpenDetail, members, handleAssign
           </div>
         )}
       </motion.div>
+
       <ReportModal 
         isOpen={isReportModalOpen} 
         onClose={() => setIsReportModalOpen(false)} 

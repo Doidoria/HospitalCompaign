@@ -1,35 +1,62 @@
 // src/components/admin/tabs/InquiryTab.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { MessageCircleQuestion, Loader2, Lock, Activity, CheckCircle2 } from 'lucide-react';
 import { adminApi, inquiryApi } from '@/src/api/index';
 import InquiryModal from '../modals/InquiryModal';
 import { Toast, YesAlert } from '@/src/utils/alert';
+import EmptyState from '../ui/EmptyState';
 
-const containerVariants: Variants = { 
-  hidden: { opacity: 0 }, 
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } } 
+// ==========================================
+// 1. 타입 정의 (Type Safety)
+// ==========================================
+export interface Inquiry {
+  id: number;
+  category: string;
+  title: string;
+  content: string;
+  authorName: string;
+  authorEmail: string;
+  status: string; // 'PENDING' | 'ANSWERED'
+  isPrivate: boolean;
+  createdAt: string;
+  answer?: string;
+}
+
+// ==========================================
+// 2. 외부 분리 (렌더링마다 재생성 방지)
+// ==========================================
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
+const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } };
+
+// [최적화 2] 뱃지 라벨 및 스타일 함수화
+const getCategoryLabel = (category: string) => {
+  const map: Record<string, string> = {
+    RESERVATION: '예약/매칭',
+    PAYMENT: '결제/환불',
+    SERVICE: '서비스 이용'
+  };
+  return map[category] || '기타';
 };
-const itemVariants: Variants = { 
-  hidden: { opacity: 0, y: 10 }, 
-  visible: { opacity: 1, y: 0 } 
-};
-const tabVariants: Variants = { 
-  hidden: { opacity: 0, y: 15 }, 
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } 
+
+const getStatusStyles = (status: string) => {
+  return status === 'ANSWERED' 
+    ? 'bg-slate-100 text-slate-600 border-slate-200' 
+    : 'bg-orange-50 text-orange-600 border-orange-200';
 };
 
 export default function InquiryTab() {
-  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [inquiryPage, setInquiryPage] = useState(0);
-  const [inquiryTotalPages, setInquiryTotalPages] = useState(0); // ✅ 누락된 페이지네이션 상태 복구
+  const [inquiryTotalPages, setInquiryTotalPages] = useState(0);
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [answerInput, setAnswerInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,16 +64,36 @@ export default function InquiryTab() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [inquiryPage]);
 
+  // [최적화 3] 데이터 페치 및 페이지네이션 보정 로직
   const fetchInquiries = useCallback(async () => {
     setLoading(true);
     try {
       const res = await adminApi.getAllInquiries(inquiryPage, inquiryStatusFilter);
-      setInquiries(res.data?.content || []);
-      setInquiryTotalPages(res.data?.totalPages || 0); // ✅ 총 페이지 수 업데이트 복구
-    } finally { setLoading(false); }
+      const content = res.data?.content || [];
+
+      // 필터 상태에서 마지막 남은 항목 처리 후 빈 배열이 되었을 때 이전 페이지로 이동
+      if (content.length === 0 && inquiryPage > 0) {
+        setInquiryPage(prev => prev - 1);
+        return;
+      }
+
+      setInquiries(content);
+      setInquiryTotalPages(res.data?.totalPages || 0);
+    } catch (error) {
+      console.error('문의 내역 로드 실패:', error);
+    } finally { 
+      setLoading(false); 
+    }
   }, [inquiryPage, inquiryStatusFilter]);
 
   useEffect(() => { fetchInquiries(); }, [fetchInquiries]);
+
+  // [최적화 4] 상단 통계 카드 배열 메모이제이션
+  const statsCards = useMemo(() => [
+    { title: '조회된 문의', value: `${inquiries.length}건`, icon: <MessageCircleQuestion className="w-6 h-6 text-blue-500" /> },
+    { title: '답변 대기', value: `${inquiries.filter(i => i.status === 'PENDING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
+    { title: '답변 완료', value: `${inquiries.filter(i => i.status === 'ANSWERED').length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+  ], [inquiries]);
 
   const handleOpenDetail = async (id: number) => {
     setIsInquiryModalOpen(true);
@@ -64,13 +111,14 @@ export default function InquiryTab() {
 
   const submitAnswer = async () => {
     if (!answerInput.trim()) return YesAlert.fire({ icon: 'warning', title: '알림', html: '답변을 입력해주세요.' });
-    
+    if (!selectedInquiry) return;
+
     setIsSubmitting(true);
     try {
       await adminApi.answerInquiry(selectedInquiry.id, answerInput);
       Toast.fire({ icon: 'success', title: '답변이 등록되었습니다.' });
       setIsInquiryModalOpen(false);
-      fetchInquiries();
+      fetchInquiries(); // 완료 후 목록 갱신
     } catch {
       YesAlert.fire({ icon: 'error', title: '오류', html: '등록에 실패했습니다.' });
     } finally { 
@@ -81,11 +129,7 @@ export default function InquiryTab() {
   return (
     <>
       <motion.div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
-        {[
-          { title: '전체 문의', value: `${inquiries.length}건`, icon: <MessageCircleQuestion className="w-6 h-6 text-blue-500" /> },
-          { title: '답변 대기', value: `${inquiries.filter(i => i.status === 'PENDING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
-          { title: '답변 완료', value: `${inquiries.filter(i => i.status === 'ANSWERED').length}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
-        ].map((stat, idx) => (
+        {statsCards.map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4">
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
             <div>
@@ -101,14 +145,18 @@ export default function InquiryTab() {
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <MessageCircleQuestion className="w-5 h-5 text-blue-600" /> 고객센터 관리
           </h2>
-          <select value={inquiryStatusFilter} onChange={(e) => {setInquiryStatusFilter(e.target.value); setInquiryPage(0);}} 
-          className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+          <select 
+            value={inquiryStatusFilter} 
+            onChange={(e) => { setInquiryStatusFilter(e.target.value); setInquiryPage(0); }} 
+            className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer"
+          >
             <option value="">모든 상태</option>
             <option value="PENDING">답변 대기</option>
             <option value="ANSWERED">답변 완료</option>
           </select>
         </div>
 
+        {/* 1. PC 뷰: 테이블 */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
@@ -128,11 +176,8 @@ export default function InquiryTab() {
                     <td className="p-4 pl-6">
                       <div className="flex items-center gap-2">
                         <span className="text-slate-400 font-medium">#{inq.id}</span>
-                        {/* 카테고리(분류) 뱃지 */}
                         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md whitespace-nowrap">
-                          {inq.category === 'RESERVATION' ? '예약/매칭' : 
-                           inq.category === 'PAYMENT' ? '결제/환불' : 
-                           inq.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                          {getCategoryLabel(inq.category)}
                         </span>
                       </div>
                     </td>
@@ -144,14 +189,12 @@ export default function InquiryTab() {
                       <p className="text-xs text-slate-500 mt-0.5">{inq.authorName} ({inq.authorEmail || '이메일 없음'})</p>
                     </td>
                     <td className="p-4">
-                      {/* 상태 뱃지 테두리 디자인 및 작성일자 */}
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold border ${getStatusStyles(inq.status)}`}>
                         {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
                       </span>
                       <p className="text-xs text-slate-400 mt-1">{inq.createdAt?.substring(0, 10)}</p>
                     </td>
                     <td className="p-4 pr-6 text-center">
-                      {/* 답변 수정 버튼 오리지널 테마(흰 배경 + 회색 테두리) */}
                       {inq.status === 'PENDING' ? (
                         <button onClick={() => handleOpenDetail(inq.id)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
                           답변 달기
@@ -165,7 +208,7 @@ export default function InquiryTab() {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={4} className="p-16 text-center text-slate-400">조건에 맞는 문의 내역이 없습니다.</td></tr>
+                <EmptyState message="조건에 맞는 문의 내역이 없습니다." isTable={true} colSpan={4} />
               )}
             </tbody>
           </table>
@@ -181,10 +224,10 @@ export default function InquiryTab() {
                 <div className="flex items-center gap-2">
                   <span className="text-slate-400 font-bold text-xs">#{inq.id}</span>
                   <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
-                    {inq.category === 'RESERVATION' ? '예약/매칭' : inq.category === 'PAYMENT' ? '결제/환불' : inq.category === 'SERVICE' ? '서비스 이용' : '기타'}
+                    {getCategoryLabel(inq.category)}
                   </span>
                 </div>
-                <span className={`px-2 py-1 rounded text-[10px] font-bold border ${inq.status === 'ANSWERED' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                <span className={`px-2 py-1 rounded text-[10px] font-bold border ${getStatusStyles(inq.status)}`}>
                   {inq.status === 'ANSWERED' ? '답변완료' : '답변대기'}
                 </span>
               </div>
@@ -206,12 +249,14 @@ export default function InquiryTab() {
               </div>
             </div>
           )) : (
-            <div className="py-16 text-center text-slate-400 text-sm">조건에 맞는 문의 내역이 없습니다.</div>
+            <div className='flex justify-center py-8'>
+              <EmptyState message="조건에 맞는 문의 내역이 없습니다." isTable={false} />
+            </div>
           )}
         </div>
 
-        {/* 페이지네이션 블록 */}
-        {inquiryTotalPages > 0 && (
+        {/* 3. 페이지네이션 블록 */}
+        {inquiryTotalPages > 0 && !loading && (
           <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
             <button disabled={inquiryPage === 0} onClick={() => setInquiryPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>
             {[...Array(inquiryTotalPages)].map((_, i) => (
