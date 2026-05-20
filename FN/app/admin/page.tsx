@@ -35,6 +35,14 @@ export default function AdminDashboardPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
+  const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
+  const [availableManagers, setAvailableManagers] = useState<any[]>([]);
+  const [selectedResId, setSelectedResId] = useState<number | null>(null);
+  const [selectedManagerEmail, setSelectedManagerEmail] = useState<string>('');
+
+  // 배정 완료 후 ReservationTab을 즉시 새로고침하기 위한 리프레시 키
+  const [reservationRefreshKey, setReservationRefreshKey] = useState(0);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
@@ -72,47 +80,52 @@ export default function AdminDashboardPage() {
   };
 
   const handleAssignManager = async (reservationId: number) => {
-    if (allManagers.length === 0) {
-      YesAlert.fire({ icon: 'warning', title: '알림', html: '배정 가능한 매니저가 없습니다.' });
-      return false;
-    }
-    let confirmedEmail = ''; 
+    try {
+      const res = await adminApi.getAvailableManagers(reservationId);
+      
+      const managers = res.data.data || res.data;
 
-    const result = await MySwal.fire({
-      title: '매니저 배정',
-      html: <ManagerListModalContent managers={allManagers} onSelect={(email) => { confirmedEmail = email; }} />,
-      showCancelButton: true,
-      confirmButtonText: '배정하기',
-      cancelButtonText: '취소',
-      buttonsStyling: false,
-      customClass: { 
-        popup: '!bg-white !rounded-[16px] sm:!rounded-[24px] !shadow-2xl !shadow-slate-200/80 !border !border-slate-100 !p-3 !sm:p-6 !max-w-2xl !w-[92%] sm:!w-full',
-        title: '!text-3xl !font-extrabold !text-slate-800 !mt-3 sm:!mt-1 !mb-0',
-        htmlContainer: '!mx-0 !mt-0 !mb-0 !px-0',
-        actions: '!flex !gap-2 sm:!gap-3 !w-full !mt-4 !px-1 !pb-1',
-        confirmButton: '!flex-1 !bg-blue-600 !text-white !rounded-2xl !py-3 !sm:py-3.5 !px-4 !text-sm !font-bold !hover:bg-blue-700 !transition-all !shadow-md !shadow-blue-500/25 !whitespace-nowrap',
-        cancelButton: '!flex-1 !bg-slate-100 !text-slate-600 !rounded-2xl !py-3 sm:!py-3.5 !px-4 !text-sm !font-bold !hover:bg-slate-200 !transition-all !whitespace-nowrap'
-      },
-      preConfirm: () => {
-        if (!confirmedEmail) {
-          WideSwal.showValidationMessage('매니저를 선택해주세요.');
-          return false;
-        }
-        return confirmedEmail;
-      }
-    });
-
-    if (result.isConfirmed && confirmedEmail) {
-      try {
-        await adminApi.assignManager(reservationId, confirmedEmail); 
-        Toast.fire({ icon: 'success', title: '배정 완료' });
-        return true;
-      } catch (error) {
-        YesAlert.fire({ icon: 'error', title: '배정 실패', html: '오류가 발생했습니다.' });
+      if (!managers || managers.length === 0) {
+        YesAlert.fire({
+          icon: 'warning',
+          title: '배정 불가',
+          html: '해당 예약의 요일/시간에 활동 가능하며, <br/>동시간대 스케줄이 비어있는 매니저가 없습니다.'
+        });
         return false;
       }
+
+      // 상태 바인딩 및 모달 오픈
+      setAvailableManagers(managers);
+      setSelectedResId(reservationId);
+      setSelectedManagerEmail(''); // 선택 이메일 초기화
+      setIsManagerModalOpen(true);
+      
+      return false;
+    } catch (error) {
+      console.error('배정 가능 매니저 로딩 실패:', error);
+      YesAlert.fire({ icon: 'error', title: '오류', html: '매니저 목록을 불러오지 못했습니다.' });
+      return false;
     }
-    return false;
+  };
+
+  // 2. 모달창 내에서 [배정 확정] 버튼을 눌렀을 때 최종 API를 쏘는 함수
+  const handleConfirmAssign = async () => {
+    if (!selectedResId || !selectedManagerEmail) {
+      Toast.fire({ icon: 'warning', title: '배정할 매니저를 선택해주세요.' });
+      return;
+    }
+
+    try {
+      await adminApi.assignManager(selectedResId, selectedManagerEmail);
+      
+      Toast.fire({ icon: 'success', title: '매니저 배정이 완료되었습니다.' });
+      setIsManagerModalOpen(false);
+      
+      setReservationRefreshKey(prev => prev + 1); 
+    } catch (error) {
+      console.error('매니저 배정 실패:', error);
+      YesAlert.fire({ icon: 'error', title: '오류', html: '매니저 배정 처리에 실패했습니다.' });
+    }
   };
 
   const handleCancelAssign = async (reservationId: number) => {
@@ -237,13 +250,12 @@ export default function AdminDashboardPage() {
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <ReservationTab 
-                key="dashboard" 
-                handleOpenDetail={handleOpenDetail} 
-                members={members} 
-                allManagers={allManagers} 
-                handleAssignManager={handleAssignManager} 
-                handleCancelAssign={handleCancelAssign} 
-                handleViewMemberProfile={handleViewMemberProfile} 
+                key={reservationRefreshKey} // 리프레시 트리거용 key 추가
+                handleOpenDetail={handleOpenDetail}
+                members={members}
+                handleAssignManager={handleAssignManager} // 위에서 수정한 함수 전달
+                handleCancelAssign={handleCancelAssign}
+                handleViewMemberProfile={handleViewMemberProfile}
               />
             )}
             {activeTab === 'managers' && <ManagerTab key="managers" />}
@@ -267,6 +279,53 @@ export default function AdminDashboardPage() {
       </main>
 
       <DetailModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} selectedRequest={selectedRequest} />
+      {isManagerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-[26px] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] p-6 border border-slate-100">
+            
+            {/* 헤더 */}
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-800">배정 가능 매니저 매칭</h3>
+                <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+                  * 해당 예약 시간대의 근무 가능 여부 및 중복 스케줄 검증이 완료된 리스트입니다.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsManagerModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm p-1"
+              >
+                닫기
+              </button>
+            </div>
+            
+            {/* 바디 (스크롤 영역) */}
+            <div className="flex-1 overflow-y-auto my-2">
+              <ManagerListModalContent 
+                managers={availableManagers} // 백엔드에서 받아온 정제된 매니저 리스트만 주입
+                onSelect={(email) => setSelectedManagerEmail(email)} 
+              />
+            </div>
+
+            {/* 푸터 버튼 */}
+            <div className="flex items-center gap-2 pt-4 border-t border-slate-100">
+              <button 
+                onClick={() => setIsManagerModalOpen(false)} 
+                className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors text-xs"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleConfirmAssign} 
+                className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors text-xs shadow-md shadow-blue-500/20"
+              >
+                배정 확정하기
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

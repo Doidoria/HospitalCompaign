@@ -76,17 +76,30 @@ export default function Header() {
       {/* 1. 상단 고정 헤더 바 */}
       <header className="bg-white/95 shadow-sm sticky top-0 z-40 border-b border-gray-100 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
-          
-          {/* 로고 */}
-          <Link href="/" className="flex items-center gap-1.5 z-50 relative group">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-blue-950 tracking-tight transition-transform group-hover:scale-[1.02]">
-              예스케어<span className="font-semibold text-emerald-600 text-sm md:text-base hidden sm:inline ml-1">병원동행</span>
-            </h1>
+          <Link href="/" className="flex items-center gap-4 z-50 relative group">
+
+            {/* 회사 로고 */}
+            <div className="flex items-center gap-2 opacity-90">
+              <img src="/wel_logo.svg" alt="wel logo" className="h-8 w-auto"/>
+            </div>
+
+            <div className="h-8 w-px bg-gray-200" />
+
+            {/* 서비스 브랜드 */}
+            <div className="flex items-center gap-2">
+              <img src="/yescare.svg" alt="yescare logo" className="h-10 w-auto"/>
+              <h1 className="text-xl md:text-2xl font-extrabold text-blue-950 tracking-tight mt-1">
+                예스케어
+                <span className="font-semibold text-emerald-600 text-sm hidden sm:inline ml-1">
+                  병원동행
+                </span>
+              </h1>
+            </div>
           </Link>
 
           {/* PC 전용 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-8 whitespace-nowrap">
-            <div className="flex items-center gap-8 text-base font-bold">
+          <nav className="hidden md:flex items-center gap-6 whitespace-nowrap">
+            <div className="flex items-center gap-6 text-base font-bold">
               <Link href="/guide" className={`transition duration-300 ${isActive('/guide') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
                 서비스 안내
               </Link>
@@ -138,10 +151,8 @@ export default function Header() {
           </nav>
           
           {/* 모바일 햄버거 버튼 */}
-          <button 
-            className="md:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none transition-transform active:scale-90" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
+          <button className="md:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none transition-transform active:scale-90" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
             {isMobileMenuOpen ? <X className="w-7 h-7 text-gray-500" /> : <Menu className="w-7 h-7 text-blue-950" />}
           </button>
         </div>

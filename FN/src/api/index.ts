@@ -41,6 +41,7 @@ export const reservationApi = {
   getWaiting: () => apiClient.get('/api/reservations/waiting'),
   getManagerSchedules: () => apiClient.get('/api/reservations/manager/me'),
   createProxy: (id: number, data: any) => apiClient.post(`/api/reservations/${id}/proxy`, data),
+
   submitReview: (id: number, data: { rating: number; comment: string }) => 
     apiClient.post(`/api/reservations/${id}/reviews`, data),
 };
@@ -88,6 +89,9 @@ export const adminApi = {
     return apiClient.get(url);
   },
 
+  // 배정 가능한 매니저 목록 조회
+  getAvailableManagers: (reservationId: number) => apiClient.get(`/api/reservations/${reservationId}/available-managers`),
+
   // 리뷰 및 리포트 모니터링
   getAllReviews: (page: number = 0) => apiClient.get(`/api/reservations/reviews/all?page=${page}`),
   deleteReview: (reviewId: number) => apiClient.delete(`/api/reservations/reviews/${reviewId}`),
@@ -100,8 +104,8 @@ export const adminApi = {
     apiClient.patch(`/api/members/${memberId}/role`, { role }),
 
   // 매니저 강제 배정/취소
-  assignManager: (reservationId: number, managerEmail: string) => 
-    apiClient.patch(`/api/reservations/${reservationId}/assign`, { managerEmail }),
+  assignManager: (id: number, managerEmail: string) => 
+    apiClient.patch(`/api/reservations/${id}/assign`, { managerEmail }),
     
   cancelAssignManager: (reservationId: number) => 
     apiClient.patch(`/api/reservations/${reservationId}/cancel-assign`),

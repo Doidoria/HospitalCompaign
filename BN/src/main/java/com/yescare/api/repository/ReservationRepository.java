@@ -42,4 +42,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Override
     @EntityGraph(attributePaths = {"member", "manager", "review"})
     Page<Reservation> findAll(Pageable pageable);
+
+    @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.manager = :manager " +
+            "AND r.status = 'CONFIRMED' " +
+            "AND r.reservationTime BETWEEN :startTime AND :endTime")
+    boolean existsConflictingReservation(
+            @Param("manager") Member manager,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
 }

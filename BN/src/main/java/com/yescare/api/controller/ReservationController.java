@@ -149,4 +149,12 @@ public class ReservationController {
         reservationService.deleteReview(reviewId);
         return ResponseEntity.ok("리뷰가 성공적으로 삭제 처리되었습니다.");
     }
+
+    // 예약 건에 대해 배정 가능한 매니저 목록만 조회 API
+    @GetMapping("/{id}/available-managers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getAvailableManagers(@PathVariable Long id) {
+        List<Map<String, Object>> availableManagers = reservationService.getAvailableManagersForReservation(id);
+        return ResponseEntity.ok(availableManagers);
+    }
 }

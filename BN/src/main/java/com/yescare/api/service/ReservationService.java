@@ -1,12 +1,10 @@
 package com.yescare.api.service;
 
-import com.yescare.api.domain.Member;
-import com.yescare.api.domain.Reservation;
-import com.yescare.api.domain.ReservationStatus;
-import com.yescare.api.domain.Review;
+import com.yescare.api.domain.*;
 import com.yescare.api.dto.ReservationRequest;
 import com.yescare.api.dto.ReservationResponse;
 import com.yescare.api.dto.ReviewResponse;
+import com.yescare.api.repository.ManagerRepository;
 import com.yescare.api.repository.MemberRepository;
 import com.yescare.api.repository.ReservationRepository;
 import com.yescare.api.repository.ReviewRepository;
@@ -16,7 +14,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,6 +30,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final MemberRepository memberRepository;
     private final ReviewRepository reviewRepository;
+    private final ManagerRepository managerRepository;
 
     @Transactional
     public Long createReservation(String email, ReservationRequest request) {
@@ -280,5 +283,100 @@ public class ReservationService {
     @Transactional
     public void deleteReview(Long reviewId) {
         reviewRepository.deleteById(reviewId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getAvailableManagersForReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+
+        LocalDateTime resTime = reservation.getReservationTime();
+        String dayOfWeekKor = getKoreanDayOfWeek(resTime.getDayOfWeek()); // 월, 화, 수...
+        LocalTime time = resTime.toLocalTime();
+
+        // Member가 아닌 Manager(매니저 상세 정보) 엔티티를 기준으로 조회합니다.
+        List<Manager> allManagers = managerRepository.findAll();
+        List<Map<String, Object>> availableManagers = new ArrayList<>();
+
+        for (Manager manager : allManagers) {
+            // 1) 요일 체크
+            if (manager.getAvailableDays() == null || !manager.getAvailableDays().contains(dayOfWeekKor)) {
+                continue;
+            }
+
+            // 2) 시간 체크
+            if (!isWithinAvailableTime(manager.getAvailableTime(), time)) {
+                continue;
+            }
+
+            Member member = manager.getMember();
+
+            // 계정 정지 상태
+            if (!member.isActive()) {
+                continue;
+            }
+
+            // 권한 한 번 더 안전하게 체크 (Enum 객체이므로 .name() 또는 == 사용)
+            if (member.getRole() != Role.MANAGER && !member.getRole().name().contains("MANAGER")) {
+                continue;
+            }
+
+            // 3) 중복 스케줄 체크 (Member 기준으로 확인)
+            LocalDateTime startTime = resTime.minusHours(2);
+            LocalDateTime endTime = resTime.plusHours(2);
+            if (reservationRepository.existsConflictingReservation(member, startTime, endTime)) {
+                continue;
+            }
+
+            // 프론트엔드(ManagerListModalContent.tsx)가 요구하는 필드명에 맞춰 조립
+            Map<String, Object> managerData = new HashMap<>();
+            managerData.put("id", member.getId());
+            managerData.put("name", member.getName());
+            managerData.put("email", member.getEmail());
+            managerData.put("availableDays", manager.getAvailableDays());
+            managerData.put("availableTime", manager.getAvailableTime());
+            managerData.put("role", member.getRole().name());
+
+            availableManagers.add(managerData);
+        }
+
+        return availableManagers;
+    }
+
+    // 요일 한글 변환 헬퍼 메서드
+    private String getKoreanDayOfWeek(DayOfWeek dayOfWeek) {
+        switch (dayOfWeek) {
+            case MONDAY:
+                return "월";
+            case TUESDAY:
+                return "화";
+            case WEDNESDAY:
+                return "수";
+            case THURSDAY:
+                return "목";
+            case FRIDAY:
+                return "금";
+            case SATURDAY:
+                return "토";
+            case SUNDAY:
+                return "일";
+            default:
+                return "";
+        }
+    }
+
+    // 시간 범위 체크 헬퍼 메서드 (availableTime 포맷이 "09:00~18:00" 형태라고 가정)
+    private boolean isWithinAvailableTime(String availableTimeStr, LocalTime targetTime) {
+        if (availableTimeStr == null || !availableTimeStr.contains("~")) return false;
+        try {
+            String[] times = availableTimeStr.split("~");
+            LocalTime startWork = LocalTime.parse(times[0].trim());
+            LocalTime endWork = LocalTime.parse(times[1].trim());
+
+            // 타겟 시간이 시작 시간과 종료 시간 사이인지 확인 (시작시간 포함, 종료시간 이전)
+            return !targetTime.isBefore(startWork) && targetTime.isBefore(endWork);
+        } catch (Exception e) {
+            return true; // 파싱 실패 시 일단 필터링에서 제외하지 않음 (유연한 대처)
+        }
     }
 }
