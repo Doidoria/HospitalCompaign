@@ -1,3 +1,4 @@
+// src/api/index.ts
 import { apiClient } from './client';
 
 // ==========================================
@@ -68,10 +69,12 @@ export const adminApi = {
   getPendingManagers: (status: string = 'WAITING') => 
     apiClient.get(`/api/members/manager-applications?status=${status}`),
   approveManager: (memberId: number) => apiClient.patch(`/api/members/${memberId}/approve`),
-  rejectManager: (applicationId: number) => apiClient.delete(`/api/members/manager-applications/${applicationId}`),
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
-  rejectManagerApp: (id: number, data: { rejectionReason: string }) => 
-    apiClient.post(`/api/members/manager-applications/${id}/reject`, data),
+  rejectManager: (applicationId: number, data: { reason: string }) =>
+  apiClient.patch(`/api/members/applications/${applicationId}/reject`, data),
+  rejectManagerApp: (id: number, data: { reason: string }) => 
+    apiClient.patch(`/api/members/applications/${id}/reject`, data),
+  getManagerStats: () => apiClient.get('/api/members/manager-applications/stats'),
 
   // 전체 회원 조회
   getAllMembers: (page: number = 0, role?: string) => 

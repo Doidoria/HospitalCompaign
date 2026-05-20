@@ -106,8 +106,8 @@ public class MemberController {
 
     @PostMapping("/apply-manager")
     public ResponseEntity<String> applyManager(
-            @ModelAttribute ManagerApplyRequest request,
-            @RequestParam(value = "certificateFile", required = false) MultipartFile file,
+            @RequestPart("request") ManagerApplyRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal String email) {
 
         String fileUrl = null;
@@ -115,6 +115,7 @@ public class MemberController {
             fileUrl = fileStorageService.uploadFile(file);
         }
         managerService.saveManagerApplication(request, email, fileUrl);
+
         return ResponseEntity.ok("매니저 지원이 완료되었습니다.");
     }
 
@@ -127,10 +128,23 @@ public class MemberController {
         return ResponseEntity.ok("지원이 반려되었습니다.");
     }
 
+//    @GetMapping("/manager-applications")
+//    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
+//    public ResponseEntity<List<ManagerAppResponse>> getPendingApplications() {
+//        return ResponseEntity.ok(managerService.getPendingManagerApplications());
+//    }
+
     @GetMapping("/manager-applications")
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<List<ManagerAppResponse>> getPendingApplications() {
-        return ResponseEntity.ok(managerService.getPendingManagerApplications());
+    public ResponseEntity<List<ManagerAppResponse>> getApplications(
+            @RequestParam(value = "status", defaultValue = "WAITING") String status) {
+        return ResponseEntity.ok(managerService.getManagerApplicationsByStatus(status));
+    }
+
+    @GetMapping("/manager-applications/stats")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Long>> getManagerStats() {
+        return ResponseEntity.ok(managerService.getManagerStats());
     }
 
     @GetMapping("/me/manager-application")

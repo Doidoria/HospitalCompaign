@@ -64,10 +64,28 @@ public class ManagerService {
         app.reject(reason);
     }
 
+//    @Transactional(readOnly = true)
+//    public List<ManagerAppResponse> getPendingManagerApplications() {
+//        return managerApplicationRepository.findByStatus("WAITING").stream()
+//                .map(ManagerAppResponse::new).collect(Collectors.toList());
+//    }
+
     @Transactional(readOnly = true)
-    public List<ManagerAppResponse> getPendingManagerApplications() {
-        return managerApplicationRepository.findByStatus("WAITING").stream()
-                .map(ManagerAppResponse::new).collect(Collectors.toList());
+    public List<ManagerAppResponse> getManagerApplicationsByStatus(String status) {
+        // 💡 "WAITING" 고정값 대신 전달받은 status로 조회
+        return managerApplicationRepository.findByStatus(status).stream()
+                .map(ManagerAppResponse::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> getManagerStats() {
+        return Map.of(
+                "total", managerApplicationRepository.count(),
+                "waiting", managerApplicationRepository.countByStatus("WAITING"),
+                "approved", managerApplicationRepository.countByStatus("APPROVED"),
+                "rejected", managerApplicationRepository.countByStatus("REJECTED")
+        );
     }
 
     @Transactional(readOnly = true)

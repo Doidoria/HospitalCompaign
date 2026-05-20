@@ -166,7 +166,7 @@ export default function Header() {
               animate={{ x: 0 }} 
               exit={{ x: '100%' }} 
               transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 md:hidden flex flex-col pt-24 px-6 overflow-y-auto pb-10"
+              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 md:hidden flex flex-col pt-12 px-6 overflow-y-auto pb-10"
             >
               {/* 모바일 프로필 영역 */}
               {isLoggedIn ? (
