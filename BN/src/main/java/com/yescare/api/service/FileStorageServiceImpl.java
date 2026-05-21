@@ -29,9 +29,15 @@ public class FileStorageServiceImpl implements FileStorageService {
                 directory.mkdirs();
             }
 
-            // 2. 파일 이름이 겹치지 않도록 UUID 암호화 추가
+            // 2. 파일 이름이 겹치지 않도록 UUID 암호화 (안전한 파일 확장자 추출 로직)
             String originalFilename = file.getOriginalFilename();
-            String savedFilename = UUID.randomUUID().toString() + "_" + originalFilename;
+            String extension = ""; // 기본 확장자 (없을 경우)
+
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+
+            String savedFilename = UUID.randomUUID().toString() + extension;
 
             // 3. 실제 하드디스크에 파일 쓰기 (저장)
             Path path = Paths.get(UPLOAD_DIR + savedFilename);

@@ -1,18 +1,15 @@
 package com.yescare.api.service;
 
+import jakarta.annotation.PostConstruct;
 import net.nurigo.sdk.NurigoApp;
-import net.nurigo.sdk.message.model.Message;
-import net.nurigo.sdk.message.request.SingleMessageSendingRequest;
-import net.nurigo.sdk.message.response.SingleMessageSentResponse;
 import net.nurigo.sdk.message.service.DefaultMessageService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -31,6 +28,9 @@ public class SmsService {
 
     // 인증번호를 임시 저장할 메모리 저장소 (Key: 전화번호, Value: 인증번호)
     private final Map<String, String> verificationCodes = new ConcurrentHashMap<>();
+
+    // 클래스 레벨에 미리 선언하여 재사용
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @PostConstruct
     public void init() {
@@ -51,7 +51,7 @@ public class SmsService {
         verificationCodes.put(phoneNumber, code);
 
         // 3분 뒤 삭제 (그대로 유지)
-        Executors.newSingleThreadScheduledExecutor().schedule(() -> {
+        scheduler.schedule(() -> {
             verificationCodes.remove(phoneNumber);
         }, 3, TimeUnit.MINUTES);
     }
@@ -76,7 +76,7 @@ public class SmsService {
 //        verificationCodes.put(phoneNumber, code);
 //
 //        // 4. 3분 뒤 삭제 로직 유지
-//        Executors.newSingleThreadScheduledExecutor().schedule(() -> {
+//        scheduler.schedule(() -> {
 //            verificationCodes.remove(phoneNumber);
 //        }, 3, TimeUnit.MINUTES);
 //    }

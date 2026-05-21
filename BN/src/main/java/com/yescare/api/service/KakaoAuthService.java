@@ -44,47 +44,36 @@ public class KakaoAuthService {
         Map<String, Object> userInfo = getKakaoUserInfo(kakaoAccessToken);
         Map<String, Object> kakaoAccount = (Map<String, Object>) userInfo.get("kakao_account");
 
-        // 방어 1: 카카오 고유 ID 추출 (이메일이 없을 때 사용할 식별자)
-        Object idObj = userInfo.get("id");
-        String kakaoId = idObj != null ? String.valueOf(idObj) : UUID.randomUUID().toString().substring(0, 8);
-
-        // 방어 2: 이메일 안전하게 추출 및 임시 이메일 생성
-        String email = null;
-        if (kakaoAccount != null) {
-            email = (String) kakaoAccount.get("email");
-        }
-        // 카카오에서 이메일을 안 줬다면, 고유 ID로 임시 이메일을 강제 생성 (예: kakao_123456789@yescare.dummy)
+        // 방어 로직 1: 이메일 처리
+        // kakaoAccount 자체가 null일 수 있는 극단적인 엣지 케이스까지 방어합니다.
+        String email = kakaoAccount != null ? (String) kakaoAccount.get("email") : null;
         if (email == null || email.isBlank()) {
-            email = "kakao_" + kakaoId + "@yescare.dummy";
+            // (Long)으로 강제 변환 시 에러가 날 수 있으므로 Object로 안전하게 꺼내서 String으로 만듭니다.
+            Object idObj = userInfo.get("id");
+            String uniqueId = idObj != null ? String.valueOf(idObj) : UUID.randomUUID().toString().substring(0, 8);
+            email = "kakao_" + uniqueId + "@yescare.com";
         }
 
-        // 방어 3: 닉네임 안전하게 추출
-        String nickname = "카카오유저_" + kakaoId;
-        if (kakaoAccount != null && kakaoAccount.get("profile") != null) {
-            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-            if (profile.get("nickname") != null) {
-                nickname = (String) profile.get("nickname");
-            }
-        }
+        // 방어 로직 2: 닉네임(이름) 처리
+        Map<String, Object> profile = kakaoAccount != null ? (Map<String, Object>) kakaoAccount.get("profile") : null;
+        String name = profile != null && profile.get("nickname") != null ? (String) profile.get("nickname") : "카카오유저";
 
         // DB 조회를 위해 변수를 final 성격으로 고정
         final String finalEmail = email;
-        final String finalNickname = nickname;
 
         // 3. 기존 회원인지 이메일로 검증 후, 없으면 신규 가입
-        Member member = memberRepository.findByEmail(finalEmail).orElseGet(() -> {
-            log.info("새로운 카카오 유저 가입 진행: {}", finalEmail);
-
-            Member newMember = Member.builder()
-                    .email(finalEmail) // 절대 null이 들어갈 수 없음
-                    .password(UUID.randomUUID().toString())
-                    .name(finalNickname)
-                    .phoneNumber("010-0000-0000") // 필수값이므로 임시 부여
-                    .role(Role.USER)
-                    .provider("KAKAO")
-                    .build();
-            return memberRepository.save(newMember);
-        });
+        Member member = memberRepository.findByEmail(finalEmail)
+                .orElseGet(() -> {
+                    Member newMember = Member.builder()
+                            .email(finalEmail)
+                            .password(UUID.randomUUID().toString()) // 임시 비밀번호 부여
+                            .name(name)
+                            .phoneNumber("010-0000-0000") // 카카오에서 번호를 못 받을 경우 임시 부여
+                            .role(Role.USER)
+                            .provider("KAKAO")
+                            .build();
+                    return memberRepository.save(newMember);
+                });
 
         // 4. 예스케어 전용 JWT 발급
         return jwtProvider.createToken(member.getId(), member.getEmail(), member.getRole().name());

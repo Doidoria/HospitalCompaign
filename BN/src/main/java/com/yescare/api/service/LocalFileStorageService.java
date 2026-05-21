@@ -24,15 +24,23 @@ public class LocalFileStorageService implements FileStorageService {
                 folder.mkdirs();
             }
 
-            // 2. 파일명 중복을 막기 위한 UUID 생성
-            String uniqueFilename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            File destFile = new File(folder, uniqueFilename);
+            // 2. 파일명 중복을 막기 위한 UUID 생성 (안전한 파일 확장자 추출 로직)
+            String originalFilename = file.getOriginalFilename();
+            String extension = ""; // 기본 확장자 (없을 경우)
+
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+
+            String savedFilename = UUID.randomUUID().toString() + extension;
+
+            File destFile = new File(folder, savedFilename);
 
             // 3. 실제 서버 하드디스크에 파일 저장
             file.transferTo(destFile);
 
             // 4. DB에 저장될 가상 경로 반환
-            return "/uploads/" + uniqueFilename;
+            return "/uploads/" + savedFilename;
 
         } catch (IOException e) {
             throw new RuntimeException("파일 저장에 실패했습니다.", e);
