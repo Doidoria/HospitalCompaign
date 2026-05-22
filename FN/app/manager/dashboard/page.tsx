@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, Variants } from 'framer-motion';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { 
   CalendarDays, Activity, CheckCircle2, MapPin, FileText, X, CalendarPlus, XCircle, Star,
   Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight, UserCog 
@@ -10,6 +10,14 @@ import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
+
+const formatDateTime = (dateString: string) => {
+  const dateObj = new Date(dateString);
+  return {
+    date: dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+    time: dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+  };
+};
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -20,20 +28,26 @@ export default function ManagerDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [myScheduleFilter, setMyScheduleFilter] = useState<'all' | 'confirmed' | 'completed'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const filteredMySchedules = useMemo(() => {
     return mySchedules.filter(req => {
-      const matchesSearch = req.patientName.includes(searchQuery) || req.hospitalName.includes(searchQuery);
+      const matchesSearch = req.patientName.includes(debouncedQuery) || req.hospitalName.includes(debouncedQuery);
       const isComp = req.status === 'COMPLETED' || req.status === '이용 완료';
       if (myScheduleFilter === 'confirmed') return matchesSearch && !isComp;
       if (myScheduleFilter === 'completed') return matchesSearch && isComp;
       return matchesSearch;
     });
-  }, [mySchedules, searchQuery, myScheduleFilter]);
+  }, [mySchedules, debouncedQuery, myScheduleFilter]);
 
   const activeData = filteredMySchedules;
   const totalPages = Math.max(1, Math.ceil(activeData.length / ITEMS_PER_PAGE));
@@ -41,7 +55,7 @@ export default function ManagerDashboard() {
 
   useEffect(() => { setCurrentPage(1); }, [searchQuery, myScheduleFilter]);
 
-  const fetchDashboardData = async (showMainLoading = true) => {
+  const fetchDashboardData = useCallback(async (showMainLoading = true) => {
     if (showMainLoading) setLoading(true);
     else setIsRefreshing(true); 
 
@@ -68,14 +82,14 @@ export default function ManagerDashboard() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchDashboardData(true);
   }, [router]);
 
   // 재방문 대리 신청 팝업
-  const handleProxyReservation = async (req: any) => {
+  const handleProxyReservation = useCallback(async (req: any) => {
     const { value: formValues } = await Swal.fire({
       title: '재방문 대리 신청',
       width: '45em',
@@ -201,18 +215,10 @@ export default function ManagerDashboard() {
         Swal.fire({ icon: 'error', title: '신청 실패', text: '오류가 발생했습니다.', confirmButtonColor: '#ea580c' });
       }
     }
-  };
+  }, [fetchDashboardData]);
 
   const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
   const itemVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } };
-
-  const formatDateTime = (dateString: string) => {
-    const dateObj = new Date(dateString);
-    return {
-      date: dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-      time: dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-    };
-  };
 
   if (loading) return (
     <div className="min-h-screen bg-[#F8FAFC] p-5 space-y-6 max-w-4xl mx-auto pt-8">
@@ -295,123 +301,125 @@ export default function ManagerDashboard() {
           </div>
         </div>
 
-        {/* 탭 2(나의 일정) 렌더링 부분을 조건 없이 바로 노출 */}
+        {/* 탭 2(나의 일정) */}
         <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-4">
-          {/* 상단 타이틀 (선택 사항 - 나의 일정이란 걸 명시) */}
+          {/* 상단 타이틀 */}
           <div className="flex items-center gap-2 mb-2 px-2">
             <CalendarDays className="w-5 h-5 text-emerald-600" />
             <h2 className="text-lg font-bold text-slate-800">나의 배정 일정 <span className="text-emerald-600 ml-1">{mySchedules.length}</span>건</h2>
           </div>
 
-          {currentItems.length === 0 ? (
-            <div className="bg-white rounded-[24px] p-12 text-center border border-slate-200/60 shadow-sm flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                <CalendarDays className="w-8 h-8 text-slate-300" />
+          <AnimatePresence mode="popLayout">
+            {currentItems.length === 0 ? (
+              <div className="bg-white rounded-[24px] p-12 text-center border border-slate-200/60 shadow-sm flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <CalendarDays className="w-8 h-8 text-slate-300" />
+                </div>
+                <h3 className="text-slate-800 font-bold text-lg mb-1">일정이 없습니다</h3>
+                <p className="text-slate-500 text-sm">조건에 맞는 배정 일정이 없습니다.</p>
               </div>
-              <h3 className="text-slate-800 font-bold text-lg mb-1">일정이 없습니다</h3>
-              <p className="text-slate-500 text-sm">조건에 맞는 배정 일정이 없습니다.</p>
-            </div>
-          ) : (
-            currentItems.map((req) => {
-              const { date, time } = formatDateTime(req.reservationTime);
-              const isCompleted = req.status === 'COMPLETED' || req.status === '이용 완료';
-              
-              return (
-                <motion.div key={req.id} variants={itemVariants} 
-                  className={`bg-white rounded-[24px] p-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 border relative overflow-hidden ${
-                    isCompleted ? 'border-slate-200/60 opacity-85' : 'border-emerald-100'
-                  }`}>
-                  
-                  {/* 예약 확정일 경우 좌측에 살짝 포인트 컬러 바 */}
-                  {!isCompleted && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>}
-
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <span className={`inline-block px-3 py-1.5 text-[11px] font-bold rounded-lg tracking-wide mb-3 border ${
-                        isCompleted ? 'bg-slate-50 text-slate-500 border-slate-200/60' : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
-                      }`}>
-                        {isCompleted ? '이용 완료' : '예약 확정'}
-                      </span>
-                      <h3 className="text-xl font-extrabold text-slate-800">{req.patientName} 환자님</h3>
-                    </div>
-                    <div className="text-right bg-slate-50 px-3 py-2 rounded-xl border border-slate-100/50">
-                      <p className="font-bold text-slate-700 text-sm">{date}</p>
-                      <p className={`font-bold ${isCompleted ? 'text-slate-500' : 'text-emerald-600'}`}>{time}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mb-5 text-sm text-slate-600 font-medium">
-                    <div className="p-1.5 bg-slate-100 rounded-md shrink-0"><MapPin className="w-4 h-4 text-slate-500" /></div>
-                    <span className="truncate">{req.hospitalName}</span>
-                  </div>
-                  
-                  <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
-                    <button onClick={() => { setSelectedRequest(req); setIsModalOpen(true); }}
-                      className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-slate-200/60 shadow-[0_2px_4px_rgb(0,0,0,0.02)]">
-                      상세 정보 보기
-                    </button>
+            ) : (
+              currentItems.map((req) => {
+                const { date, time } = formatDateTime(req.reservationTime);
+                const isCompleted = req.status === 'COMPLETED' || req.status === '이용 완료';
+                
+                return (
+                  <motion.div layout key={req.id} variants={itemVariants} exit={{ opacity: 0, scale: 0.95 }}
+                    className={`bg-white rounded-[24px] p-6 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 border relative overflow-hidden ${
+                      isCompleted ? 'border-slate-200/60 opacity-85' : 'border-emerald-100'
+                    }`}>
                     
-                    {!isCompleted ? (
-                      <Link href={`/manager/report/${req.id}`} 
-                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-[0_2px_4px_rgb(59,130,246,0.1)] flex items-center justify-center gap-1.5">
-                        <FileText className="w-4 h-4" /> 케어 리포트 작성
-                      </Link>
-                    ) : (
-                      <>
-                        <Link href={`/manager/report/${req.id}`} 
-                          className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-indigo-200/60 shadow-[0_2px_4px_rgb(79,70,229,0.1)] flex items-center justify-center gap-1.5">
-                          <FileText className="w-4 h-4" /> 조회/수정
-                        </Link>
+                    {/* 예약 확정일 경우 좌측에 살짝 포인트 컬러 바 */}
+                    {!isCompleted && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>}
 
-                        {/* 3. 재방문 관련 버튼들 */}
-                        {req.noRevisit ? (
-                          <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                            <XCircle className="w-4 h-4" /> 재방문 없음
-                          </button>
-                        ) : req.hasProxy ? (
-                          <button disabled className="flex-1 bg-emerald-50 text-emerald-600 opacity-70 font-bold py-3.5 rounded-xl text-center text-sm border border-emerald-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                            <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
-                          </button>
-                        ) : (
-                          <button onClick={() => handleProxyReservation(req)}
-                            className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
-                            <CalendarPlus className="w-4 h-4" /> 대리 신청
-                          </button>
-                        )}
-                      </>
-                    )}
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <span className={`inline-block px-3 py-1.5 text-[11px] font-bold rounded-lg tracking-wide mb-3 border ${
+                          isCompleted ? 'bg-slate-50 text-slate-500 border-slate-200/60' : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                        }`}>
+                          {isCompleted ? '이용 완료' : '예약 확정'}
+                        </span>
+                        <h3 className="text-xl font-extrabold text-slate-800">{req.patientName} 환자님</h3>
+                      </div>
+                      <div className="text-right bg-slate-50 px-3 py-2 rounded-xl border border-slate-100/50">
+                        <p className="font-bold text-slate-700 text-sm">{date}</p>
+                        <p className={`font-bold ${isCompleted ? 'text-slate-500' : 'text-emerald-600'}`}>{time}</p>
+                      </div>
+                    </div>
                     
-                    {/* 리뷰 별점 버튼 */}
-                    {req.reviewRating && (
-                      <button 
-                        onClick={() => {
-                          Swal.fire({
-                            title: '고객님의 소중한 후기',
-                            html: `
-                              <div style="margin-top: -5px;">
-                                <div style="font-size: 32px; color: #f59e0b; font-weight: 900; margin-bottom: 20px; text-align: center; letter-spacing: -1px;">
-                                  ⭐ ${req.reviewRating}.0
-                                </div>
-                                <div style="box-sizing: border-box; background-color: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: left; font-size: 15px; color: #334155; line-height: 1.6; word-break: keep-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-                                  ${req.reviewComment ? req.reviewComment : '<span style="color: #94a3b8;">작성된 상세 후기 내용이 없습니다.</span>'}
-                                </div>
-                              </div>
-                            `,
-                            confirmButtonText: '확인',
-                            confirmButtonColor: '#1e293b',
-                            customClass: { popup: 'rounded-[32px]' }
-                          });
-                        }}
-                        className="flex-1 sm:flex-none sm:w-28 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-amber-200/60 shadow-[0_2px_4px_rgb(245,158,11,0.1)] flex items-center justify-center gap-1.5 active:scale-[0.98]"
-                      >
-                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {req.reviewRating}.0
+                    <div className="flex items-center gap-2 mb-5 text-sm text-slate-600 font-medium">
+                      <div className="p-1.5 bg-slate-100 rounded-md shrink-0"><MapPin className="w-4 h-4 text-slate-500" /></div>
+                      <span className="truncate">{req.hospitalName}</span>
+                    </div>
+                    
+                    <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
+                      <button onClick={() => { setSelectedRequest(req); setIsModalOpen(true); }}
+                        className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-slate-200/60 shadow-[0_2px_4px_rgb(0,0,0,0.02)]">
+                        상세 정보 보기
                       </button>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
+                      
+                      {!isCompleted ? (
+                        <Link href={`/manager/report/${req.id}`} 
+                          className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-[0_2px_4px_rgb(59,130,246,0.1)] flex items-center justify-center gap-1.5">
+                          <FileText className="w-4 h-4" /> 케어 리포트 작성
+                        </Link>
+                      ) : (
+                        <>
+                          <Link href={`/manager/report/${req.id}`} 
+                            className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-indigo-200/60 shadow-[0_2px_4px_rgb(79,70,229,0.1)] flex items-center justify-center gap-1.5">
+                            <FileText className="w-4 h-4" /> 조회/수정
+                          </Link>
+
+                          {/* 3. 재방문 관련 버튼들 */}
+                          {req.noRevisit ? (
+                            <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                              <XCircle className="w-4 h-4" /> 재방문 없음
+                            </button>
+                          ) : req.hasProxy ? (
+                            <button disabled className="flex-1 bg-emerald-50 text-emerald-600 opacity-70 font-bold py-3.5 rounded-xl text-center text-sm border border-emerald-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                              <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
+                            </button>
+                          ) : (
+                            <button onClick={() => handleProxyReservation(req)}
+                              className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
+                              <CalendarPlus className="w-4 h-4" /> 대리 신청
+                            </button>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* 리뷰 별점 버튼 */}
+                      {req.reviewRating && (
+                        <button 
+                          onClick={() => {
+                            Swal.fire({
+                              title: '고객님의 소중한 후기',
+                              html: `
+                                <div style="margin-top: -5px;">
+                                  <div style="font-size: 32px; color: #f59e0b; font-weight: 900; margin-bottom: 20px; text-align: center; letter-spacing: -1px;">
+                                    ⭐ ${req.reviewRating}.0
+                                  </div>
+                                  <div style="box-sizing: border-box; background-color: #f8fafc; padding: 20px; border-radius: 20px; border: 1px solid #e2e8f0; text-align: left; font-size: 15px; color: #334155; line-height: 1.6; word-break: keep-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                                    ${req.reviewComment ? req.reviewComment : '<span style="color: #94a3b8;">작성된 상세 후기 내용이 없습니다.</span>'}
+                                  </div>
+                                </div>
+                              `,
+                              confirmButtonText: '확인',
+                              confirmButtonColor: '#1e293b',
+                              customClass: { popup: 'rounded-[32px]' }
+                            });
+                          }}
+                          className="flex-1 sm:flex-none sm:w-28 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-amber-200/60 shadow-[0_2px_4px_rgb(245,158,11,0.1)] flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                        >
+                          <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {req.reviewRating}.0
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* 상세 정보 모달창 */}
