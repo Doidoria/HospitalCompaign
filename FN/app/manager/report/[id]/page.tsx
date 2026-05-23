@@ -1,3 +1,4 @@
+// app/manager/report/[id]/page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -90,7 +91,14 @@ export default function ReportWritePage() {
   }, [params.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, tagName } = e.target;
+
+    if (tagName.toLowerCase() === 'textarea') {
+      const target = e.target as HTMLTextAreaElement;
+      target.style.height = 'auto';
+      target.style.height = `${target.scrollHeight}px`;
+    }
+
     setFormData(prev => {
       const updatedData = { ...prev, [name]: value };
       localStorage.setItem(`draft_care_report_${params.id}`, JSON.stringify(updatedData));

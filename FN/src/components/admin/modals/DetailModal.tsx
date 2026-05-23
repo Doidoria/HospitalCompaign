@@ -116,10 +116,17 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                   
                   <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                     <span className="font-bold text-slate-400 text-xs block mb-1.5">목적지 (방문 병원)</span>
-                    <button onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(selectedRequest.hospitalName)}`, '_blank')} 
+                    <button 
+                      onClick={() => {
+                        // 1. 주소에 '///' 가 있다면 그 앞부분(기본 주소)만 추출하고 양옆 공백을 제거
+                        const cleanAddress = selectedRequest.hospitalName.split('///')[0].trim();
+                        
+                        // 2. 추출한 주소를 안전하게 URL 인코딩하여 카카오맵 링크로 넘김
+                        window.open(`https://map.kakao.com/link/search/${encodeURIComponent(cleanAddress)}`, '_blank');
+                      }} 
                       className="w-full text-left font-bold text-blue-600 text-sm truncate hover:text-blue-800 transition-colors flex items-center gap-1.5"
                     >
-                      {selectedRequest.hospitalName} <MapPin className="w-3.5 h-3.5" />
+                      {selectedRequest.hospitalName.split('///')[0].trim()} <MapPin className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

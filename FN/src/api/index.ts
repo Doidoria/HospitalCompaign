@@ -89,6 +89,9 @@ export const adminApi = {
     return apiClient.get(url);
   },
 
+  // 예약 일정 업데이트
+  updateReservation: (id: number, data: any) => apiClient.put(`/api/reservations/${id}/admin`, data),
+
   // 배정 가능한 매니저 목록 조회
   getAvailableManagers: (reservationId: number) => apiClient.get(`/api/reservations/${reservationId}/available-managers`),
 

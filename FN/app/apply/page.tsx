@@ -19,7 +19,8 @@ export default function ApplyPage() {
 
   // 내일 날짜 구하기 (YYYY-MM-DD 형식)
   const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1); // 오늘 기준 +1일
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  tomorrowDate.setHours(tomorrowDate.getHours() + 9); // KST 강제 보정
   const minDate = tomorrowDate.toISOString().split('T')[0];
 
   // 통합 데이터 관리 보관함
@@ -68,30 +69,73 @@ export default function ApplyPage() {
 
   const handleSmartChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    // 사용자가 입력하면 해당 항목에 대한 에러 메시지 초기화 (선택적 편의 기능)
+
+    // 전화번호 필드일 경우 숫자만 남긴 후 하이픈 자동 삽입
+    if (name === 'patientPhone' || name === 'guardianPhone') {
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      let formattedNum = onlyNums;
+      if (onlyNums.length <= 3) {
+        formattedNum = onlyNums;
+      } else if (onlyNums.length <= 7) {
+        formattedNum = `${onlyNums.slice(0, 3)}-${onlyNums.slice(3)}`;
+      } else {
+        formattedNum = `${onlyNums.slice(0, 3)}-${onlyNums.slice(3, 7)}-${onlyNums.slice(7, 11)}`;
+      }
+      setFormData(prev => ({ ...prev, [name]: formattedNum }));
+      if (missingFields.length > 0) setMissingFields([]);
+      return;
+    }
+
+    // 일반 텍스트 입력
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (missingFields.length > 0) setMissingFields([]);
   };
 
   const handlePostComplete = (data: any) => {
     let fullAddress = data.address;
-    if (data.buildingName) {
-      fullAddress += ` (${data.buildingName})`;
-    }
+    let bName = data.buildingName || '';
 
-    if (postTarget === 'hospital') {
-      setFormData({ ...formData, hospitalName: fullAddress });
-    } else if (postTarget === 'meeting') {
-      setBasicExtraData({ ...basicExtraData, meetingAddress: fullAddress });
+    // 1. 주소를 합치기 전 병원 키워드 검사
+    const hospitalKeywords = ['병원', '의원', '치과', '한의원', '보건소', '센터', '클리닉', '대학'];
+    const isHospital = hospitalKeywords.some(keyword => bName.includes(keyword) || fullAddress.includes(keyword));
+
+    if (bName) fullAddress += ` (${bName})`;
+
+    const currentTarget = postTarget;
+    setPostTarget('none'); 
+
+    // 2. 타겟이 '병원'인데 병원 키워드가 없는 경우
+    if (currentTarget === 'hospital' && !isHospital) {
+      Swal.fire({
+        title: '병원이 맞나요?',
+        text: `선택하신 주소(${bName || '건물명 없음'})에서 병원 관련 단어가 발견되지 않았습니다. 그래도 등록하시겠습니까?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2563EB',
+        cancelButtonColor: '#94A3B8',
+        confirmButtonText: '네, 병원 맞습니다',
+        cancelButtonText: '다시 검색하기'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
+          if (missingFields.length > 0) setMissingFields([]);
+        } else {
+          setTimeout(() => setPostTarget('hospital'), 300);
+        }
+      });
+    } else {
+      if (currentTarget === 'hospital') {
+        setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
+      } else if (currentTarget === 'meeting') {
+        setBasicExtraData(prev => ({ ...prev, meetingAddress: fullAddress }));
+      }
+      if (missingFields.length > 0) setMissingFields([]);
     }
-    setPostTarget('none');
-    if (missingFields.length > 0) setMissingFields([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // --- [추가된 유효성 검사 로직] ---
+
     const missing: string[] = [];
 
     if (!formData.date) missing.push('진료 날짜');

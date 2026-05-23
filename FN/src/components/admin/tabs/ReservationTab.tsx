@@ -2,13 +2,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { CalendarDays, Activity, Users, UserPlus, Search, Loader2, CheckCircle2, Send, UserMinus, FileText } from 'lucide-react';
+import { CalendarDays, Activity, Users, UserPlus, Search, Loader2, CheckCircle2, Send, UserMinus, FileText, Edit, Download } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import { adminApi, reservationApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
 import StatusBadge from '../ui/StatusBadge';
 import EmptyState from '../ui/EmptyState';
 import ReportModal from '../modals/ReportModal';
+import ReservationEditModal from '../modals/ReservationEditModal';
 
 // ==========================================
 // 1. 타입 정의 (Type Safety)
@@ -28,6 +29,7 @@ export interface Reservation {
   hospital: string;
   status: string; // 'WAITING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
   manager: string;
+  raw: any;
 }
 
 interface ReservationTabProps {
@@ -54,6 +56,50 @@ const tabVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } 
 };
 
+// ==========================================
+// [추가] 엑셀(CSV) 변환 및 다운로드 헬퍼 함수
+// ==========================================
+const exportToCsv = (data: Reservation[]) => {
+  if (data.length === 0) {
+    Toast.fire({ icon: 'warning', title: '다운로드할 데이터가 없습니다.' });
+    return;
+  }
+
+  // 1. 엑셀 헤더 정의
+  const headers = ['예약번호', '예약일자', '예약시간', '환자명', '매칭병원', '진행상태', '담당매니저'];
+
+  // 2. 데이터 행 생성 (쉼표 가공 및 개행 문자 치환 처리)
+  const rows = data.map(res => [
+    res.id,
+    res.date.replace(/,/g, ''), // 날짜 안의 쉼표가 CSV 포맷을 깨트리지 않게 제거
+    res.time,
+    `"${res.patient}"`, // 이름이나 병원명에 쉼표가 있을 수 있으므로 쌍따옴표 래핑
+    `"${res.hospital.split('///')[0].trim()}"`, // 병원주소 가공 반영
+    res.status === 'WAITING' ? '매칭 대기' : res.status === 'CONFIRMED' ? '예약 확정' : res.status === 'COMPLETED' ? '이용 완료' : '취소됨',
+    res.manager
+  ]);
+
+  // 3. 문자열 병합
+  const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+
+  // 4. Excel에서 한글(UTF-8)을 인식할 수 있도록 BOM(Byte Order Mark) 추가 🚨 (핵심!)
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  // 5. 브라우저 강제 다운로드 링크 생성
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  
+  // 파일명 형식: 예스케어_예약리스트_2026-05-23.csv
+  const today = new Date().toISOString().split('T')[0];
+  link.setAttribute('download', `예스케어_예약리스트_${today}.csv`);
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function ReservationTab({ 
   handleOpenDetail, 
   members, 
@@ -71,6 +117,9 @@ export default function ReservationTab({
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedReportResId, setSelectedReportResId] = useState<number | null>(null);
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEditRes, setSelectedEditRes] = useState<any | null>(null);
+
   // 페이지 이동 시 최상단 스크롤
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -80,6 +129,11 @@ export default function ReservationTab({
   useEffect(() => {
     setCurrentPage(0);
   }, [searchTerm, statusFilter]);
+
+  const handleOpenEdit = (rawRes: any) => {
+    setSelectedEditRes(rawRes);
+    setIsEditModalOpen(true);
+  };
 
   // [최적화 1] 데이터 페치 및 페이지네이션 보정
   const fetchReservations = useCallback(async (page: number, keyword: string, status: string) => {
@@ -106,7 +160,8 @@ export default function ReservationTab({
           patient: r.patientName,
           hospital: r.hospitalName,
           status: r.status, 
-          manager: r.managerName || (r.status === 'CONFIRMED' ? '배정완료' : '-') 
+          manager: r.managerName || (r.status === 'CONFIRMED' ? '배정완료' : '-'),
+          raw: r
         };
       });
       
@@ -188,7 +243,18 @@ export default function ReservationTab({
       <motion.div variants={tabVariants} initial="hidden" animate="visible" exit="hidden" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col mt-6">
         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-lg font-bold text-slate-800">예약 리스트</h2>
-          <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full sm:w-auto gap-2">
+          <form onSubmit={(e) => e.preventDefault()} className="flex flex-wrap items-center w-full sm:w-auto gap-2">
+            {/* 엑셀 다운로드 버튼 */}
+            <button
+              type="button"
+              onClick={() => exportToCsv(reservations)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-sm transition-colors cursor-pointer"
+              title="현재 조회된 리스트를 엑셀 파일로 저장합니다"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">엑셀 다운로드</span>
+            </button>
+
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
               <option value="">상태 전체</option>
               <option value="WAITING">매칭 대기</option>
@@ -196,6 +262,7 @@ export default function ReservationTab({
               <option value="COMPLETED">이용 완료</option>
               <option value="CANCELLED">취소됨</option>
             </select>
+
             <div className="relative w-full sm:w-64">
               <input type="text" placeholder="환자명, 병원명 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm placeholder:text-slate-400" />
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
@@ -237,7 +304,9 @@ export default function ReservationTab({
                   <td className="p-4 pr-6 text-center">
                     <div className="flex justify-center items-center gap-2">
                       <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">상세 보기</button>
-                      
+                      <button onClick={() => handleOpenEdit(res.raw)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">
+                        <Edit className="w-3.5 h-3.5" /> 수정
+                      </button>
                       {res.status === 'WAITING' ? (
                         <button onClick={() => onAssign(res.id)} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
                           <Send className="w-3.5 h-3.5" /> 매니저 배정
@@ -306,6 +375,9 @@ export default function ReservationTab({
                 <button onClick={() => handleOpenDetail(res.id)} className="flex-1 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
                   상세 보기
                 </button>
+                <button onClick={() => handleOpenEdit(res.raw)} className="flex-1 py-2 bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-1">
+                  <Edit className="w-3.5 h-3.5" /> 수정
+                </button>
                 {res.status === 'WAITING' ? (
                   <button onClick={() => onAssign(res.id)} className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
                     <Send className="w-3.5 h-3.5" /> 매니저 배정
@@ -351,6 +423,15 @@ export default function ReservationTab({
         isOpen={isReportModalOpen} 
         onClose={() => setIsReportModalOpen(false)} 
         reservationId={selectedReportResId} 
+      />
+      <ReservationEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedEditRes(null);
+        }}
+        selectedRequest={selectedEditRes}
+        onSuccess={() => fetchReservations(currentPage, searchTerm, statusFilter)} 
       />
     </>
   );

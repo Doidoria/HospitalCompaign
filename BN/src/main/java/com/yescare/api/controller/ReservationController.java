@@ -23,10 +23,10 @@ public class ReservationController {
     private final ReservationService reservationService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')") // 유저(또는 대리 신청하는 관리자)만 가능
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<String> makeReservation(@RequestAttribute("userEmail") String email, @RequestBody ReservationRequest request) {
         Long reservationId = reservationService.createReservation(email, request);
-        return ResponseEntity.ok("예약이 성공적으로 접수되었습니다. (예약 번호: " + reservationId + ")");
+        return ResponseEntity.ok("예약이 성공적으로 접수되었습니다.");
     }
 
     @GetMapping
@@ -156,5 +156,16 @@ public class ReservationController {
     public ResponseEntity<List<Map<String, Object>>> getAvailableManagers(@PathVariable Long id) {
         List<Map<String, Object>> availableManagers = reservationService.getAvailableManagersForReservation(id);
         return ResponseEntity.ok(availableManagers);
+    }
+
+    // 관리자가 사용자 예약 일정 및 장소 수정 API
+    @PutMapping("/{id}/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> updateReservation(
+            @PathVariable Long id,
+            @RequestBody AdminReservationUpdateRequest request) {
+
+        reservationService.updateReservationByAdmin(id, request);
+        return ResponseEntity.ok().build();
     }
 }

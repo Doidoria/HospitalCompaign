@@ -48,17 +48,21 @@ export default function ReservationEditPage() {
           return;
         }
 
-        const [datePart, timePart] = data.reservationTime.split('T');
+        let datePart = '', timePart = '';
+        if (data.reservationTime && data.reservationTime.includes('T')) {
+          [datePart, timePart] = data.reservationTime.split('T');
+          timePart = timePart.substring(0, 5); // 초 단위(:00)가 딸려오면 input type="time"에 에러가 날 수 있으므로 잘라줌
+        }
         setFormData({
           hospitalName: data.hospitalName,
           date: datePart,
-          time: timePart.substring(0, 5),
+          time: timePart,
           requirements: data.requirements || data.memo || '',
           detailedContent: data.detailedContent || '',
           doctorInquiry: data.doctorInquiry || ''
         });
 
-        // 🌟 백엔드에서 온 만나는 장소 파싱 (자택 vs 직접 지정)
+        // 백엔드에서 온 만나는 장소 파싱 (자택 vs 직접 지정)
         let mType = '자택';
         let mAddr = '';
         let mDetail = '';
@@ -70,7 +74,7 @@ export default function ReservationEditPage() {
           mDetail = parts[1]?.trim() || '';
         }
 
-        // 🌟 동행 기본 정보 세팅
+        // 동행 기본 정보 세팅
         setBasicExtraData({
           meetingType: mType,
           meetingAddress: mAddr,
@@ -89,20 +93,65 @@ export default function ReservationEditPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    // 전화번호 필드일 경우 숫자만 남긴 후 하이픈 자동 삽입
+    if (name === 'patientPhone' || name === 'guardianPhone') {
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      let formattedNum = onlyNums;
+      if (onlyNums.length <= 3) {
+        formattedNum = onlyNums;
+      } else if (onlyNums.length <= 7) {
+        formattedNum = `${onlyNums.slice(0, 3)}-${onlyNums.slice(3)}`;
+      } else {
+        formattedNum = `${onlyNums.slice(0, 3)}-${onlyNums.slice(3, 7)}-${onlyNums.slice(7, 11)}`;
+      }
+      setFormData(prev => ({ ...prev, [name]: formattedNum }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 🌟 검색 완료 시 병원/만나는장소 분기 처리
+  // 검색 완료 시 병원/만나는장소 분기 처리
   const handleCompletePost = (data: any) => {
     let fullAddress = data.address;
-    if (data.buildingName) fullAddress += ` (${data.buildingName})`;
-    
-    if (postTarget === 'hospital') {
-      setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
-    } else if (postTarget === 'meeting') {
-      setBasicExtraData(prev => ({ ...prev, meetingAddress: fullAddress }));
-    }
+    let bName = data.buildingName || '';
+
+    // 1. 주소를 합치기 전 병원 키워드 검사
+    const hospitalKeywords = ['병원', '의원', '치과', '한의원', '보건소', '센터', '클리닉', '대학'];
+    const isHospital = hospitalKeywords.some(keyword => bName.includes(keyword) || fullAddress.includes(keyword));
+
+    if (bName) fullAddress += ` (${bName})`;
+
+    // 창 즉시 닫기
+    const currentTarget = postTarget;
     setPostTarget('none');
+
+    // 2. 타겟이 '병원'인데 병원 키워드가 없는 경우
+    if (currentTarget === 'hospital' && !isHospital) {
+      Swal.fire({
+        title: '병원이 맞나요?',
+        text: `선택하신 주소(${bName || '건물명 없음'})에서 병원 관련 단어가 발견되지 않았습니다. 그래도 등록하시겠습니까?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2563EB',
+        cancelButtonColor: '#94A3B8',
+        confirmButtonText: '네, 병원 맞습니다',
+        cancelButtonText: '다시 검색하기'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
+        } else {
+          setTimeout(() => setPostTarget('hospital'), 300);
+        }
+      });
+    } else {
+      if (currentTarget === 'hospital') {
+        setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
+      } else if (currentTarget === 'meeting') {
+        setFormData(prev => ({ ...prev, meetingPoint: fullAddress })); 
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,7 +159,7 @@ export default function ReservationEditPage() {
     try {
       const formattedTime = `${formData.date}T${formData.time}:00`;
       
-      // 🌟 만나는 장소 문자열 조합 (직접 지정 시 /// 로 구분)
+      // 만나는 장소 문자열 조합 (직접 지정 시 /// 로 구분)
       const finalMeetingPoint = basicExtraData.meetingType === '자택' 
         ? '자택' 
         : `${basicExtraData.meetingAddress} /// ${basicExtraData.meetingDetail}`.trim();
@@ -121,9 +170,9 @@ export default function ReservationEditPage() {
         requirements: formData.requirements,
         detailedContent: formData.detailedContent,
         doctorInquiry: formData.doctorInquiry,
-        meetingPoint: finalMeetingPoint,             // 🌟 추가됨
-        transportation: basicExtraData.transportation, // 🌟 추가됨
-        mobility: basicExtraData.mobility            // 🌟 추가됨
+        meetingPoint: finalMeetingPoint,
+        transportation: basicExtraData.transportation,
+        mobility: basicExtraData.mobility
       };
       
       await reservationApi.update(id as string, requestData); 
@@ -141,7 +190,7 @@ export default function ReservationEditPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900">
       
-      {/* 🌟 주소 검색 모달 */}
+      {/* 주소 검색 모달 */}
       {postTarget !== 'none' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl animate-in zoom-in-95 duration-200">
@@ -200,7 +249,7 @@ export default function ReservationEditPage() {
             </div>
           </div>
 
-          {/* 🌟 2. 동행 기본 정보 수정 (추가된 부분) */}
+          {/* 2. 동행 기본 정보 수정 (추가된 부분) */}
           <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
               <div className="p-2.5 bg-orange-50 rounded-xl">

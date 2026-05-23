@@ -1,3 +1,4 @@
+// app/manager/dashboard/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -41,7 +42,7 @@ export default function ManagerDashboard() {
 
   const filteredMySchedules = useMemo(() => {
     return mySchedules.filter(req => {
-      const matchesSearch = req.patientName.includes(debouncedQuery) || req.hospitalName.includes(debouncedQuery);
+      const matchesSearch = (req.patientName || '').includes(debouncedQuery) || (req.hospitalName || '').includes(debouncedQuery);
       const isComp = req.status === 'COMPLETED' || req.status === '이용 완료';
       if (myScheduleFilter === 'confirmed') return matchesSearch && !isComp;
       if (myScheduleFilter === 'completed') return matchesSearch && isComp;
@@ -90,6 +91,10 @@ export default function ManagerDashboard() {
 
   // 재방문 대리 신청 팝업
   const handleProxyReservation = useCallback(async (req: any) => {
+    const nowKST = new Date();
+    nowKST.setHours(nowKST.getHours() + 9);
+    const minDateTime = nowKST.toISOString().slice(0, 16); // "YYYY-MM-DDThh:mm" 포맷
+
     const { value: formValues } = await Swal.fire({
       title: '재방문 대리 신청',
       width: '45em',
@@ -110,7 +115,7 @@ export default function ManagerDashboard() {
             </div>
             <div>
               <label class="block font-bold text-slate-700 mb-1">다음 방문 일시</label>
-              <input type="datetime-local" id="proxy-time" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-400">
+              <input type="datetime-local" id="proxy-time" min="${minDateTime}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-400">
             </div>
           </div>
 
@@ -306,7 +311,7 @@ export default function ManagerDashboard() {
           {/* 상단 타이틀 */}
           <div className="flex items-center gap-2 mb-2 px-2">
             <CalendarDays className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-bold text-slate-800">나의 배정 일정 <span className="text-emerald-600 ml-1">{mySchedules.length}</span>건</h2>
+            <h2 className="text-lg font-bold text-slate-800">나의 배정 일정 <span className="text-emerald-600 ml-1">{activeData.length}</span>건</h2>
           </div>
 
           <AnimatePresence mode="popLayout">

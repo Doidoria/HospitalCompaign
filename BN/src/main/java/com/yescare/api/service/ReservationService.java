@@ -1,6 +1,7 @@
 package com.yescare.api.service;
 
 import com.yescare.api.domain.*;
+import com.yescare.api.dto.AdminReservationUpdateRequest;
 import com.yescare.api.dto.ReservationRequest;
 import com.yescare.api.dto.ReservationResponse;
 import com.yescare.api.dto.ReviewResponse;
@@ -378,5 +379,23 @@ public class ReservationService {
         } catch (Exception e) {
             return true; // 파싱 실패 시 일단 필터링에서 제외하지 않음 (유연한 대처)
         }
+    }
+
+    // 예약 수정
+    @Transactional
+    public void updateReservationByAdmin(Long reservationId, AdminReservationUpdateRequest request) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        reservation.updateDetails(
+                request.getHospitalName(),
+                request.getReservationTime(),
+                request.getRequirements(),
+                request.getDetailedContent(),
+                request.getDoctorInquiry(),
+                request.getMeetingPoint(),
+                request.getTransportation(),
+                request.getMobility()
+        );
     }
 }
