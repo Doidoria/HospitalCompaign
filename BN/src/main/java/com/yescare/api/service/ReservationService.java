@@ -137,6 +137,11 @@ public class ReservationService {
             throw new IllegalStateException("매칭 대기 중인 예약만 매니저를 배정할 수 있습니다.");
         }
 
+        // 최종 배정 직전에 한 번 더 검증!
+        if (reservation.getMember().getId().equals(manager.getId())) {
+            throw new IllegalArgumentException("본인이 신청한 예약은 직접 배정받을 수 없습니다.");
+        }
+
         // 매니저 배정 및 상태 변경 (CONFIRMED)
         reservation.assignManager(manager);
         reservation.updateStatus(ReservationStatus.CONFIRMED);
@@ -302,6 +307,11 @@ public class ReservationService {
         for (Manager manager : allManagers) {
             // 1) 요일 체크
             if (manager.getAvailableDays() == null || !manager.getAvailableDays().contains(dayOfWeekKor)) {
+                continue;
+            }
+
+            // 예약 신청자의 Member ID와 매니저의 Member ID가 같다면 목록에서 제외!
+            if (reservation.getMember().getId().equals(manager.getMember().getId())) {
                 continue;
             }
 

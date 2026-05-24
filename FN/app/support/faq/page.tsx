@@ -1,3 +1,4 @@
+// app/support/faq/page.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -5,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { inquiryApi, noticeApi } from '@/src/api/index';
 import { PhoneCall } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { 
   ChevronDown, MessageCircleQuestion, Bell, Headphones, Search, ChevronLeft, 
   ChevronRight, PenSquare, Lock
@@ -34,12 +36,20 @@ interface InquiryType {
 
 export default function CustomerSupportPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>('faq');
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState(''); 
   const [myInquiries, setMyInquiries] = useState<InquiryType[]>([]);
   const [notices, setNotices] = useState<any[]>([]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'notice' || tab === 'inquiry' || tab === 'faq') {
+      setActiveTab(tab as TabType);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (activeTab === 'inquiry') {

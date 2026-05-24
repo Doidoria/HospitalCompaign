@@ -19,14 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -93,31 +87,6 @@ public class InquiryService {
         log.info("새로운 1:1 문의가 등록되었습니다. ID: {}", savedInquiry.getId());
 
         return savedInquiry.getId();
-    }
-
-    // --- 내부 파일 저장 유틸리티 메서드 ---
-    private String saveImageToLocal(MultipartFile file) {
-        try {
-            // 폴더가 없으면 생성
-            File dir = new File(UPLOAD_DIR);
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-
-            // 파일명 중복 방지를 위한 UUID 부여 (예: 1234-abcd_image.png)
-            String originalFilename = file.getOriginalFilename();
-            String storedFileName = UUID.randomUUID().toString() + "_" + originalFilename;
-
-            Path filePath = Paths.get(UPLOAD_DIR + storedFileName);
-            Files.write(filePath, file.getBytes());
-
-            // 프론트에서 접근할 수 있는 가상 URL 반환 (WebConfig에서 정적 리소스 매핑 필요)
-            return "/uploads/inquiries/" + storedFileName;
-
-        } catch (IOException e) {
-            log.error("파일 저장 중 오류 발생", e);
-            throw new RuntimeException("이미지 파일 저장에 실패했습니다.");
-        }
     }
 
     // 내 문의 내역 조회

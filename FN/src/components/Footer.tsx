@@ -24,7 +24,7 @@ export default function Footer() {
         </div>
         <div className="text-xs text-gray-500 md:text-right space-y-1.5">
           <p>© 2026 Ye'sCare. All rights reserved.</p>
-          <p>대구광역시 동구 해동로123 1층 | 사업자등록번호 : 123-45-67890</p>
+          <p>대구광역시 동구 해동로123 1층 | 사업자등록번호 : 265-87-00326</p>
         </div>
       </div>
     </footer>

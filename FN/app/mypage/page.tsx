@@ -1,3 +1,4 @@
+//app/mypage/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,8 +13,8 @@ import Link from 'next/link';
 export default function MyPage() {
   const router = useRouter();
   const [userName, setUserName] = useState("고객"); 
-  const [upcomingReservation, setUpcomingReservation] = useState<any>(null);
   const [pastRecords, setPastRecords] = useState<any[]>([]);
+  const [activeReservations, setActiveReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(3);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -22,6 +23,7 @@ export default function MyPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterPeriod, setFilterPeriod] = useState('ALL'); // '1M', '3M', '6M', 'ALL'
+
 
   // 상태별 정렬 순서 정의
   const statusOrder: Record<string, number> = {
@@ -121,12 +123,16 @@ export default function MyPage() {
           };
         });
 
-        const upcoming = processedData.find((res: any) => 
-            res.status !== 'COMPLETED' && res.status !== 'CANCELLED'
+        // 2. 취소나 완료가 아닌 '진행 중(WAITING, CONFIRMED)'인 모든 예약을 찾음
+        const active = processedData.filter((res: any) => 
+            res.status === 'WAITING' || res.status === 'CONFIRMED' || res.status === '매칭 대기' || res.status === '예약 확정'
         );
-        const past = processedData.filter((res: any) => res.id !== upcoming?.id);
+        // 3. 완료되었거나 취소된 예약은 과거 내역으로
+        const past = processedData.filter((res: any) => 
+            res.status === 'COMPLETED' || res.status === 'CANCELLED' || res.status === '이용 완료' || res.status === '예약 취소'
+        );
 
-        setUpcomingReservation(upcoming || null);
+        setActiveReservations(active);
         setPastRecords(past);
 
       } catch (error) {
@@ -304,68 +310,77 @@ export default function MyPage() {
               </button>
             </div>
 
-            {/* 👉 탭 내용 렌더링 */}
+            {/* 탭 내용 렌더링 */}
             <div className="pt-2">
               {activeTab === 'upcoming' ? (
                 /* 다가오는 예약 화면 */
-                upcomingReservation ? (
-                  <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-slate-100 relative overflow-hidden group">
-                    {/* ... (기존 다가오는 예약 코드 그대로 유지) ... */}
-                    {/* 상단 뱃지부터 Activity 아이콘까지 기존 코드와 동일 */}
-                    <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100 relative z-10">
-                      <span className={`text-[13px] font-bold px-3 py-1.5 rounded-lg border ${STATUS_MAP[upcomingReservation.status as StatusKey]?.colorClass || 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                        {STATUS_MAP[upcomingReservation.status as StatusKey]?.label || upcomingReservation.status}
-                      </span>
-                      <span className="text-[13px] text-slate-400 font-semibold tracking-wide">NO. {upcomingReservation.id}</span>
-                    </div>
-
-                    <Link href={`/reservation/${upcomingReservation.id}`} className="block relative z-10">
-                      <div className="bg-slate-50/50 rounded-2xl p-5 mb-5 space-y-5 border border-slate-100/60 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
-                            <Clock className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 일시</p>
-                            <p className="text-xl sm:text-2xl font-extrabold text-slate-900">{upcomingReservation.date} <span className="text-indigo-600">{upcomingReservation.time}</span></p>
-                          </div>
+                activeReservations.length > 0 ? (
+                  <div className="space-y-4">
+                    {activeReservations.map((req) => (
+                      <div key={req.id} className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-slate-100 relative overflow-hidden group">
+                        
+                        <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100 relative z-10">
+                          <span className={`text-[13px] font-bold px-3 py-1.5 rounded-lg border ${STATUS_MAP[req.status as StatusKey]?.colorClass || 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                            {STATUS_MAP[req.status as StatusKey]?.label || req.status}
+                          </span>
+                          <span className="text-[13px] text-slate-400 font-semibold tracking-wide">NO. {req.id}</span>
                         </div>
 
-                        <div className="flex items-center gap-4 pt-1">
-                          <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 shadow-sm">
-                            <MapPin className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 병원</p>
-                            <p className="text-lg font-bold text-slate-800">{upcomingReservation.hospital}</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end text-sm text-indigo-600 font-bold items-center gap-1 group-hover:text-indigo-700">
-                        상세 정보 보기 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </Link>
+                        <Link href={`/reservation/${req.id}`} className="block relative z-10">
+                          <div className="bg-slate-50/50 rounded-2xl p-5 mb-5 space-y-5 border border-slate-100/60 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
+                                <Clock className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 일시</p>
+                                <p className="text-xl sm:text-2xl font-extrabold text-slate-900">{req.date} <span className="text-indigo-600">{req.time}</span></p>
+                              </div>
+                            </div>
 
-                    {upcomingReservation.managerId && (
-                      <div className="mt-6 pt-6 border-t border-slate-100 relative z-10">
-                        <Link href={`/manager/profile/${upcomingReservation.managerId}`}>
-                          <div className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50/80 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors group/manager cursor-pointer">
-                            <div className="w-12 h-12 rounded-full bg-emerald-200/60 flex items-center justify-center text-emerald-700 shrink-0">
-                              <User className="w-5 h-5" />
+                            <div className="flex items-center gap-4 pt-1">
+                              <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 shadow-sm">
+                                <MapPin className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 병원</p>
+                                <p className="text-lg font-bold text-slate-800">{req.hospital}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-[11px] text-emerald-600 font-bold mb-1 tracking-wide">배정된 매니저</p>
-                              <p className="text-base font-extrabold text-slate-900 group-hover/manager:text-emerald-800 transition-colors">
-                                {upcomingReservation.managerName} <span className="font-medium text-sm text-emerald-700">매니저</span>
-                              </p>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-emerald-400 ml-auto group-hover/manager:translate-x-1 transition-transform" />
+                          </div>
+                          
+                          <div className="flex justify-end text-sm text-indigo-600 font-bold items-center gap-1 group-hover:text-indigo-700">
+                            상세 정보 보기 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </div>
                         </Link>
+
+                        {/* 매니저 정보 렌더링 */}
+                        {req.managerId ? (
+                          <div className="mt-6 pt-6 border-t border-slate-100 relative z-10">
+                            <Link href={`/manager/profile/${req.managerId}`}>
+                              <div className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50/80 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors group/manager cursor-pointer">
+                                <div className="w-12 h-12 rounded-full bg-emerald-200/60 flex items-center justify-center text-emerald-700 shrink-0">
+                                  <User className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className="text-[11px] text-emerald-600 font-bold mb-1 tracking-wide">배정된 매니저</p>
+                                  <p className="text-base font-extrabold text-slate-900 group-hover/manager:text-emerald-800 transition-colors">
+                                    {req.managerName} <span className="font-medium text-sm text-emerald-700">매니저</span>
+                                  </p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-emerald-400 ml-auto group-hover/manager:translate-x-1 transition-transform" />
+                              </div>
+                            </Link>
+                          </div>
+                        ) : (
+                          // 매칭 대기 중일 때 보여줄 친절한 안내 문구
+                          <div className="mt-6 pt-5 border-t border-slate-100 relative z-10 text-center">
+                            <p className="text-sm text-slate-500 font-medium">현재 최적의 동행 매니저를 <span className="text-indigo-500 font-bold">매칭 중</span>입니다.</p>
+                          </div>
+                        )}
+                        <Activity className="absolute -bottom-10 -right-10 w-56 h-56 text-indigo-50/60 pointer-events-none transition-transform group-hover:scale-110 duration-500 z-0" />
                       </div>
-                    )}
-                    <Activity className="absolute -bottom-10 -right-10 w-56 h-56 text-indigo-50/60 pointer-events-none transition-transform group-hover:scale-110 duration-500 z-0" />
+                    ))}
                   </div>
                 ) : (
                   <div className="bg-white p-12 rounded-[32px] shadow-sm border border-slate-200/60 text-center flex flex-col items-center">
