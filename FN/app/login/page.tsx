@@ -34,7 +34,7 @@ export default function LoginPage() {
     try {
       const response = await authApi.login({ email, password });
       
-      // 🌟 TypeScript 빨간 줄 해결: data를 any로 단언하여 안전하게 추출
+      // TypeScript 빨간 줄 해결: data를 any로 단언하여 안전하게 추출
       const resData = response.data as any;
       const token = resData?.accessToken || resData?.token || resData;
       
@@ -47,7 +47,6 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', token);
       document.cookie = `accessToken=${token}; path=/; max-age=86400; Secure; SameSite=Strict`;
 
-      // 🌟 여기도 TypeScript 빨간 줄 해결
       const meResponse = await authApi.getMe(); 
       const meData = meResponse.data as any;
       const userRole = meData?.role; 

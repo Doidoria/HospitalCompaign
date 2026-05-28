@@ -68,7 +68,7 @@ export default function ApplyPage() {
     }).catch(err => console.log("사용자 정보를 불러올 수 없습니다."));
   }, []);
 
-  const handleSmartChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleSmartChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     // 전화번호 필드일 경우 숫자만 남긴 후 하이픈 자동 삽입
@@ -151,6 +151,24 @@ export default function ApplyPage() {
       missing.push('진료 날짜 (과거 날짜는 예약할 수 없습니다)');
     }
 
+    // 진료 시간 제한 및 10분 단위 검증
+    if (!formData.time) {
+      missing.push('진료 시간');
+    } else {
+      const [hourStr, minuteStr] = formData.time.split(':');
+      const hours = parseInt(hourStr, 10);
+      const minutes = parseInt(minuteStr, 10);
+
+      // 1. 09:00 ~ 18:00 사이인지 체크 (18:01부터는 안 됨)
+      if (hours < 9 || hours > 18 || (hours === 18 && minutes > 0)) {
+        missing.push('진료 시간 (오전 9시 ~ 오후 6시 사이만 가능합니다)');
+      }
+      // 2. 10분 단위 체크
+      else if (minutes % 10 !== 0) {
+        missing.push('진료 시간 (10분 단위로 설정해 주세요)');
+      }
+    }
+
     // 만나는 장소가 '직접 지정'일 경우 주소 필수
     if (basicExtraData.meetingType === '직접 지정' && !basicExtraData.meetingAddress) {
       missing.push('만나는 장소 (주소 검색 필요)');
@@ -212,6 +230,21 @@ export default function ApplyPage() {
       Swal.fire({ icon: 'error', title: '신청 실패', text: '서버 오류로 인해 신청에 실패했습니다.' });
     }
   };
+
+  // 10분 단위 시간 슬롯 생성 함수
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let h = 9; h <= 18; h++) {
+      for (let m = 0; m < 60; m += 10) {
+        if (h === 18 && m > 0) break; // 18:00 까지만 생성
+        const hour = h.toString().padStart(2, '0');
+        const minute = m.toString().padStart(2, '0');
+        slots.push(`${hour}:${minute}`);
+      }
+    }
+    return slots;
+  };
+  const TIME_SLOTS = generateTimeSlots();
 
   // Framer Motion 애니메이션 설정 복원
   const containerVariants: Variants = {
@@ -275,7 +308,15 @@ export default function ApplyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 시간 <span className="text-red-500">*</span></label>
-                  <input type="time" name="time" onChange={handleSmartChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" />
+                  <select name="time" value={formData.time} onChange={handleSmartChange} 
+                    className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800 cursor-pointer appearance-none">
+                    <option value="" disabled>시간을 선택하세요</option>
+                    {TIME_SLOTS.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>

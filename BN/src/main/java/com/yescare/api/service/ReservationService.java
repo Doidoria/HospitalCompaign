@@ -36,6 +36,15 @@ public class ReservationService {
     @Transactional
     public Long createReservation(String email, ReservationRequest request) {
 
+        // 예약 시간 정책(09:00 ~ 18:00, 10분 단위) 백엔드 2차 검증
+        LocalTime reqTime = request.getReservationTime().toLocalTime();
+        if (reqTime.isBefore(LocalTime.of(9, 0)) || reqTime.isAfter(LocalTime.of(18, 0))) {
+            throw new IllegalArgumentException("예약 시간은 오전 09:00 부터 오후 18:00 사이만 가능합니다.");
+        }
+        if (reqTime.getMinute() % 10 != 0) {
+            throw new IllegalArgumentException("예약 시간은 10분 단위로만 설정할 수 있습니다.");
+        }
+
         // 1. ID가 아니라 '이메일'로 안전하게 진짜 회원을 찾습니다.
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
