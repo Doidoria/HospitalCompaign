@@ -8,6 +8,9 @@ export const authApi = {
   // 1. 로그인 (성공 시 토큰 발급)
   login: (data: any) => apiClient.post('/api/members/login', data),  
   
+  // 카카오 로그인 처리
+  loginWithKakao: (code: string) => apiClient.post('/api/members/auth/kakao', { code }),
+
   // 2. 회원가입
   signup: (data: any) => apiClient.post('/api/members/join', data),
   

@@ -1,3 +1,4 @@
+// app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -13,41 +14,55 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleKakaoLogin = () => {
+    if (isLoading) return; // 이미 진행 중이면 무시
+    setIsLoading(true);
+
     const KAKAO_REST_API_KEY = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY?.trim();
     const KAKAO_REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI?.trim();
     
     const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_API_KEY}&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI as string)}&response_type=code`;
     
     window.location.href = KAKAO_AUTH_URL;
-};
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      // 로컬호스트 주소와 axios를 지우고 깔끔하게 authApi로 교체!
       const response = await authApi.login({ email, password });
       
-      const token = response.data.token || response.data;
-      localStorage.setItem('accessToken', token);
+      // 🌟 TypeScript 빨간 줄 해결: data를 any로 단언하여 안전하게 추출
+      const resData = response.data as any;
+      const token = resData?.accessToken || resData?.token || resData;
+      
+      if (!token || typeof token !== 'string') {
+        console.error("🚨 [로그인 오류] 백엔드에서 받은 데이터에 토큰이 없습니다:", response);
+        Swal.fire({ icon: 'error', title: '시스템 오류', text: '서버로부터 유효한 토큰을 받지 못했습니다.' });
+        return;
+      }
 
-      // 헤더에 토큰 넣는 로직 삭제 (인터셉터가 자동 처리)
+      localStorage.setItem('accessToken', token);
+      document.cookie = `accessToken=${token}; path=/; max-age=86400; Secure; SameSite=Strict`;
+
+      // 🌟 여기도 TypeScript 빨간 줄 해결
       const meResponse = await authApi.getMe(); 
-      const userRole = meResponse.data.role;
+      const meData = meResponse.data as any;
+      const userRole = meData?.role; 
       
       // [유저 탭]으로 로그인했는데 매니저 권한인 경우
       if (loginType === 'user' && userRole === 'MANAGER') {
         await Swal.fire({ icon: 'info', title: '안내', text: '매니저 계정입니다. 다음부터는 [동행 매니저] 탭에서 로그인해 주세요.', timer: 2500 });
-        router.push('/manager/dashboard'); // 매니저 대시보드로 보내줌
+        router.push('/manager/dashboard'); 
         return;
       }
 
       // [매니저 탭]으로 로그인했는데 아직 승인 안 된 일반 유저인 경우
       if (loginType === 'manager' && userRole === 'USER') {
         await Swal.fire({ icon: 'error', title: '접근 제한', text: '매니저 승인이 완료되지 않은 계정입니다.' });
-        localStorage.removeItem('accessToken'); // 토큰 뺏기 (로그아웃 처리)
+        localStorage.removeItem('accessToken'); 
         return;
       }
       
@@ -57,6 +72,7 @@ export default function LoginPage() {
       else router.push('/');
 
     } catch (error: any) {
+      console.error("🚨 [로그인 실패 상세]:", error);
       if (error.response?.status === 409) {
         Swal.fire({
           icon: 'error',

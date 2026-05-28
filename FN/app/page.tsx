@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client'; 
 
 import React, { useEffect, useState } from 'react';
@@ -7,24 +8,16 @@ import Link from 'next/link';
 import { reviewApi } from '@/src/api/index';
 import dayjs from 'dayjs';
 import EventPopup from '@/src/components/EventPopup';
-
-interface Review {
-  id: number;
-  reservationId: number;
-  authorName: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-}
+import { ReviewResponse } from '@/src/types/review'; // 백엔드 ReviewResponse와 매칭되는 타입
 
 export default function Home() {
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<ReviewResponse[]>([]);
 
   useEffect(() => {
     reviewApi.getReviews(0, 3)
-      .then(res => {
-        const data = res.data.content || res.data;
-        setReviews(Array.isArray(data) ? data.slice(0, 3) : []);
+      .then((data: any) => {
+        const reviewList = data.content || data;
+        setReviews(Array.isArray(reviewList) ? reviewList.slice(0, 3) : []);
       })
       .catch(err => console.error("메인페이지 리뷰 로딩 실패:", err));
   }, []);

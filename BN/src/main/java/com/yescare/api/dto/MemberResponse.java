@@ -20,6 +20,10 @@ public class MemberResponse {
     private String availableDays;
     private String availableTime;
 
+    // 카카오 전용 반환 필드
+    private String gender;
+    private String birthDate;
+
     @JsonProperty("isActive")
     private boolean isActive;
 
@@ -37,7 +41,15 @@ public class MemberResponse {
         this.guardianPhone = member.getGuardianPhone();
         this.isActive = member.isActive();
 
+        this.gender = member.getGender();
+        this.birthDate = member.getBirthDate();
+
         // 매니저 정보가 있는 회원이면 요일/시간 세팅
+        if (member.getManager() != null) {
+            this.availableDays = member.getManager().getAvailableDays();
+            this.availableTime = member.getManager().getAvailableTime();
+        }
+
         if (member.getManager() != null) {
             this.availableDays = member.getManager().getAvailableDays();
             this.availableTime = member.getManager().getAvailableTime();

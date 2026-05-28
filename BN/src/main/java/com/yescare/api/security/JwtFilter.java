@@ -18,9 +18,16 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
 
+    // com.yescare.api.security.JwtFilter.java 내부
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
 
         String authorization = request.getHeader("Authorization");
 
@@ -32,7 +39,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 String role = jwtProvider.getRole(token);
                 request.setAttribute("userEmail", email);
 
-                // 스프링 시큐리티 본부에 "이 사람 정상 회원(ROLE_USER)입니다!" 라고 정식 보고하기
+                // 스프링 시큐리티 본부에 권한 등록
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(email, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

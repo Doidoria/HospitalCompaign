@@ -5,11 +5,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Entity
 @Table(name = "members") // DB에 생성될 테이블 이름
 @Getter
@@ -63,9 +65,20 @@ public class Member {
     @OneToOne(mappedBy = "member", fetch = FetchType.LAZY)
     private Manager manager;
 
+    // 카카오 전용 필드
+    @Column(length = 10)
+    private String gender; // male, female
+
+    @Column(length = 8)
+    private String birthDate; // YYYYMMDD 형태
+
+    @Column(length = 255)
+    private String kakaoAccessToken; // 알림톡/메시지 발송용 임시 저장 토큰
+
     @Builder
     public Member(String email, String password, String name, String phoneNumber, String address, String detailAddress,
-                  String zipCode, String guardianName, String guardianPhone, Role role, String provider) {
+                  String zipCode, String guardianName, String guardianPhone, Role role, String provider,
+                  String gender, String birthDate, String kakaoAccessToken) {
         this.email = email;
         this.password = password;
         this.name = name;
@@ -78,6 +91,11 @@ public class Member {
         this.createdAt = LocalDateTime.now(); // 객체 생성 시 현재 시간 자동 입력
         this.role = role != null ? role : Role.USER;
         this.provider = provider != null ? provider : "LOCAL";
+
+        // 카카오 정보 매핑
+        this.gender = gender;
+        this.birthDate = birthDate;
+        this.kakaoAccessToken = kakaoAccessToken;
     }
 
     // 1:N 관계 설정 (회원 1 : 예약 N)
@@ -117,5 +135,26 @@ public class Member {
     // 계정 활성화(정지 해제) 메서드
     public void activate() {
         this.isActive = true;
+    }
+
+    // [추가] 기존 이메일 계정이 존재할 때 소셜 연동을 묶어주는 메서드
+    public void linkSocialProvider(String provider, String gender, String birthDate, String kakaoAccessToken) {
+        this.provider = provider; // "LOCAL" -> "KAKAO"로 소셜 전환 처리
+        if (this.gender == null) this.gender = gender;
+        if (this.birthDate == null) this.birthDate = birthDate;
+        this.kakaoAccessToken = kakaoAccessToken;
+        log.info("계정 연동 완료 (이메일: {}, 새로운 공급자: {})", this.email, provider);
+    }
+
+    // [추가] 카카오 정보 업데이트용 편의 메서드
+    public void setKakaoInfo(String gender, String birthDate, String kakaoAccessToken) {
+        this.gender = gender;
+        this.birthDate = birthDate;
+        this.kakaoAccessToken = kakaoAccessToken;
+    }
+
+    // 토큰 갱신용 메서드 (기존 회원 로그인 시 사용)
+    public void updateKakaoToken(String kakaoAccessToken) {
+        this.kakaoAccessToken = kakaoAccessToken;
     }
 }

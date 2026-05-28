@@ -379,17 +379,17 @@ export default function CustomerSupportPage() {
             </div>
             <div>
               <p className="text-blue-200 font-medium mb-1 text-sm">도움이 필요하시면 언제든 전화주세요</p>
-              <p className="font-extrabold text-3xl tracking-tight text-white">1588-0000</p>
+              <p className="font-extrabold text-3xl tracking-tight text-white">053-982-2778</p>
             </div>
           </div>
 
           <div className="z-10 flex flex-col items-center md:items-end gap-4 w-full md:w-auto">
             <div className="text-sm text-blue-200/80 text-center md:text-right font-medium leading-relaxed">
-              평일 09:00 ~ 18:00 (점심시간 12:00 ~ 13:00)<br />
+              평일 09:30 ~ 17:30 (점심시간 12:00 ~ 13:00)<br />
               <span className="text-blue-300/80">주말 및 공휴일 휴무</span>
             </div>
             
-            <a href="tel:1588-0000" className="md:hidden w-full py-3.5 bg-white text-blue-950 rounded-xl font-bold text-center shadow-md active:scale-[0.98] transition-transform">
+            <a href="tel:053-982-2778" className="md:hidden w-full py-3.5 bg-white text-blue-950 rounded-xl font-bold text-center shadow-md active:scale-[0.98] transition-transform">
               바로 전화걸기
             </a>
           </div>

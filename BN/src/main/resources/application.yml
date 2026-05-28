@@ -50,7 +50,7 @@ spring:
             authorization-grant-type: authorization_code
             client-authentication-method: client_secret_post # 카카오 권장 방식
             redirect-uri: http://localhost:3000/api/auth/callback/kakao
-            scope: profile_nickname, account_email # 필요한 권한
+            scope: account_email,name,phone_number,shipping_address,gender,birthday,birthyear,talk_message,plusfriends
 
 jwt:
   # 💡 비밀 도장 (실무에서는 절대 외부에 노출하면 안 됩니다!)

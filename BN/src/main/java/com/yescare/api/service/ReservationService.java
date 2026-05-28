@@ -296,62 +296,90 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
 
-        LocalDateTime resTime = reservation.getReservationTime();
-        String dayOfWeekKor = getKoreanDayOfWeek(resTime.getDayOfWeek()); // 월, 화, 수...
-        LocalTime time = resTime.toLocalTime();
+        LocalDateTime targetStart = reservation.getReservationTime();
+        String dayOfWeekKor = getKoreanDayOfWeek(targetStart.getDayOfWeek());
+        LocalTime targetTime = targetStart.toLocalTime();
 
-        // Member가 아닌 Manager(매니저 상세 정보) 엔티티를 기준으로 조회합니다.
+        // LocalDateTime 기반으로 수학적 오차(자정 넘김) 원천 차단
+        int estimatedHours = (reservation.getCategory() != null && reservation.getCategory().contains("정밀")) ? 5 : 3;
+        LocalDateTime targetEnd = targetStart.plusHours(estimatedHours);
+
         List<Manager> allManagers = managerRepository.findAll();
-        List<Map<String, Object>> availableManagers = new ArrayList<>();
+        List<Map<String, Object>> resultList = new ArrayList<>();
+
+        LocalDateTime startOfDay = targetStart.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = targetStart.toLocalDate().atTime(23, 59, 59);
+
+        System.out.println("=== 🔍 매니저 배정 필터링 시작 (예약번호: " + reservationId + ") ===");
 
         for (Manager manager : allManagers) {
-            // 1) 요일 체크
-            if (manager.getAvailableDays() == null || !manager.getAvailableDays().contains(dayOfWeekKor)) {
-                continue;
-            }
-
-            // 예약 신청자의 Member ID와 매니저의 Member ID가 같다면 목록에서 제외!
-            if (reservation.getMember().getId().equals(manager.getMember().getId())) {
-                continue;
-            }
-
-            // 2) 시간 체크
-            if (!isWithinAvailableTime(manager.getAvailableTime(), time)) {
-                continue;
-            }
-
             Member member = manager.getMember();
+            String managerName = member.getName() + "(ID:" + member.getId() + ")";
 
-            // 계정 정지 상태
-            if (!member.isActive()) {
-                continue;
+            if (!member.isActive()) continue;
+            if (member.getRole() != Role.MANAGER && !member.getRole().name().contains("MANAGER")) continue;
+            if (reservation.getMember().getId().equals(member.getId())) continue;
+
+            String availDays = manager.getAvailableDays();
+            if (availDays != null && !availDays.trim().isEmpty() && !availDays.contains(dayOfWeekKor)) continue;
+
+            if (!isWithinAvailableTime(manager.getAvailableTime(), targetTime, targetEnd.toLocalTime())) continue;
+
+            // 일단 그날 스케줄 전부 다 가져옴
+            List<Reservation> dailySchedules = reservationRepository.findManagerDailySchedules(
+                    member, startOfDay, endOfDay
+            );
+
+            boolean isOverlapping = false;
+            for (Reservation schedule : dailySchedules) {
+                // 핵심: 취소된 예약이거나, 지금 배정하려고 열어둔 '바로 그 예약'이면 겹침 검사 패스!
+                if (schedule.getStatus() == ReservationStatus.CANCELLED || schedule.getId().equals(reservationId)) {
+                    continue;
+                }
+
+                LocalDateTime existStart = schedule.getReservationTime();
+                int existHours = (schedule.getCategory() != null && schedule.getCategory().contains("정밀")) ? 5 : 3;
+                LocalDateTime existEnd = existStart.plusHours(existHours);
+
+                // 완벽한 시간 교집합(Overlap) 수학 공식 적용
+                if (targetStart.isBefore(existEnd) && targetEnd.isAfter(existStart)) {
+                    System.out.println("❌ " + managerName + " 제외: 기존 일정과 겹침 (" + existStart.toLocalTime() + " ~ " + existEnd.toLocalTime() + ")");
+                    isOverlapping = true;
+                    break;
+                }
             }
 
-            // 권한 한 번 더 안전하게 체크 (Enum 객체이므로 .name() 또는 == 사용)
-            if (member.getRole() != Role.MANAGER && !member.getRole().name().contains("MANAGER")) {
-                continue;
-            }
+            if (isOverlapping) continue;
 
-            // 3) 중복 스케줄 체크 (Member 기준으로 확인)
-            LocalDateTime startTime = resTime.minusHours(2);
-            LocalDateTime endTime = resTime.plusHours(2);
-            if (reservationRepository.existsConflictingReservation(member, startTime, endTime)) {
-                continue;
-            }
+            System.out.println("✅ " + managerName + " -> 배정 가능 (시간 겹침 없음)");
 
-            // 프론트엔드(ManagerListModalContent.tsx)가 요구하는 필드명에 맞춰 조립
             Map<String, Object> managerData = new HashMap<>();
             managerData.put("id", member.getId());
             managerData.put("name", member.getName());
             managerData.put("email", member.getEmail());
-            managerData.put("availableDays", manager.getAvailableDays());
-            managerData.put("availableTime", manager.getAvailableTime());
+            managerData.put("availableDays", manager.getAvailableDays() == null ? "상시" : manager.getAvailableDays());
+            managerData.put("availableTime", manager.getAvailableTime() == null ? "상시" : manager.getAvailableTime());
             managerData.put("role", member.getRole().name());
 
-            availableManagers.add(managerData);
+            resultList.add(managerData);
         }
 
-        return availableManagers;
+        return resultList;
+    }
+
+    private boolean isWithinAvailableTime(String availableTimeStr, LocalTime targetTime, LocalTime targetEndTime) {
+        if (availableTimeStr == null || availableTimeStr.trim().isEmpty() || !availableTimeStr.contains("~")) {
+            return true;
+        }
+        try {
+            String[] times = availableTimeStr.split("~");
+            LocalTime startWork = LocalTime.parse(times[0].trim());
+            LocalTime endWork = LocalTime.parse(times[1].trim());
+
+            return !targetTime.isBefore(startWork) && !targetEndTime.isAfter(endWork);
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     // 요일 한글 변환 헬퍼 메서드
@@ -373,21 +401,6 @@ public class ReservationService {
                 return "일";
             default:
                 return "";
-        }
-    }
-
-    // 시간 범위 체크 헬퍼 메서드 (availableTime 포맷이 "09:00~18:00" 형태라고 가정)
-    private boolean isWithinAvailableTime(String availableTimeStr, LocalTime targetTime) {
-        if (availableTimeStr == null || !availableTimeStr.contains("~")) return false;
-        try {
-            String[] times = availableTimeStr.split("~");
-            LocalTime startWork = LocalTime.parse(times[0].trim());
-            LocalTime endWork = LocalTime.parse(times[1].trim());
-
-            // 타겟 시간이 시작 시간과 종료 시간 사이인지 확인 (시작시간 포함, 종료시간 이전)
-            return !targetTime.isBefore(startWork) && targetTime.isBefore(endWork);
-        } catch (Exception e) {
-            return true; // 파싱 실패 시 일단 필터링에서 제외하지 않음 (유연한 대처)
         }
     }
 

@@ -6,6 +6,7 @@ import { motion, Variants } from 'framer-motion';
 import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
+import { ReservationRequest } from '@/src/types/reservation';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -183,20 +184,20 @@ export default function ApplyPage() {
         ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}\n- 약국 동행: ${detailData.needPharmacy}`
         : `- 검사 종류: ${detailData.testType}\n- 금식 여부: ${detailData.isFasting}\n- 약국 동행: ${detailData.needPharmacy}`;
 
-      const requestBody = {
+      const requestBody: ReservationRequest = {
         patientName: formData.patientName,
         patientPhone: formData.patientPhone,
-        guardianName: formData.guardianName,
-        guardianPhone: formData.guardianPhone,
+        guardianName: formData.guardianName || undefined, // 빈 문자열은 undefined로 처리
+        guardianPhone: formData.guardianPhone || undefined,
         hospitalName: formData.hospitalName,
         reservationTime: `${formData.date}T${formData.time}:00`,
         category: formData.category,
         meetingPoint: finalMeetingPoint,
         transportation: basicExtraData.transportation,
         mobility: basicExtraData.mobility,
-        requirements: formData.memo,
+        requirements: formData.memo || undefined,
         detailedContent: combinedDetailedContent,
-        doctorInquiry: formData.doctorInquiry
+        doctorInquiry: formData.doctorInquiry || undefined
       };
 
       await reservationApi.create(requestBody);

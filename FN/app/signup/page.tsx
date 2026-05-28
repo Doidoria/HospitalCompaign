@@ -1,3 +1,4 @@
+// app/signup/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -46,11 +47,19 @@ export default function SignupPage() {
   // 인증번호 타이머
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isCodeSent && timer > 0 && !isPhoneVerified) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    if (isCodeSent && !isPhoneVerified && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0; // 0에서 멈추도록 보장
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isCodeSent, timer, isPhoneVerified]);
+  }, [isCodeSent, isPhoneVerified, timer]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

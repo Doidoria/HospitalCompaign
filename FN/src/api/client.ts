@@ -1,22 +1,27 @@
+// src/api/client.ts
 import axios from 'axios';
+import { ApiResponse, ErrorResponse } from '@/src/types/common'; 
 
-// 1. 기본 인스턴스 생성
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': '69420', 
   },
-  withCredentials: true, // 쿠키 기반 세션/CORS 처리 시 필요
+  withCredentials: true,
 });
 
-// 2. 요청(Request) 인터셉터: 모든 API 요청 직전에 실행됨
+// 1. 요청 인터셉터: 토큰 헤더 100% 보장 주입
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      let token = localStorage.getItem('accessToken');
+      // 혹시라도 'undefined' 문자열이나 따옴표가 들어갔을 경우를 완벽히 방어
+      if (token && token !== 'undefined' && token !== 'null') {
+        token = token.replace(/['"]+/g, ''); // 따옴표 제거
+        
+        config.headers = config.headers || {};
+        config.headers['Authorization'] = `Bearer ${token}`;
       }
     }
     
@@ -29,39 +34,40 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 3. 응답(Response) 인터셉터: 데이터 정제 및 공통 에러 처리
 let isAlertOpen = false; 
 
+// 2. 응답 인터셉터: 🌟 개발자님의 원래 훌륭한 코드로 완전 원상 복구!
 apiClient.interceptors.response.use(
   (response) => {
-    if (response.data && typeof response.data.success !== 'undefined') {
-      if (response.data.success) {
-        response.data = response.data.data;
-      } else {
-        return Promise.reject(new Error(response.data.error || 'API 요청 실패'));
+    const resData = response.data;
+
+    // 백엔드의 공통 포맷 여부 확인
+    if (resData && (resData.status !== undefined || resData.success !== undefined || resData.data !== undefined)) {
+      if (resData.status === 'FAIL' || resData.success === false) {
+        return Promise.reject(new Error(resData.error || resData.message || 'API 요청 실패'));
+      }
+      if (resData.data !== undefined) {
+        response.data = resData.data; // 기존처럼 response 객체의 data만 교체!
       }
     }
-    return response;
+    
+    return response; // 🌟 핵심: 알맹이가 아닌 response 전체를 리턴!
   },
   (error) => {
-    // 에러가 난 API 주소가 무엇인지 확인합니다.
     const originalRequestUrl = error.config?.url;
 
-    if (error.response?.status === 401) {
-      // 로그인 API(/api/members/login 등)에서 터진 401 에러가 "아닐 때만" 만료 처리!
-      if (originalRequestUrl && !originalRequestUrl.includes('/login')) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
-          if (!isAlertOpen) {
-            isAlertOpen = true;
-            alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-            window.location.href = '/login';
-          }
+    if (error.response?.status === 401 && originalRequestUrl && !originalRequestUrl.includes('/login')) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken'); 
+        
+        if (!isAlertOpen) {
+          isAlertOpen = true;
+          alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+          window.location.href = '/login'; 
         }
       }
     }
     
-    // 에러를 그대로 통과시켜서 LoginPage의 catch 블록이 잡을 수 있게 해줍니다.
     return Promise.reject(error);
   }
 );

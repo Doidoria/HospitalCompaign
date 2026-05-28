@@ -36,15 +36,15 @@ public class TestDataInit implements CommandLineRunner {
         // ==========================================
 
         // [최고 관리자]
-        Member admin = createMember("admin@yescare.com", defaultPw, "최고관리자", "010-9999-9999", Role.ADMIN, "LOCAL");
+        Member admin = createMember("admin@yescare.com", defaultPw, "최고관리자", "01099999999", Role.ADMIN, "LOCAL");
 
         // [일반 고객들 - LOCAL]
-        Member user1 = createMember("test_user@yescare.com", defaultPw, "김테스트", "010-1111-2222", Role.USER, "LOCAL");
-        Member user2 = createMember("new_user@yescare.com", defaultPw, "이단골", "010-5555-6666", Role.USER, "LOCAL");
-        Member user3 = createMember("patience_park@naver.com", defaultPw, "박환자", "010-7777-1111", Role.USER, "LOCAL");
+        Member user1 = createMember("test_user@yescare.com", defaultPw, "김테스트", "01011112222", Role.USER, "LOCAL");
+        Member user2 = createMember("new_user@yescare.com", defaultPw, "이단골", "01055556666", Role.USER, "LOCAL");
+        Member user3 = createMember("patience_park@naver.com", defaultPw, "박환자", "01077771111", Role.USER, "LOCAL");
 
         // [카카오 가입 고객 테스트용]
-        Member kakaoUser = createMember("kakao_test@kakao.com", defaultPw, "카카오유저", "010-0000-0000", Role.USER, "KAKAO");
+        Member kakaoUser = createMember("kakao_test@kakao.com", defaultPw, "카카오유저", "01000000000", Role.USER, "KAKAO");
 
         // [윤태현님 데이터]
         Member yoonUser = Member.builder()
@@ -67,13 +67,13 @@ public class TestDataInit implements CommandLineRunner {
         // 2. 매니저 계정 생성 (풍부한 프로필)
         // ==========================================
 
-        Manager m1 = createManager("manager1@yescare.com", defaultPw, "이매니저", "010-3333-4444",
+        Manager m1 = createManager("manager1@yescare.com", defaultPw, "이매니저", "01033334444",
                 "베테랑 간호조무사 출신입니다.", "대학병원 5년 경력", "요양보호사 1급, 간호조무사", "월, 수, 금", "09:00 - 18:00");
 
-        Manager m2 = createManager("manager2@yescare.com", defaultPw, "박동행", "010-4444-5555",
+        Manager m2 = createManager("manager2@yescare.com", defaultPw, "박동행", "01044445555",
                 "친절한 미소로 모십니다.", "동행 서비스 3년", "요양보호사, CPR 수료", "화, 목, 토", "08:00 - 15:00");
 
-        Manager m3 = createManager("manager3@yescare.com", defaultPw, "김케어", "010-7777-8888",
+        Manager m3 = createManager("manager3@yescare.com", defaultPw, "김케어", "01077778888",
                 "행정 업무 완벽 지원!", "병원 원무과 7년", "병원행정사, 사회복지사", "월, 화, 수, 목, 금", "10:00 - 19:00");
 
 
@@ -120,11 +120,11 @@ public class TestDataInit implements CommandLineRunner {
                 .password(pw)
                 .name(name)
                 .phoneNumber(phone)
-                .guardianName(name + "보호자")          // 💡 자동 생성 보호자 이름
-                .guardianPhone("010-8888-7777")       // 💡 자동 생성 보호자 연락처
-                .zipCode("12345")                     // 💡 기본 우편번호
-                .address("서울시 강남구 테헤란로 123")     // 💡 기본 주소
-                .detailAddress("예스빌딩 4층")          // 💡 상세 주소
+                .guardianName(name + "보호자")
+                .guardianPhone("01088887777")
+                .zipCode("12345")
+                .address("서울시 강남구 테헤란로 123")
+                .detailAddress("예스빌딩 4층")
                 .role(role)
                 .provider(provider)
                 .build();
@@ -146,8 +146,8 @@ public class TestDataInit implements CommandLineRunner {
                 .member(user)
                 .patientName(user.getName())
                 .patientPhone(user.getPhoneNumber())
-                .guardianName(user.getGuardianName())   // 💡 회원 정보에서 보호자 연동
-                .guardianPhone(user.getGuardianPhone()) // 💡 회원 정보에서 보호자 연락처 연동
+                .guardianName(user.getGuardianName())
+                .guardianPhone(user.getGuardianPhone())
                 .hospitalName(hospital)
                 .reservationTime(time)
                 .category(cat)

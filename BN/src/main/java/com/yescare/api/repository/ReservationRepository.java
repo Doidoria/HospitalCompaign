@@ -43,12 +43,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @EntityGraph(attributePaths = {"member", "manager", "review"})
     Page<Reservation> findAll(Pageable pageable);
 
-    @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.manager = :manager " +
-            "AND r.status = 'CONFIRMED' " +
-            "AND r.reservationTime BETWEEN :startTime AND :endTime")
-    boolean existsConflictingReservation(
+    // 특정 매니저의 '해당 날짜(startOfDay ~ endOfDay)' 확정/진행중 예약만 싹 가져오는 쿼리
+    @Query("SELECT r FROM Reservation r " +
+            "WHERE r.manager = :manager " +
+            "AND r.reservationTime >= :startOfDay AND r.reservationTime <= :endOfDay")
+    List<Reservation> findManagerDailySchedules(
             @Param("manager") Member manager,
-            @Param("startTime") LocalDateTime startTime,
-            @Param("endTime") LocalDateTime endTime
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay
     );
 }
