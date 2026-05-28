@@ -101,7 +101,7 @@ export default function MyPage() {
 
         // 가짜 번호 검사를 통과한 "정상 유저"만 예약 목록을 가져옵니다.
         const response = await reservationApi.getMyList();
-        const data = response.data;
+        const data = response.data || [];
 
         const processedData = data.map((res: any) => {
           const dateObj = new Date(res.reservationTime);
