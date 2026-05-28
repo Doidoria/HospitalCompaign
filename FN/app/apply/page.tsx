@@ -55,6 +55,9 @@ export default function ApplyPage() {
     isFasting: '금식 완료'
   });
 
+  const HOURS = Array.from({ length: 10 }, (_, i) => String(i + 9).padStart(2, '0')); // ['09', '10', ... '18']
+  const MINUTES = ['00', '10', '20', '30', '40', '50'];
+
   // 내 정보 가져오기 및 자동 입력 (기본 정보 섹션용)
   useEffect(() => {
     authApi.getMe().then(res => {
@@ -231,6 +234,27 @@ export default function ApplyPage() {
     }
   };
 
+  // 🌟 시/분 분리 입력 처리용 핸들러
+  const handleTimeSelect = (type: 'hour' | 'minute', value: string) => {
+    const currentHour = formData.time ? formData.time.split(':')[0] : '09'; // 기본값 09시
+    const currentMinute = formData.time ? formData.time.split(':')[1] : '00'; // 기본값 00분
+
+    let newHour = type === 'hour' ? value : currentHour;
+    let newMinute = type === 'minute' ? value : currentMinute;
+
+    // 퇴근 시간(18시) 선택 시 분은 강제로 '00'으로 고정 (18:10 등 방지)
+    if (newHour === '18') {
+      newMinute = '00';
+    }
+
+    setFormData(prev => ({ ...prev, time: `${newHour}:${newMinute}` }));
+    if (missingFields.length > 0) setMissingFields([]);
+  };
+
+  // 기존 formData.time에서 현재 시/분 추출 (UI 표시용)
+  const selectedHour = formData.time ? formData.time.split(':')[0] : '';
+  const selectedMinute = formData.time ? formData.time.split(':')[1] : '';
+
   // 10분 단위 시간 슬롯 생성 함수
   const generateTimeSlots = () => {
     const slots = [];
@@ -308,15 +332,25 @@ export default function ApplyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 시간 <span className="text-red-500">*</span></label>
-                  <select name="time" value={formData.time} onChange={handleSmartChange} 
-                    className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800 cursor-pointer appearance-none">
-                    <option value="" disabled>시간을 선택하세요</option>
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot} value={slot}>
-                        {slot}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    {/* 시(Hour) 선택 */}
+                    <div className="relative flex-1">
+                      <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)}
+                        className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold text-gray-800 appearance-none cursor-pointer text-center">
+                        <option value="" disabled>시</option>
+                        {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-center font-bold text-gray-400">:</div>
+                    {/* 분(Minute) 선택 */}
+                    <div className="relative flex-1">
+                      <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'} 
+                        className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold text-gray-800 appearance-none cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="" disabled>분</option>
+                        {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div>
