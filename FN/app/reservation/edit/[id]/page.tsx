@@ -1,11 +1,12 @@
+// app/reservation/edit/[id]/page.tsx
 'use client';
 
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
-  ArrowLeft, Save, MapPin, Calendar, FileText, Search, 
-  MessageSquare, HelpCircle, Car, Accessibility, Building2, X 
+  ArrowLeft, Save, MapPin, Calendar, FileText, Search, MessageSquare, HelpCircle, 
+  Car, Accessibility, Building2, X, Stethoscope
 } from 'lucide-react';
 import { reservationApi } from '@/src/api/index';
 import { Toast } from '@/src/utils/alert';
@@ -18,6 +19,9 @@ export default function ReservationEditPage() {
   
   // 주소 검색 타겟 상태 ('none' | 'hospital' | 'meeting')
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
+
+  const HOURS = Array.from({ length: 10 }, (_, i) => String(i + 9).padStart(2, '0'));
+  const MINUTES = ['00', '10', '20', '30', '40', '50'];
 
   // 일정 및 상세 정보 보관함
   const [formData, setFormData] = useState({
@@ -36,6 +40,14 @@ export default function ReservationEditPage() {
     meetingDetail: '',
     transportation: '택시 이용',
     mobility: '도보'
+  });
+
+  const [category, setCategory] = useState('일반 진료');
+  const [detailData, setDetailData] = useState({
+    department: '', 
+    symptoms: '', 
+    testType: '', 
+    isFasting: '해당 없음', 
   });
 
   useEffect(() => {
@@ -61,6 +73,20 @@ export default function ReservationEditPage() {
           detailedContent: data.detailedContent || '',
           doctorInquiry: data.doctorInquiry || ''
         });
+
+        setCategory(data.category || '일반 진료');
+
+        const parsed = { department: '', symptoms: '', testType: '', isFasting: '해당 없음'};
+        if (data.detailedContent) {
+          const lines = data.detailedContent.split('\n');
+          lines.forEach((line: string) => {
+            if (line.includes('진료 과목:')) parsed.department = line.replace('- 진료 과목:', '').trim();
+            if (line.includes('주요 증상:')) parsed.symptoms = line.replace('- 주요 증상:', '').trim();
+            if (line.includes('검사 종류:')) parsed.testType = line.replace('- 검사 종류:', '').trim();
+            if (line.includes('금식 여부:')) parsed.isFasting = line.replace('- 금식 여부:', '').trim();
+          });
+        }
+        setDetailData(parsed);
 
         // 백엔드에서 온 만나는 장소 파싱 (자택 vs 직접 지정)
         let mType = '자택';
@@ -164,11 +190,16 @@ export default function ReservationEditPage() {
         ? '자택' 
         : `${basicExtraData.meetingAddress} /// ${basicExtraData.meetingDetail}`.trim();
 
+      const combinedDetail = category === '일반 진료'
+        ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}`
+        : `- 검사 종류: ${detailData.testType}\n- 금식 여부: ${detailData.isFasting}`;
+
       const requestData = {
         hospitalName: formData.hospitalName,
         reservationTime: formattedTime,
+        category: category,
         requirements: formData.requirements,
-        detailedContent: formData.detailedContent,
+        detailedContent: combinedDetail,
         doctorInquiry: formData.doctorInquiry,
         meetingPoint: finalMeetingPoint,
         transportation: basicExtraData.transportation,
@@ -249,7 +280,7 @@ export default function ReservationEditPage() {
             </div>
           </div>
 
-          {/* 2. 동행 기본 정보 수정 (추가된 부분) */}
+          {/* 2. 동행 기본 정보 수정 */}
           <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
               <div className="p-2.5 bg-orange-50 rounded-xl">
@@ -343,12 +374,52 @@ export default function ReservationEditPage() {
                 <textarea name="requirements" rows={3} value={formData.requirements} onChange={handleChange} placeholder="매니저가 알아야 할 특별한 사항을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-gray-400 outline-none resize-none bg-gray-50"></textarea>
               </div>
 
-              {/* 파란 박스: 상세 진료 내용 */}
-              <div>
-                <label className="block text-sm font-semibold text-blue-600 mb-2 flex items-center gap-1">
-                  <MessageSquare className="w-4 h-4" /> 상세 진료 및 검사 내용
-                </label>
-                <textarea name="detailedContent" rows={3} value={formData.detailedContent} onChange={handleChange} placeholder="진료 과목이나 주요 증상을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-blue-50/30"></textarea>
+              {/* 파란 박스: 상세 진료 내용 UI (개선본) */}
+              <div className="bg-blue-50/40 p-5 md:p-6 rounded-[20px] border border-blue-100 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-5 border-b border-blue-200/60 pb-4 gap-3">
+                  <label className="text-base font-bold text-blue-900 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-100 rounded-lg">
+                      <Stethoscope className="w-5 h-5 text-blue-600" />
+                    </div>
+                    상세 진료 및 검사 내용
+                  </label>
+                  <select 
+                    value={category} 
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="text-sm border border-blue-200 rounded-xl px-3 py-2 outline-none text-blue-800 bg-white cursor-pointer font-bold shadow-sm focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="일반 진료">일반 진료</option>
+                    <option value="정밀 검사">정밀 검사</option>
+                  </select>
+                </div>
+                
+                {category === '일반 진료' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-sm font-bold text-blue-800 mb-2 block ml-1">어떤 진료를 보시나요? (진료 과목)</span>
+                      <input type="text" value={detailData.department} onChange={e => setDetailData({...detailData, department: e.target.value})} className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-800" placeholder="예) 내과, 정형외과" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-blue-800 mb-2 block ml-1">어디가 불편하신가요? (주요 증상)</span>
+                      <input type="text" value={detailData.symptoms} onChange={e => setDetailData({...detailData, symptoms: e.target.value})} className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-800" placeholder="예) 기침이 심해요, 무릎이 아파요" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-sm font-bold text-blue-800 mb-2 block ml-1">어떤 검사를 받으시나요? (검사 종류)</span>
+                      <input type="text" value={detailData.testType} onChange={e => setDetailData({...detailData, testType: e.target.value})} className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-800" placeholder="예) 수면 내시경, MRI" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-blue-800 mb-2 block ml-1">금식을 하셨나요?</span>
+                      <div className="flex gap-3">
+                        {['금식 완료', '해당 없음'].map(f => (
+                           <button key={f} type="button" onClick={() => setDetailData({...detailData, isFasting: f})} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border-2 ${detailData.isFasting === f ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-500 border-blue-100 hover:bg-blue-50'}`}>{f}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 주황 박스: 의사 선생님께 질문할 내용 */}

@@ -29,6 +29,11 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
     doctorInquiry: ''
   });
 
+  const [category, setCategory] = useState('일반 진료');
+  const [detailData, setDetailData] = useState({
+    department: '', symptoms: '', testType: '', isFasting: '해당 없음'
+  });
+
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
 
   const handleCompletePost = (data: any) => {
@@ -67,6 +72,20 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
         doctorInquiry: selectedRequest.doctorInquiry || ''
       });
 
+      setCategory(selectedRequest.category || '일반 진료');
+      
+      const parsed = { department: '', symptoms: '', testType: '', isFasting: '해당 없음'};
+      if (selectedRequest.detailedContent) {
+        const lines = selectedRequest.detailedContent.split('\n');
+        lines.forEach((line: string) => {
+          if (line.includes('진료 과목:')) parsed.department = line.replace('- 진료 과목:', '').trim();
+          if (line.includes('주요 증상:')) parsed.symptoms = line.replace('- 주요 증상:', '').trim();
+          if (line.includes('검사 종류:')) parsed.testType = line.replace('- 검사 종류:', '').trim();
+          if (line.includes('금식 여부:')) parsed.isFasting = line.replace('- 금식 여부:', '').trim();
+        });
+      }
+      setDetailData(parsed);
+
       // 백엔드의 meetingPoint 값 파싱 ('///' 기준 분리)
       let mType = '자택';
       let mAddr = '';
@@ -98,9 +117,15 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
       const finalMeetingPoint = meetingData.type === '자택' 
         ? '자택' 
         : `${meetingData.address} /// ${meetingData.detail}`.trim();
+      
+      const combinedDetail = category === '일반 진료'
+        ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}`
+        : `- 검사 종류: ${detailData.testType}\n- 금식 여부: ${detailData.isFasting}`;
 
       const requestData = {
         ...formData,
+        category: category,
+        detailedContent: combinedDetail,
         meetingPoint: finalMeetingPoint
       };
 
@@ -271,14 +296,52 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
                 />
               </div>
 
-              <div className="bg-white p-4 rounded-[20px] border border-blue-50 shadow-sm">
-                <label className="block text-xs font-bold text-blue-800 mb-1.5 flex items-center gap-1">
-                  <Stethoscope className="w-3.5 h-3.5 text-blue-500" /> 상세 진료 및 검사 내용
-                </label>
-                <textarea 
-                  name="detailedContent" value={formData.detailedContent} onChange={handleChange} rows={3}
-                  className="w-full p-3 bg-blue-50/20 border border-blue-100 rounded-xl text-xs font-medium text-blue-900 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
-                />
+              {/* 파란 박스: 어드민 모달용 UI (개선본) */}
+              <div className="bg-white p-5 rounded-[20px] border border-blue-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <label className="block text-sm font-extrabold text-blue-900 flex items-center gap-1.5">
+                    <Stethoscope className="w-4 h-4 text-blue-600" /> 상세 진료 및 검사 내용
+                  </label>
+                  <select 
+                    value={category} 
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="text-xs border border-blue-200 rounded-lg px-2.5 py-1.5 outline-none text-blue-800 bg-blue-50 cursor-pointer font-bold focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="일반 진료">일반 진료</option>
+                    <option value="정밀 검사">정밀 검사</option>
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  {category === '일반 진료' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 block mb-1">진료 과목</span>
+                        <input type="text" value={detailData.department} onChange={e => setDetailData({...detailData, department: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 내과" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 block mb-1">주요 증상</span>
+                        <input type="text" value={detailData.symptoms} onChange={e => setDetailData({...detailData, symptoms: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 기침, 발열" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 block mb-1">검사 종류</span>
+                        <input type="text" value={detailData.testType} onChange={e => setDetailData({...detailData, testType: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 수면 내시경" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 block mb-1">금식 여부</span>
+                        <div className="flex gap-2">
+                          {['금식 완료', '해당 없음'].map(f => (
+                             <button key={f} type="button" onClick={() => setDetailData({...detailData, isFasting: f})} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border-2 ${detailData.isFasting === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{f}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bg-white p-4 rounded-[20px] border border-orange-50 shadow-sm">

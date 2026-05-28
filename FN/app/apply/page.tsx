@@ -50,7 +50,6 @@ export default function ApplyPage() {
   const [detailData, setDetailData] = useState({
     department: '', 
     symptoms: '', 
-    needPharmacy: '필요함',
     testType: '', 
     isFasting: '금식 완료'
   });
@@ -202,8 +201,8 @@ export default function ApplyPage() {
         : `${basicExtraData.meetingAddress} /// ${basicExtraData.meetingDetail}`.trim();
 
       const combinedDetailedContent = formData.category === '일반 진료'
-        ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}\n- 약국 동행: ${detailData.needPharmacy}`
-        : `- 검사 종류: ${detailData.testType}\n- 금식 여부: ${detailData.isFasting}\n- 약국 동행: ${detailData.needPharmacy}`;
+        ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}`
+        : `- 검사 종류: ${detailData.testType}\n- 금식 여부: ${detailData.isFasting}`;
 
       const requestBody: ReservationRequest = {
         patientName: formData.patientName,
