@@ -30,6 +30,7 @@ public class MemberController {
     private final SmsService smsService;
     private final KakaoAuthService kakaoAuthService;
     private final FileStorageService fileStorageService;
+    private final EmailService emailService;
 
     // ==========================================
     // [회원(Member) 관련 API] -> memberService 사용
@@ -197,6 +198,30 @@ public class MemberController {
         } catch (Exception e) {
             log.error("카카오 로그인 실패: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("카카오 인증에 실패했습니다.");
+        }
+    }
+
+    @PostMapping("/email/send")
+    public ResponseEntity<?> sendEmailCode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        // 중복 체크를 한 번 더 거치는 것이 안전합니다.
+        if (!memberService.isEmailAvailable(email)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "이미 가입된 이메일입니다."));
+        }
+        emailService.sendVerificationCode(email);
+        return ResponseEntity.ok(Map.of("message", "인증번호가 이메일로 발송되었습니다."));
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<?> verifyEmailCode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        boolean isVerified = emailService.verifyCode(email, code);
+
+        if (isVerified) {
+            return ResponseEntity.ok(Map.of("message", "이메일 인증에 성공했습니다."));
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "인증번호가 일치하지 않습니다."));
         }
     }
 }

@@ -291,11 +291,8 @@ export default function AdminDashboardPage() {
                   * 해당 예약 시간대의 근무 가능 여부 및 중복 스케줄 검증이 완료된 리스트입니다.
                 </p>
               </div>
-              <button 
-                onClick={() => setIsManagerModalOpen(false)} 
-                className="text-slate-400 hover:text-slate-600 font-bold text-sm p-1"
-              >
-                닫기
+              <button onClick={() => setIsManagerModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm p-1 whitespace-nowrap">닫기
               </button>
             </div>
             

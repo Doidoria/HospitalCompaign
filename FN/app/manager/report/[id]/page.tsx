@@ -20,11 +20,16 @@ export default function ReportWritePage() {
   const [existingReportId, setExistingReportId] = useState<number | null>(null);
   const [isModified, setIsModified] = useState(false);
 
+  const HOURS = Array.from({ length: 10 }, (_, i) => String(i + 9).padStart(2, '0'));
+  const MINUTES = ['00', '10', '20', '30', '40', '50'];
+
   const [formData, setFormData] = useState({
     department: '',
     doctorOpinion: '',
     prescription: '',
     nextSchedule: '',
+    nextDate: '',
+    nextTime: '',
     patientCondition: 'good',
     managerComment: ''
   });
@@ -44,13 +49,18 @@ export default function ReportWritePage() {
           if (reportRes.data) {
             setExistingReportId(reportRes.data.id); // 기존 리포트 번호 저장
             setIsModified(reportRes.data.isModified);
+
+            const fetchedNextSchedule = reportRes.data.nextSchedule || '';
+            const [splitDate, splitTime] = fetchedNextSchedule ? fetchedNextSchedule.split('T') : ['', ''];
             
             // 3) 기존 데이터로 폼 덮어쓰기
             setFormData({
               department: reportRes.data.department || '',
               doctorOpinion: reportRes.data.doctorOpinion || '',
               prescription: reportRes.data.prescription || '',
-              nextSchedule: reportRes.data.nextSchedule || '',
+              nextSchedule: fetchedNextSchedule,
+              nextDate: splitDate,
+              nextTime: splitTime ? splitTime.substring(0, 5) : '', // '14:30' 형태로 자르기
               patientCondition: reportRes.data.patientCondition || 'good',
               managerComment: reportRes.data.managerComment || ''
             });
@@ -106,6 +116,23 @@ export default function ReportWritePage() {
     });
   };
 
+  // 시간 선택 핸들러
+  const handleTimeSelect = (type: 'hour' | 'minute', value: string) => {
+    const currentHour = formData.nextTime ? formData.nextTime.split(':')[0] : '09';
+    const currentMinute = formData.nextTime ? formData.nextTime.split(':')[1] : '00';
+
+    let newHour = type === 'hour' ? value : currentHour;
+    let newMinute = type === 'minute' ? value : currentMinute;
+
+    if (newHour === '18') newMinute = '00'; // 18시 이후 분 선택 방지
+
+    setFormData(prev => {
+      const updatedData = { ...prev, nextTime: `${newHour}:${newMinute}` };
+      localStorage.setItem(`draft_care_report_${params.id}`, JSON.stringify(updatedData));
+      return updatedData;
+    });
+  };
+
   const handleNoNextScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked;
     setNoNextSchedule(isChecked);
@@ -139,6 +166,11 @@ export default function ReportWritePage() {
       const pdfBlob = pdf.output('blob');
 
       const payload = new FormData();
+
+      const finalNextSchedule = noNextSchedule || !formData.nextDate || !formData.nextTime 
+        ? '' 
+        : `${formData.nextDate}T${formData.nextTime}:00`;
+
       const requestData = {
         reservationId: Number(params.id),
         department: formData.department,
@@ -182,6 +214,9 @@ export default function ReportWritePage() {
 
   const pageVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, staggerChildren: 0.1 } } };
   const itemVariants: Variants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
+
+  const selectedHour = formData.nextTime ? formData.nextTime.split(':')[0] : '';
+  const selectedMinute = formData.nextTime ? formData.nextTime.split(':')[1] : '';
 
   if (loading || !targetReservation) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-10 h-10 text-emerald-600 animate-spin" /></div>;
 
@@ -269,9 +304,28 @@ export default function ReportWritePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> 다음 예약 일정</label>
-                  <input type="datetime-local" name="nextSchedule" value={formData.nextSchedule} onChange={handleChange} disabled={noNextSchedule}
-                    className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all 
-                    text-base text-gray-800 placeholder:text-gray-400 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" />
+                  <div className={`space-y-3 ${noNextSchedule ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <input type="date" name="nextDate" value={formData.nextDate} onChange={handleChange} 
+                      className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 outline-none" />
+                    
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)}
+                          className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all outline-none font-bold text-gray-800 appearance-none text-center">
+                          <option value="" disabled>시</option>
+                          {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-center font-bold text-gray-400">:</div>
+                      <div className="relative flex-1">
+                        <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'}
+                          className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all outline-none font-bold text-gray-800 appearance-none text-center disabled:opacity-50">
+                          <option value="" disabled>분</option>
+                          {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex justify-end mt-2.5 mr-1">
                     <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer hover:text-slate-700 transition-colors">
                       <input type="checkbox" checked={noNextSchedule} onChange={handleNoNextScheduleChange}

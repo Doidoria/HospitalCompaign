@@ -218,32 +218,30 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
                   ))}
                 </div>
                 {meetingData.type === '직접 지정' && (
-                    <div className="flex flex-col gap-2 animate-in fade-in duration-200">
-                        <div className="flex gap-2">
-                        <input 
-                            type="text" placeholder="장소를 검색하세요" readOnly value={meetingData.address} 
-                            className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none" 
+                  <div className="flex flex-col gap-2 animate-in fade-in duration-200">
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="장소 검색" readOnly value={meetingData.address} 
+                            className="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none" 
                         />
-                        <button type="button" onClick={() => setPostTarget('meeting')} className="px-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-sm flex items-center justify-center">
+                        <button type="button" onClick={() => setPostTarget('meeting')} className="w-10 shrink-0 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-sm flex items-center justify-center">
                             <Search className="w-4 h-4" />
                         </button>
-                        <button 
-                            type="button" 
+                        <button type="button" 
                             onClick={() => {
-                            if(!formData.hospitalName) return Toast.fire({ icon: 'warning', title: '병원 주소를 먼저 입력해주세요.' });
-                            setMeetingData({...meetingData, address: formData.hospitalName});
+                              if(!formData.hospitalName) return Toast.fire({ icon: 'warning', title: '병원 주소를 먼저 입력해주세요.' });
+                              setMeetingData({...meetingData, address: formData.hospitalName});
                             }} 
-                            className="px-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1 whitespace-nowrap text-xs"
+                            className="w-14 shrink-0 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1 whitespace-nowrap text-xs"
                         >
-                            <Building2 className="w-3.5 h-3.5"/> 병원
+                            <Building2 className="w-3 h-3"/> 병원
                         </button>
-                        </div>
-                        <input 
-                        type="text" placeholder="상세 위치 (예: 본관 1층 로비)" 
-                        value={meetingData.detail} onChange={(e) => setMeetingData({...meetingData, detail: e.target.value})} 
-                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-emerald-500 focus:bg-white" 
-                        />
-                    </div>
+                      </div>
+                      <input 
+                      type="text" placeholder="상세 위치 (예: 본관 1층 로비)" 
+                      value={meetingData.detail} onChange={(e) => setMeetingData({...meetingData, detail: e.target.value})} 
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-emerald-500 focus:bg-white" 
+                      />
+                  </div>
                 )}
               </div>
 

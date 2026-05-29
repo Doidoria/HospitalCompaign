@@ -89,139 +89,6 @@ export default function ManagerDashboard() {
     fetchDashboardData(true);
   }, [router]);
 
-  // 재방문 대리 신청 팝업
-  const handleProxyReservation = useCallback(async (req: any) => {
-    const nowKST = new Date();
-    nowKST.setHours(nowKST.getHours() + 9);
-    const minDateTime = nowKST.toISOString().slice(0, 16); // "YYYY-MM-DDThh:mm" 포맷
-
-    const { value: formValues } = await Swal.fire({
-      title: '재방문 대리 신청',
-      width: '45em',
-      html: `
-        <div class="text-left space-y-4 mt-4 font-sans text-sm max-h-[70vh] overflow-y-auto px-2">
-          <p class="text-blue-600 font-bold mb-4">※ 기존 정보를 바탕으로 다음 방문을 신청합니다. 수정이 필요한 부분만 입력하세요.</p>
-          
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">재방문 회차</label>
-              <select id="proxy-revisit" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-400">
-                <option value="1차 재방문">1차 재방문</option>
-                <option value="2차 재방문">2차 재방문</option>
-                <option value="3차 재방문">3차 재방문</option>
-                <option value="4차 재방문">4차 재방문</option>
-                <option value="5차 재방문">5차 재방문</option>
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">다음 방문 일시</label>
-              <input type="datetime-local" id="proxy-time" min="${minDateTime}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-400">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">방문 병원</label>
-              <input type="text" id="proxy-hospital" value="${req.hospitalName}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">진료 카테고리</label>
-              <select id="proxy-category" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-                <option value="일반 진료" ${req.category === '일반 진료' ? 'selected' : ''}>일반 진료</option>
-                <option value="정밀 검사" ${req.category === '정밀 검사' ? 'selected' : ''}>정밀 검사</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">보호자 성함</label>
-              <input type="text" id="proxy-gname" value="${req.guardianName || ''}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">보호자 연락처</label>
-              <input type="text" id="proxy-gphone" value="${req.guardianPhone || ''}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-            </div>
-          </div>
-
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">매니저와 만나는 장소</label>
-            <input type="text" id="proxy-meeting" value="${req.meetingPoint || '자택'}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">이동 수단</label>
-              <input type="text" id="proxy-transport" value="${req.transportation || ''}" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">환자 거동 상태</label>
-              <select id="proxy-mobility" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">
-                <option value="독립 보행 가능" ${req.mobility === '독립 보행 가능' ? 'selected' : ''}>독립 보행 가능</option>
-                <option value="지팡이/워커 보행" ${req.mobility === '지팡이/워커 보행' ? 'selected' : ''}>지팡이/워커 보행</option>
-                <option value="부축 필요" ${req.mobility === '부축 필요' ? 'selected' : ''}>부축 필요</option>
-                <option value="휠체어 이용" ${req.mobility === '휠체어 이용' ? 'selected' : ''}>휠체어 이용</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">보호자 특별 요청사항 (메모)</label>
-            <textarea id="proxy-reqs" rows="2" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none">${req.requirements || ''}</textarea>
-          </div>
-
-          <div>
-            <label class="block font-bold text-blue-600 mb-1">상세 진료 내용</label>
-            <textarea id="proxy-detail" rows="2" class="w-full px-3 py-2.5 rounded-xl border border-blue-100 bg-blue-50/30 outline-none">${req.detailedContent || ''}</textarea>
-          </div>
-
-          <div>
-            <label class="block font-bold text-amber-600 mb-1">의사 선생님께 드릴 질문</label>
-            <textarea id="proxy-inquiry" rows="2" class="w-full px-3 py-2.5 rounded-xl border border-amber-100 bg-amber-50/30 outline-none">${req.doctorInquiry || ''}</textarea>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: '대리 신청 완료하기',
-      cancelButtonText: '취소',
-      confirmButtonColor: '#ea580c',
-      customClass: { popup: 'rounded-[24px]' },
-      preConfirm: () => {
-        const time = (document.getElementById('proxy-time') as HTMLInputElement).value;
-        if (!time) {
-          Swal.showValidationMessage('방문 일시를 선택해주세요.');
-          return false;
-        }
-        return {
-          reservationTime: time + ':00',
-          revisitCount: (document.getElementById('proxy-revisit') as HTMLSelectElement).value,
-          hospitalName: (document.getElementById('proxy-hospital') as HTMLInputElement).value,
-          category: (document.getElementById('proxy-category') as HTMLSelectElement).value,
-          guardianName: (document.getElementById('proxy-gname') as HTMLInputElement).value,
-          guardianPhone: (document.getElementById('proxy-gphone') as HTMLInputElement).value,
-          meetingPoint: (document.getElementById('proxy-meeting') as HTMLInputElement).value,
-          transportation: (document.getElementById('proxy-transport') as HTMLInputElement).value,
-          mobility: (document.getElementById('proxy-mobility') as HTMLSelectElement).value,
-          requirements: (document.getElementById('proxy-reqs') as HTMLTextAreaElement).value,
-          detailedContent: (document.getElementById('proxy-detail') as HTMLTextAreaElement).value,
-          doctorInquiry: (document.getElementById('proxy-inquiry') as HTMLTextAreaElement).value,
-          memo: "재방문 대리 신청"
-        };
-      }
-    });
-
-    if (formValues) {
-      try {
-        await reservationApi.createProxy(req.id, formValues);
-        Swal.fire({ icon: 'success', title: '신청 완료', text: '다음 동행 일정이 성공적으로 접수되었습니다.', confirmButtonColor: '#059669' });
-        const mySchedulesRes = await reservationApi.getManagerSchedules();
-        setMySchedules(mySchedulesRes.data);
-      } catch (error) {
-        Swal.fire({ icon: 'error', title: '신청 실패', text: '오류가 발생했습니다.', confirmButtonColor: '#ea580c' });
-      }
-    }
-  }, [fetchDashboardData]);
-
   const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
   const itemVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } };
 
@@ -385,10 +252,11 @@ export default function ManagerDashboard() {
                               <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
                             </button>
                           ) : (
-                            <button onClick={() => handleProxyReservation(req)}
-                              className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5">
+                            <Link href={`/manager/proxy/${req.id}`}
+                              className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5"
+                            >
                               <CalendarPlus className="w-4 h-4" /> 대리 신청
-                            </button>
+                            </Link>
                           )}
                         </>
                       )}

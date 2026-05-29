@@ -17,6 +17,8 @@ export const authApi = {
   // 3. 내 예약 목록 가져오기 (마이페이지 기능)
   getMe: () => apiClient.get('/api/members/me'),
   checkEmail: (email: string) => apiClient.get(`/api/members/check-email?email=${email}`),
+  sendEmailCode: (email: string) => apiClient.post('/api/members/email/send', { email }),
+  verifyEmailCode: (email: string, code: string) => apiClient.post('/api/members/email/verify', { email, code }),
   sendSms: (phone: string) => apiClient.post('/api/members/sms/send', { phone }),
   verifySms: (phone: string, code: string) => apiClient.post('/api/members/sms/verify', { phone, code }),
   verifyPassword: (password: string) => apiClient.post('/api/members/verify-password', { password }),

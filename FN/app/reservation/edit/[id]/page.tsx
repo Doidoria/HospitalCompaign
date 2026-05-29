@@ -138,6 +138,19 @@ export default function ReservationEditPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleTimeSelect = (type: 'hour' | 'minute', value: string) => {
+    const currentHour = formData.time ? formData.time.split(':')[0] : '09';
+    const currentMinute = formData.time ? formData.time.split(':')[1] : '00';
+    let newHour = type === 'hour' ? value : currentHour;
+    let newMinute = type === 'minute' ? value : currentMinute;
+
+    if (newHour === '18') newMinute = '00';
+    setFormData(prev => ({ ...prev, time: `${newHour}:${newMinute}` }));
+  };
+
+  const selectedHour = formData.time ? formData.time.split(':')[0] : '';
+  const selectedMinute = formData.time ? formData.time.split(':')[1] : '';
+
   // 검색 완료 시 병원/만나는장소 분기 처리
   const handleCompletePost = (data: any) => {
     let fullAddress = data.address;
@@ -258,11 +271,28 @@ export default function ReservationEditPage() {
             </div>
 
             <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">방문 일시</label>
-                <div className="flex gap-3">
-                  <input type="date" name="date" value={formData.date} onChange={handleChange} className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" required />
-                  <input type="time" name="time" value={formData.time} onChange={handleChange} className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" required />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">방문 날짜</label>
+                  <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-gray-800" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">방문 시간</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-center appearance-none font-medium text-gray-800">
+                        <option value="" disabled>시</option>
+                        {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
+                      </select>
+                    </div>
+                    <div className="flex items-center font-bold text-gray-400">:</div>
+                    <div className="relative flex-1">
+                      <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-center appearance-none font-medium disabled:opacity-50 text-gray-800">
+                        <option value="" disabled>분</option>
+                        {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -271,9 +301,9 @@ export default function ReservationEditPage() {
                   <MapPin className="w-4 h-4 text-gray-400" /> 병원 위치
                 </label>
                 <div className="flex gap-2">
-                  <input type="text" name="hospitalName" value={formData.hospitalName} readOnly placeholder="검색 버튼을 눌러주세요" onClick={() => setPostTarget('hospital')} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 outline-none cursor-pointer" required />
-                  <button type="button" onClick={() => setPostTarget('hospital')} className="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center whitespace-nowrap shadow-sm">
-                    <Search className="w-4 h-4 mr-1.5" /> 검색
+                  <input type="text" name="hospitalName" value={formData.hospitalName} readOnly placeholder="병원 검색" onClick={() => setPostTarget('hospital')} className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 outline-none cursor-pointer text-sm" required />
+                  <button type="button" onClick={() => setPostTarget('hospital')} className="w-[72px] shrink-0 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-colors flex items-center justify-center whitespace-nowrap shadow-sm text-sm">
+                    <Search className="w-4 h-4 mr-1" /> 검색
                   </button>
                 </div>
               </div>
@@ -308,21 +338,20 @@ export default function ReservationEditPage() {
                 {basicExtraData.meetingType === '직접 지정' && (
                   <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="flex gap-2">
-                      <input type="text" value={basicExtraData.meetingAddress} readOnly placeholder="장소를 검색하세요" className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none text-gray-800" />
-                      <button type="button" onClick={() => setPostTarget('meeting')} className="px-5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-sm flex items-center justify-center">
+                      <input type="text" value={basicExtraData.meetingAddress} readOnly placeholder="장소 검색" className="flex-1 min-w-0 px-3 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none text-gray-800 text-sm" />
+                      <button type="button" onClick={() => setPostTarget('meeting')} className="w-12 shrink-0 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors shadow-sm flex items-center justify-center">
                         <Search className="w-4 h-4" />
                       </button>
                       
-                      {/* 병원 주소 가져오기 버튼 */}
                       <button 
                         type="button" 
                         onClick={() => {
                           if(!formData.hospitalName) return Swal.fire('알림', '먼저 1번 항목에서 방문 병원을 입력해주세요.', 'warning');
                           setBasicExtraData({...basicExtraData, meetingAddress: formData.hospitalName});
                         }} 
-                        className="px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap flex items-center gap-1"
+                        className="w-16 shrink-0 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap flex items-center justify-center gap-1 text-[13px]"
                       >
-                        <Building2 className="w-4 h-4"/> 병원
+                        <Building2 className="w-3.5 h-3.5"/> 병원
                       </button>
                     </div>
                     <input type="text" placeholder="상세 위치를 입력하세요 (예: 본관 1층 로비 키오스크 앞)" value={basicExtraData.meetingDetail} onChange={(e) => setBasicExtraData({...basicExtraData, meetingDetail: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all outline-none font-medium text-gray-800" />
