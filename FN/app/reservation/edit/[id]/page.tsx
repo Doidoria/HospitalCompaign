@@ -274,20 +274,23 @@ export default function ReservationEditPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">방문 날짜</label>
-                  <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-gray-800" required />
+                  <input type="date" name="date" value={formData.date} onChange={handleChange} 
+                  className="w-full px-3 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-gray-800 text-sm md:text-base" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">방문 시간</label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-center appearance-none font-medium text-gray-800">
+                      <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 bg-white 
+                      focus:ring-2 focus:ring-emerald-500 outline-none text-center text-sm md:text-base appearance-none font-medium text-gray-800">
                         <option value="" disabled>시</option>
                         {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
                       </select>
                     </div>
                     <div className="flex items-center font-bold text-gray-400">:</div>
                     <div className="relative flex-1">
-                      <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-center appearance-none font-medium disabled:opacity-50 text-gray-800">
+                      <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'} className="w-full px-3 py-3 rounded-xl 
+                      border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-center text-sm md:text-base appearance-none font-medium disabled:opacity-50 text-gray-800">
                         <option value="" disabled>분</option>
                         {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
                       </select>

@@ -88,17 +88,17 @@ export default function Header() {
               <img src="/wel_logo.svg" alt="wel logo" className="h-8 w-auto"/>
             </div>
             <div className="h-8 w-px bg-gray-200" />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <img src="/yescare.svg" alt="yescare logo" className="h-10 w-auto"/>
               <h1 className="text-xl md:text-2xl font-extrabold text-blue-950 tracking-tight mt-1">
                 예스케어
-                <span className="font-semibold text-emerald-600 text-sm hidden sm:inline ml-1">병원동행</span>
+                <span className="font-semibold text-[#299245] text-sm inline ml-1">병원동행</span>
               </h1>
             </div>
           </Link>
 
           {/* PC 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-6 whitespace-nowrap">
+          <nav className="hidden lg:flex items-center gap-6 whitespace-nowrap">
             <div className="flex items-center gap-6 text-base font-bold">
               {NAV_ITEMS.filter(item => item.show).map((item) => (
                 <Link 
@@ -146,7 +146,7 @@ export default function Header() {
             </div>
           </nav>
           
-          <button className="md:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none active:scale-90" 
+          <button className="lg:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none active:scale-90" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
             {isMobileMenuOpen ? <X className="w-7 h-7 text-gray-500" /> : <Menu className="w-7 h-7 text-blue-950" />}
           </button>
@@ -160,13 +160,13 @@ export default function Header() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
               onClick={() => setIsMobileMenuOpen(false)} 
-              className="fixed inset-0 bg-gray-900/40 z-40 md:hidden backdrop-blur-sm" 
+              className="fixed inset-0 bg-gray-900/40 z-40 lg:hidden backdrop-blur-sm" 
             />
             
             <motion.div 
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} 
               transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 md:hidden flex flex-col pt-12 px-6 overflow-y-auto pb-10"
+              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 lg:hidden flex flex-col pt-12 px-6 overflow-y-auto pb-10"
             >
               {isLoggedIn ? (
                 <div className="mb-8 p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 flex items-center gap-4 shadow-sm">

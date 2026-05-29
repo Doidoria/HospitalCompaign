@@ -35,6 +35,20 @@ export default function MyInfoEditPage() {
   // 비밀번호 변경 관련 상태
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // SMS 재전송 쿨타임 상태 (30초)
+  const [smsTimer, setSmsTimer] = useState(0);
+
+  // 타이머 감소 로직 (1초마다 1씩 감소)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (smsTimer > 0) {
+      interval = setInterval(() => {
+        setSmsTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [smsTimer]);
 
   // 비밀번호 정규식 (8자 이상, 영문, 숫자, 특수문자 포함)
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
@@ -124,9 +138,12 @@ export default function MyInfoEditPage() {
 
   // SMS 발송 핸들러
   const handleSendSms = async () => {
+    if (smsTimer > 0) return;
+
     try {
       await authApi.sendSms(formData.phoneNumber);
       setSmsSent(true);
+      setSmsTimer(30);
       Toast.fire({ icon: 'success', title: '인증번호가 전송되었습니다.' });
     } catch (err: any) {
       YesAlert.fire('실패', err.message || 'SMS 발송 중 오류가 발생했습니다.', 'error');
@@ -286,15 +303,23 @@ export default function MyInfoEditPage() {
                   <div className="space-y-4">
                     <p className="text-sm text-gray-500 mb-2">비밀번호 변경을 위해 휴대폰 본인 인증이 필요합니다.</p>
                     <div className="flex gap-2">
-                      <input type="text" value={formData.phoneNumber} readOnly className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none text-gray-500" />
-                      <button type="button" onClick={handleSendSms} className="px-4 py-3 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors">
-                        {smsSent ? '재발송' : '인증번호 발송'}
+                      <input type="text" value={formData.phoneNumber} readOnly 
+                        className="min-w-0 flex-1 px-3 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none text-gray-500 text-sm" />
+                      <button type="button" onClick={handleSendSms} disabled={smsTimer > 0}
+                        className={`shrink-0 px-3.5 py-3 text-white rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+                          smsTimer > 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-800 hover:bg-gray-900'}`}
+                        >
+                        {smsTimer > 0 
+                          ? `재발송 (${smsTimer}초)` 
+                          : smsSent ? '재발송' : '인증번호 발송'}
                       </button>
                     </div>
                     {smsSent && (
                       <div className="flex gap-2">
-                        <input type="text" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} placeholder="인증번호 6자리" className="flex-1 px-4 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                        <button type="button" onClick={handleVerifySms} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                        <input type="text" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} placeholder="인증번호 6자리" 
+                          className="min-w-0 flex-1 px-3 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+                        <button type="button" onClick={handleVerifySms} 
+                          className="shrink-0 px-5 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap">
                           인증확인
                         </button>
                       </div>

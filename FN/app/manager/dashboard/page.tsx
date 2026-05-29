@@ -105,8 +105,8 @@ export default function ManagerDashboard() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-24 relative selection:bg-emerald-100 selection:text-emerald-900">
       <main className="max-w-4xl mx-auto px-5 pt-8">
-        <div className="mb-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-7 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex 
-        items-center justify-between relative overflow-hidden">
+        <div className="mb-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-7 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col sm:flex-row 
+        sm:items-center justify-between gap-5 relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
           

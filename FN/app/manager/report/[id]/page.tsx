@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2 } from 'lucide-react';
+import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2, ArrowLeft, FileText } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
 import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
@@ -223,7 +223,17 @@ export default function ReportWritePage() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
       <motion.main className="max-w-2xl mx-auto px-4 pt-6" initial="hidden" animate="visible" variants={pageVariants}>
-        
+
+        {/* 상단 헤더 */}
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3 mb-8">
+          <button onClick={() => router.back()} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <h2 className="text-2xl font-extrabold flex items-center gap-2 tracking-tight">
+            <FileText className="w-7 h-7 text-emerald-600" /> 케어 리포트 조회 / 수정
+          </h2>
+        </motion.div>
+
         {/* 상단 대상자 정보 요약 */}
         <motion.div variants={itemVariants} className="bg-white rounded-2xl p-5 mb-6 border border-emerald-100 shadow-sm">
           <div className="flex justify-between items-start mb-2">

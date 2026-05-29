@@ -14,13 +14,22 @@ export default function Home() {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
 
   useEffect(() => {
-    reviewApi.getReviews(0, 3)
-      .then((data: any) => {
-        const reviewList = data.content || data;
-        setReviews(Array.isArray(reviewList) ? reviewList.slice(0, 3) : []);
-      })
-      .catch(err => console.error("메인페이지 리뷰 로딩 실패:", err));
-  }, []);
+    reviewApi.getReviews(0, 3)
+      .then((response: any) => {
+        // console.log("리뷰 API 응답 데이터:", response); 
+
+        const payload = response.data.content || response; 
+        const reviewList = payload.content || payload;
+
+        if (Array.isArray(reviewList)) {
+          setReviews(reviewList.slice(0, 3));
+        } else {
+          console.warn("배열 형태가 아닙니다! 현재 reviewList:", reviewList);
+          setReviews([]);
+        }
+      })
+      .catch(err => console.error("메인페이지 리뷰 로딩 실패:", err));
+  }, []);
 
   const maskName = (name: string) => {
     if (!name || name.length < 2) return name;

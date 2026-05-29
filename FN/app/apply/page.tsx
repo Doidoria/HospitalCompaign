@@ -327,24 +327,27 @@ export default function ApplyPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 날짜 <span className="text-red-500">*</span></label>
-                  <input type="date" name="date" min={minDate} onChange={handleSmartChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" />
+                  <input type="date" name="date" min={minDate} onChange={handleSmartChange} className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 
+                  focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800 text-sm md:text-base" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 시간 <span className="text-red-500">*</span></label>
                   <div className="flex gap-2">
                     {/* 시(Hour) 선택 */}
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 text-sm md:text-base">
                       <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)}
-                        className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold text-gray-800 appearance-none cursor-pointer text-center">
+                        className="w-full px-3 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 
+                        focus:ring-blue-500 transition-all outline-none font-bold text-gray-800 appearance-none cursor-pointer text-center">
                         <option value="" disabled>시</option>
                         {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
                       </select>
                     </div>
                     <div className="flex items-center justify-center font-bold text-gray-400">:</div>
                     {/* 분(Minute) 선택 */}
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 text-sm md:text-base">
                       <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'} 
-                        className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold text-gray-800 appearance-none cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="w-full px-3 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 
+                        focus:ring-blue-500 transition-all outline-none font-bold text-gray-800 appearance-none cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <option value="" disabled>분</option>
                         {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
                       </select>
@@ -355,8 +358,10 @@ export default function ApplyPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">방문 병원 <span className="text-red-500">*</span></label>
                 <div className="flex gap-2">
-                  <input type="text" name="hospitalName" value={formData.hospitalName} placeholder="병원을 검색하거나 직접 입력하세요" onChange={handleSmartChange} className="flex-1 px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800" />
-                  <button type="button" onClick={() => setPostTarget('hospital')} className="px-6 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-colors shadow-md flex items-center justify-center">
+                  <input type="text" name="hospitalName" value={formData.hospitalName} placeholder="병원을 검색하거나 직접 입력하세요" onChange={handleSmartChange} 
+                    className="flex-1 min-w-0 px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800 text-sm md:text-base" />
+                  <button type="button" onClick={() => setPostTarget('hospital')} 
+                    className="w-14 shrink-0 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-colors shadow-md flex items-center justify-center">
                     <Search className="w-5 h-5" />
                   </button>
                 </div>
@@ -371,26 +376,30 @@ export default function ApplyPage() {
               2. 기본 정보 입력
             </h3>
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 text-[15px] md:text-base">
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">실제 이용자 성함 (환자) <span className="text-red-500">*</span></label>
-                  <input type="text" name="patientName" value={formData.patientName} onChange={handleSmartChange} placeholder="예: 홍길동" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
+                  <label className="block whitespace-nowrap text-[13px] md:text-base font-bold text-gray-500 mb-2 ml-1">실제 이용자 성함 (환자) <span className="text-red-500">*</span></label>
+                  <input type="text" name="patientName" value={formData.patientName} onChange={handleSmartChange} placeholder="예: 홍길동" 
+                  className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">환자 연락처 <span className="text-red-500">*</span></label>
-                  <input type="text" name="patientPhone" value={formData.patientPhone} onChange={handleSmartChange} placeholder="010-0000-0000" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
+                  <label className="block text-[13px] md:text-base font-bold text-gray-500 mb-2 ml-1">환자 연락처 <span className="text-red-500">*</span></label>
+                  <input type="text" name="patientPhone" value={formData.patientPhone} onChange={handleSmartChange} placeholder="010-0000-0000" 
+                  className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">
+                  <label className="block text-[13px] md:text-base font-bold text-gray-500 mb-2 ml-1">
                     보호자 성함 <span className="text-gray-400 font-normal">(선택)</span>
                   </label>
-                  <input type="text" name="guardianName" value={formData.guardianName} onChange={handleSmartChange} placeholder="예: 김보호 (자녀)" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
+                  <input type="text" name="guardianName" value={formData.guardianName} onChange={handleSmartChange} placeholder="예: 김보호 (자녀)" 
+                  className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">
+                  <label className="block whitespace-nowrap text-[13px] md:text-base font-bold text-gray-500 mb-2 ml-1">
                     보호자 비상연락처 <span className="text-gray-400 font-normal">(선택)</span>
                   </label>
-                  <input type="text" name="guardianPhone" value={formData.guardianPhone} onChange={handleSmartChange} placeholder="010-0000-0000" className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
+                  <input type="text" name="guardianPhone" value={formData.guardianPhone} onChange={handleSmartChange} placeholder="010-0000-0000" 
+                  className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium text-gray-800" />
                 </div>
               </div>
             </div>
@@ -424,13 +433,14 @@ export default function ApplyPage() {
                 {basicExtraData.meetingType === '직접 지정' && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3">
                     <div className="flex gap-2">
-                      <input type="text" value={basicExtraData.meetingAddress} readOnly placeholder="장소를 검색하세요" className="flex-1 px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none text-gray-800" />
-                      <button type="button" onClick={() => setPostTarget('meeting')} className="px-6 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-colors shadow-md flex items-center justify-center">
+                      <input type="text" value={basicExtraData.meetingAddress} readOnly placeholder="장소 검색" 
+                        className="flex-1 min-w-0 px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 outline-none text-gray-800 text-sm md:text-base" />
+                      <button type="button" onClick={() => setPostTarget('meeting')} 
+                        className="w-14 shrink-0 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-colors shadow-md flex items-center justify-center">
                         <Search className="w-5 h-5" />
                       </button>
                       
-                      <button 
-                        type="button" 
+                      <button type="button" 
                         onClick={() => {
                           if(!formData.hospitalName) {
                             setMissingFields(['방문 병원 (1번 항목에서 먼저 입력해주세요)']);
@@ -439,7 +449,7 @@ export default function ApplyPage() {
                           setBasicExtraData({...basicExtraData, meetingAddress: formData.hospitalName});
                           setMissingFields([]);
                         }} 
-                        className="px-6 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-md whitespace-nowrap flex items-center gap-1"
+                        className="w-20 shrink-0 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center gap-1 text-[14px]"
                       >
                         <Building2 className="w-4 h-4"/> 병원
                       </button>
@@ -502,23 +512,26 @@ export default function ApplyPage() {
 
               {formData.category === '일반 진료' ? (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm md:text-base">
                     <div>
                       <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">진료 과목 <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="예) 내과, 정형외과" value={detailData.department} onChange={(e) => { setDetailData({...detailData, department: e.target.value}); setMissingFields([]); }} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
+                      <input type="text" placeholder="예) 내과, 정형외과" value={detailData.department} onChange={(e) => { setDetailData({...detailData, department: e.target.value}); setMissingFields([]); }} 
+                      className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">주요 증상 <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="예) 기침, 무릎 통증" value={detailData.symptoms} onChange={(e) => { setDetailData({...detailData, symptoms: e.target.value}); setMissingFields([]); }} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
+                      <input type="text" placeholder="예) 기침, 무릎 통증" value={detailData.symptoms} onChange={(e) => { setDetailData({...detailData, symptoms: e.target.value}); setMissingFields([]); }} 
+                      className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
                     </div>
                   </div>
                 </motion.div>
               ) : (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm md:text-base">
                     <div>
                       <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">검사 종류 <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="예) 위/대장 수면 내시경" value={detailData.testType} onChange={(e) => { setDetailData({...detailData, testType: e.target.value}); setMissingFields([]); }} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
+                      <input type="text" placeholder="예) 위/대장 수면 내시경" value={detailData.testType} onChange={(e) => { setDetailData({...detailData, testType: e.target.value}); setMissingFields([]); }} 
+                      className="w-full px-3 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-500 transition-all outline-none font-medium text-gray-800" />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">금식 여부</label>

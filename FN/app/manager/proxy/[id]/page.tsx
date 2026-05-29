@@ -234,7 +234,7 @@ export default function ProxyReservationPage() {
               <h3 className="font-bold text-gray-800 text-lg">주소 검색</h3>
               <button onClick={() => setPostTarget('none')} className="text-gray-400 hover:text-red-500 transition-colors p-1"><X className="w-6 h-6" /></button>
             </div>
-            <div className="h-[450px]">
+            <div className="h-[470px]">
               <DaumPostcodeEmbed onComplete={handleCompletePost} style={{ height: '100%' }} />
             </div>
           </div>
@@ -290,22 +290,25 @@ export default function ProxyReservationPage() {
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">방문 날짜 <span className="text-red-500">*</span></label>
                   <input type="date" name="date" min={minDate} value={formData.date} onChange={handleChange} 
-                  className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all outline-none font-bold text-gray-800" />
+                  className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 
+                  focus:ring-orange-500 transition-all outline-none font-bold text-gray-800 text-sm md:text-base" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">방문 시간 <span className="text-red-500">*</span></label>
                   <div className="flex gap-2">
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 text-sm md:text-base">
                       <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)} 
-                      className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all outline-none font-bold text-gray-800 appearance-none text-center">
+                      className="w-full px-3 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 
+                      focus:ring-orange-500 transition-all outline-none font-bold text-gray-800 appearance-none text-center">
                         <option value="" disabled>시</option>
                         {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
                       </select>
                     </div>
                     <div className="flex items-center justify-center font-bold text-gray-400">:</div>
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 text-sm md:text-base">
                       <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'} 
-                      className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all outline-none font-bold text-gray-800 appearance-none text-center disabled:opacity-50">
+                      className="w-full px-3 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 
+                      focus:ring-orange-500 transition-all outline-none font-bold text-gray-800 appearance-none text-center disabled:opacity-50">
                         <option value="" disabled>분</option>
                         {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
                       </select>
