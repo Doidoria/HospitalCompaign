@@ -37,42 +37,56 @@ public class KakaoAuthService {
 
     @Transactional
     public String loginWithKakao(String code) {
+        // 1. 카카오 토큰 및 유저 기본 정보 수신
         String kakaoAccessToken = getKakaoAccessToken(code);
         Map<String, Object> userInfo = getKakaoUserInfo(kakaoAccessToken);
         Map<String, Object> kakaoAccount = (Map<String, Object>) userInfo.get("kakao_account");
+
         String email = (String) kakaoAccount.get("email");
 
-        // 카카오 이메일 인증 여부 확인
+        // 2. 카카오 이메일 인증 여부 검증
         boolean isEmailVerified = kakaoAccount.containsKey("is_email_verified") && (boolean) kakaoAccount.get("is_email_verified");
         if (!isEmailVerified) {
             throw new IllegalStateException("카카오 계정의 이메일이 인증되지 않아 로그인할 수 없습니다. 카카오톡에서 이메일 인증을 완료해주세요.");
         }
 
+        // 3. 이름(닉네임) 추출
         String name = (String) kakaoAccount.get("name");
-        String rawPhoneNumber = (String) kakaoAccount.get("phone_number");
-        String formattedPhone = normalizePhoneNumber(rawPhoneNumber);
+        if (name == null) {
+            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+            if (profile != null) {
+                name = (String) profile.get("nickname");
+            }
+        }
 
+        // 4. 폰 번호 추출 및 누락/거부 대비 방어 로직 (010-0000-0000 세팅)
+        String kakaoPhone = (String) kakaoAccount.get("phone_number");
+        String phoneNumber = normalizePhoneNumber(kakaoPhone);
+
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            phoneNumber = "010-0000-0000"; // 필수 동의 거부 시 안심벨트
+        }
+
+        // 5. 성별 및 생년월일 추출
         String gender = (String) kakaoAccount.get("gender");
         String birthyear = (String) kakaoAccount.get("birthyear");
         String birthday = (String) kakaoAccount.get("birthday");
         String birthDate = (birthyear != null && birthday != null) ? birthyear + birthday : null;
 
+        // 6. 카카오 배송지(주소) 정보 추출 및 정제
         Map<String, Object> shippingInfo = getKakaoShippingAddress(kakaoAccessToken);
-
         String zipCode = null;
         String address = null;
         String detailAddress = null;
 
-        // 카카오는 shipping_address(단수)가 아니라 shipping_addresses(복수 배열)로 내려줍니다.
-        if (shippingInfo.containsKey("shipping_addresses")) {
+        if (shippingInfo != null && shippingInfo.containsKey("shipping_addresses")) {
             Object shippingObj = shippingInfo.get("shipping_addresses");
             if (shippingObj instanceof List) {
                 List<Map<String, Object>> addresses = (List<Map<String, Object>>) shippingObj;
                 if (!addresses.isEmpty()) {
-                    // 우선 첫 번째 주소를 기본값으로 세팅
                     Map<String, Object> baseAddressInfo = addresses.get(0);
 
-                    // 사용자가 설정한 '기본 배송지'가 있다면 그걸로 덮어씌움
+                    // 기본 배송지가 설정되어 있다면 우선 매핑
                     for (Map<String, Object> addr : addresses) {
                         if (Boolean.TRUE.equals(addr.get("is_default"))) {
                             baseAddressInfo = addr;
@@ -80,9 +94,9 @@ public class KakaoAuthService {
                         }
                     }
 
-                    zipCode = (String) baseAddressInfo.get("zone_number"); // 우편번호
-                    address = (String) baseAddressInfo.get("base_address"); // 기본주소
-                    detailAddress = (String) baseAddressInfo.get("detail_address"); // 상세주소
+                    zipCode = (String) baseAddressInfo.get("zone_number");
+                    address = (String) baseAddressInfo.get("base_address");
+                    detailAddress = (String) baseAddressInfo.get("detail_address");
                 }
             }
         }
@@ -91,26 +105,29 @@ public class KakaoAuthService {
         String finalAddress = address;
         String finalDetailAddress = detailAddress;
 
+        // 7. 핵심 비즈니스 라우팅: 기존 가입자 여부 판단
         Member member;
         Optional<Member> existingMemberOpt = memberRepository.findByEmail(email);
 
         if (existingMemberOpt.isPresent()) {
-            // 1. 기존 회원이 있는 경우
+            // [케이스 A] 기존 회원이 이미 존재하는 경우
             member = existingMemberOpt.get();
 
             if ("LOCAL".equals(member.getProvider())) {
+                // 일반 회원가입 유저가 카카오 로그인을 처음 시도한 경우 연동 처리
                 log.info("동일 이메일의 LOCAL 계정 발견 -> KAKAO 연동 통합 진행: {}", email);
                 member.linkSocialProvider("KAKAO", gender, birthDate, kakaoAccessToken);
 
+                // 기존 자택 주소가 비어있다면 카카오 주소로 채워줌
                 if (member.getAddress() == null) {
                     member.updateInfo(member.getName(), member.getPhoneNumber(), finalZipCode, finalAddress, finalDetailAddress, member.getGuardianName(), member.getGuardianPhone());
                 }
             } else {
-                // 이미 KAKAO 연동 회원이라면 토큰만 갱신 (Dirty Checking 작동)
+                // 이미 카카오로 가입한 회원이라면 액세스 토큰만 최신화 (더티 체킹)
                 member.updateKakaoToken(kakaoAccessToken);
             }
         } else {
-            // 2. 완전 신규 회원인 경우
+            // [케이스 B] 최초 진입한 완전 신규 회원인 경우 -> 여기서 단 한 번만 저장이 일어나야 함!
             log.info("새로운 카카오 유저 가입 진행: {}", email);
             String dummyPassword = UUID.randomUUID().toString();
 
@@ -118,7 +135,7 @@ public class KakaoAuthService {
                     .email(email)
                     .password(dummyPassword)
                     .name(name != null ? name : "카카오유저")
-                    .phoneNumber(formattedPhone != null ? formattedPhone : "")
+                    .phoneNumber(phoneNumber) // 위에서 방어한 정제 번호 주입
                     .zipCode(finalZipCode)
                     .address(finalAddress)
                     .detailAddress(finalDetailAddress)
@@ -130,7 +147,6 @@ public class KakaoAuthService {
                     .build();
 
             try {
-                // 신규 저장 시에만 예외를 잡고, 즉시 던져버립니다 (트랜잭션 망가짐 방지)
                 member = memberRepository.saveAndFlush(newMember);
             } catch (DataIntegrityViolationException e) {
                 log.warn("동시 가입 요청 감지 (더블클릭 방어): {}", email);
@@ -138,6 +154,7 @@ public class KakaoAuthService {
             }
         }
 
+        // 8. 우리 서비스 전용 JWT 토큰 발급 후 프론트엔드로 반환
         return jwtProvider.createToken(member.getId(), member.getEmail(), member.getRole().name());
     }
 

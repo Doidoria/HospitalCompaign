@@ -11,9 +11,6 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
 @RestControllerAdvice(basePackages = "com.yescare.api.controller")
 @RequiredArgsConstructor
 public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
@@ -50,19 +47,17 @@ public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
         // 3. 공통 ApiResponse 객체 생성
         ApiResponse<Object> apiResponse = ApiResponse.success(body);
 
-        // 4. Spring의 타입별 엄격한 직렬화(Map, List, Number 등) 충돌을 원천 차단하기 위해
-        // 래퍼 단에서 직접 JSON으로 변환 후 OutputStream 에 꽂아버림
-        try {
-            response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-            String jsonString = objectMapper.writeValueAsString(apiResponse);
-
-            response.getBody().write(jsonString.getBytes(StandardCharsets.UTF_8));
-            response.getBody().flush();
-
-            // 직접 응답을 작성했으므로 null을 반환하여 Spring의 기본 처리(Jackson)를 중단시킴
-            return null;
-        } catch (IOException e) {
-            throw new RuntimeException("공통 응답 포맷 직렬화 중 오류가 발생했습니다.", e);
+        // 4. 우아한 해결책: 컨트롤러가 String을 반환할 때만 직접 직렬화하고, 나머지는 객체 반환
+        if (body instanceof String) {
+            try {
+                response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                return objectMapper.writeValueAsString(apiResponse);
+            } catch (Exception e) {
+                throw new RuntimeException("JSON 직렬화 오류", e);
+            }
         }
+
+        // String이 아닌 객체(DTO, Long 등)는 그대로 반환하면 스프링(Jackson)이 알아서 처리함
+        return apiResponse;
     }
 }

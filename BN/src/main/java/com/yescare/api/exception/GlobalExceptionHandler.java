@@ -23,15 +23,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
-    // 로그인 실패(아이디/비번 틀림) 에러를 낚아채서 401(Unauthorized) 코드로 반환합니다.
+    // 로그인 실패(아이디/비번 틀림) 에러를 낚아채서 401(Unauthorized) 코드로 반환
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
 
         ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(), // 401: 인증 실패
+                HttpStatus.BAD_REQUEST.value(), // 400: 잘못된 요청 (프론트에서 튕겨내지 않음)
                 e.getMessage()
         );
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 }

@@ -60,7 +60,7 @@ public class InquiryService {
                 }
 
                 // 파일 저장 및 URL(경로) 반환
-                String imageUrl = fileStorageService.uploadFile(file);
+                String imageUrl = fileStorageService.uploadFile(file, "inquiries");
                 savedImageUrls.add(imageUrl);
             }
         }
@@ -167,18 +167,29 @@ public class InquiryService {
 
     // 비밀번호 확인 로직
     @Transactional(readOnly = true)
-    public void checkInquiryPassword(Long id, String password) {
+    public InquiryDetailResponse checkInquiryPassword(Long id, String password) {
         Inquiry inquiry = inquiryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 문의입니다."));
 
         // 비밀글이 아니면 애초에 검사할 필요 없음
-        if (!inquiry.isPrivate()) {
-            return;
+        if (inquiry.isPrivate()) {
+            // 비밀번호가 틀리면 예외 발생 (프론트에서 400 에러로 처리됨)
+            // (주의: 본인의 암호화 방식에 맞게 passwordEncoder.matches 등을 사용하셨다면 그대로 유지)
+            if (!passwordEncoder.matches(password, inquiry.getPassword())) {
+                throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            }
         }
 
-        // 비밀번호가 틀리면 예외 발생 (프론트에서 catch 블록으로 빠짐)
-        if (inquiry.getPassword() == null || !passwordEncoder.matches(password, inquiry.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-        }
+        // 비밀번호가 맞다면, 두 번 요청할 필요 없이 즉시 상세 데이터를 만들어서 던져줌
+        return InquiryDetailResponse.builder()
+                .id(inquiry.getId())
+                .category(inquiry.getCategory().name())
+                .title(inquiry.getTitle())
+                .content(inquiry.getContent())
+                .status(inquiry.getStatus().name())
+                .imageUrls(inquiry.getImageUrls())
+                .answer(inquiry.getAnswer())
+                .createdAt(inquiry.getCreatedDate().toString()) // 필요시 포맷팅
+                .build();
     }
 }

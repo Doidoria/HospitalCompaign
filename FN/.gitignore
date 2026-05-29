@@ -43,3 +43,8 @@ next-env.d.ts
 repomix-output.xml
 frontend-code-src.xml
 frontend-code-app.xml
+
+export-pages.js
+export-flat.js
+attached_flat_files
+attached_pages

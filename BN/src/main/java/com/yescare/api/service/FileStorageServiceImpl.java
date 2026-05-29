@@ -13,41 +13,49 @@ import java.util.UUID;
 @Service
 public class FileStorageServiceImpl implements FileStorageService {
 
-    // 이미지가 실제로 저장될 폴더 경로 (프로젝트 루트 경로 아래에 uploads 폴더 생성)
-    private final String UPLOAD_DIR = "uploads/";
+    // 최상위 기본 업로드 폴더
+    private final String BASE_UPLOAD_DIR = "uploads/";
 
+    // 1. 기존처럼 폴더 지정 없이 넘기면 기본값으로 "others" 폴더에 넣음
     @Override
     public String uploadFile(MultipartFile file) {
+        return uploadFile(file, "others");
+    }
+
+    // 2. 하위 폴더 지정 저장 메서드
+    @Override
+    public String uploadFile(MultipartFile file, String subDirectory) {
         if (file == null || file.isEmpty()) {
             return null;
         }
 
         try {
-            // 1. uploads 폴더가 없으면 자동으로 생성
-            File directory = new File(UPLOAD_DIR);
+            // 예: "uploads/" + "inquiries" + "/" -> "uploads/inquiries/"
+            String targetDirPath = BASE_UPLOAD_DIR + subDirectory + "/";
+
+            // 폴더가 없으면 지정한 하위 폴더까지 한 번에 생성 (mkdirs)
+            File directory = new File(targetDirPath);
             if (!directory.exists()) {
                 directory.mkdirs();
             }
 
-            // 2. 파일 이름이 겹치지 않도록 UUID 암호화 (안전한 파일 확장자 추출 로직)
+            // 파일 이름 생성
             String originalFilename = file.getOriginalFilename();
-            String extension = ""; // 기본 확장자 (없을 경우)
-
+            String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
-
             String savedFilename = UUID.randomUUID().toString() + extension;
 
-            // 3. 실제 하드디스크에 파일 쓰기 (저장)
-            Path path = Paths.get(UPLOAD_DIR + savedFilename);
+            // 실제 파일 쓰기
+            Path path = Paths.get(targetDirPath + savedFilename);
             Files.write(path, file.getBytes());
 
-            // 4. DB에 저장할 파일 이름만 프론트에 반환
-            return savedFilename;
+            // 프론트엔드가 사용할 수 있도록 /uploads/inquiries/파일명.png 로 리턴
+            return "/" + BASE_UPLOAD_DIR + subDirectory + "/" + savedFilename;
 
         } catch (IOException e) {
-            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
+            throw new RuntimeException("파일 업로드에 실패했습니다.", e);
         }
     }
 }

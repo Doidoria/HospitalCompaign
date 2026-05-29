@@ -12,6 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -20,6 +23,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final ConcurrentHashMap<String, String> emailAuthMap = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1); // 3분 뒤 삭제를 실행할 스케줄러
 
     @Async
     public void sendCareReport(String toEmail, String patientName, String hospitalName, String content, MultipartFile pdfFile, boolean isModified) {
@@ -68,16 +72,21 @@ public class EmailService {
             mailSender.send(message);
             emailAuthMap.put(toEmail, code); // 발송 후 맵에 저장
 
-            // 실무 팁: 3분 뒤 만료 로직이 필요하다면 Redis의 TTL을 사용하는 것이 가장 좋습니다.
+            // 3분(180초) 뒤에 Map에서 해당 이메일의 인증번호를 자동 삭제 (메모리 누수 및 만료 처리)
+            scheduler.schedule(() -> {
+                emailAuthMap.remove(toEmail);
+            }, 3, TimeUnit.MINUTES);
+
         } catch (Exception e) {
             throw new RuntimeException("이메일 인증번호 전송에 실패했습니다.", e);
         }
     }
 
+    // 인증 성공 시 재사용 방지를 위해 즉시 삭제 로직
     public boolean verifyCode(String email, String code) {
         String savedCode = emailAuthMap.get(email);
         if (savedCode != null && savedCode.equals(code)) {
-            emailAuthMap.remove(email); // 인증 성공 시 메모리에서 삭제
+            emailAuthMap.remove(email); // 인증 통과 즉시 파기!
             return true;
         }
         return false;

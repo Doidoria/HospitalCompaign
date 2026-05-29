@@ -12,38 +12,43 @@ import java.util.UUID;
 @Profile("local") // 로컬 환경에서만 작동
 public class LocalFileStorageService implements FileStorageService {
 
+    // 1. 기존처럼 폴더 지정 없이 넘기면 기본값으로 "others" 폴더에 넣음
     @Override
     public String uploadFile(MultipartFile file) {
+        return uploadFile(file, "others");
+    }
+
+    // 2. 새롭게 추가된 하위 폴더 지정 메서드
+    @Override
+    public String uploadFile(MultipartFile file, String subDirectory) {
         if (file == null || file.isEmpty()) return null;
 
         try {
-            // 1. 저장할 폴더 경로 설정 및 생성 (디렉토리가 없으면 만듦)
-            String uploadDir = System.getProperty("user.dir") + "/uploads/";
+            // 저장할 폴더 경로 설정 (하위 폴더 포함)
+            String uploadDir = System.getProperty("user.dir") + "/uploads/" + subDirectory + "/";
             File folder = new File(uploadDir);
             if (!folder.exists()) {
                 folder.mkdirs();
             }
 
-            // 2. 파일명 중복을 막기 위한 UUID 생성 (안전한 파일 확장자 추출 로직)
+            // 파일명 중복을 막기 위한 UUID 생성
             String originalFilename = file.getOriginalFilename();
-            String extension = ""; // 기본 확장자 (없을 경우)
-
+            String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
 
             String savedFilename = UUID.randomUUID().toString() + extension;
-
             File destFile = new File(folder, savedFilename);
 
-            // 3. 실제 서버 하드디스크에 파일 저장
+            // 실제 서버 하드디스크에 파일 저장
             file.transferTo(destFile);
 
-            // 4. DB에 저장될 가상 경로 반환
-            return "/uploads/" + savedFilename;
+            // 프론트엔드가 사용할 수 있는 상대 경로 리턴
+            return "/uploads/" + subDirectory + "/" + savedFilename;
 
         } catch (IOException e) {
-            throw new RuntimeException("파일 저장에 실패했습니다.", e);
+            throw new RuntimeException("파일 업로드에 실패했습니다.", e);
         }
     }
 }
