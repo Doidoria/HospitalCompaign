@@ -18,7 +18,7 @@ export default function ManagerListModalContent({ managers, onSelect }: ManagerL
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
       {managers.map((manager) => {
         const daysHtml = manager.availableDays 
           ? manager.availableDays.split(',').map((day: string, idx: number) => (

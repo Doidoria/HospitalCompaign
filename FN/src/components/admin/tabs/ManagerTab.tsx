@@ -21,6 +21,11 @@ interface ManagerApplication {
   availableDays: string;
   availableTime: string;
   certificateUrl: string | null;
+  rejectReason?: string;
+}
+
+interface ManagerTabProps {
+  refreshBadges?: () => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -49,7 +54,7 @@ const getFileUrl = (path: string) => {
   return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
 };
 
-export default function ManagerTab() {
+export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
   const [pendingManagers, setPendingManagers] = useState<ManagerApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [mgrAppStatus, setMgrAppStatus] = useState('WAITING');
@@ -102,6 +107,7 @@ export default function ManagerTab() {
       adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();
+      if (refreshBadges) refreshBadges(); // 승인 완료 후 사이드바 뱃지 갱신 호출
     }
   };
 
@@ -117,7 +123,19 @@ export default function ManagerTab() {
       adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();
+      if (refreshBadges) refreshBadges(); // 반려 완료 후 사이드바 뱃지 갱신 호출
     }
+  };
+
+  // 반려 사유 확인 알람 함수
+  const handleViewRejectReason = (reason?: string) => {
+    YesAlert.fire({
+      icon: 'info',
+      title: '반려 사유',
+      html: reason ? `<div class="text-left bg-slate-50 p-4 rounded-lg text-sm text-slate-700 mt-2">${reason}</div>` : '등록된 반려 사유가 없습니다.',
+      showCancelButton: false,
+      confirmButtonText: '확인'
+    });
   };
 
   const handleTabChange = (status: string) => {
@@ -215,7 +233,7 @@ export default function ManagerTab() {
           </div>
         </div>
 
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
               <tr>
@@ -224,8 +242,8 @@ export default function ManagerTab() {
                 <th className="p-4 font-bold text-center">보유 자격증</th>
                 <th className="p-4 font-bold text-center">근무 가능 시간</th>
                 <th className="p-4 font-bold text-center">첨부파일</th>
-                {/* [최적화] 대기 상태일 때만 '계정 승인' 헤더 노출 */}
                 {mgrAppStatus === 'WAITING' && <th className="p-4 font-bold text-center pr-6">계정 승인</th>}
+                {mgrAppStatus === 'REJECTED' && <th className="p-4 font-bold text-center pr-6">반려 사유</th>}
               </tr>
             </thead>
             <tbody className="text-sm bg-white">
@@ -271,6 +289,15 @@ export default function ManagerTab() {
                       </div>
                     </td>
                   )}
+                  {mgrAppStatus === 'REJECTED' && (
+                    <td className="p-4 pr-6 text-center">
+                      <button onClick={() => handleViewRejectReason(mgr.rejectReason)} 
+                        className="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"
+                      >
+                        사유 보기
+                      </button>
+                    </td>
+                  )}
                 </tr>
               )) : (
                 <EmptyState message="해당하는 지원 내역이 없습니다." isTable={true} />
@@ -280,7 +307,7 @@ export default function ManagerTab() {
         </div>
 
         {/* 2. 모바일 뷰: 카드형 리스트 */}
-        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 flex-1 overflow-y-auto bg-slate-50/50 content-start">
           {loading ? (
             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" /></div>
           ) : currentManagers.length > 0 ? currentManagers.map((mgr) => (
@@ -324,10 +351,18 @@ export default function ManagerTab() {
                     <button onClick={() => handleReject(mgr.id, mgr.name)} className="flex-1 bg-white border border-red-200 text-red-600 py-2 rounded-lg text-xs font-bold hover:bg-red-50 shadow-sm">반려</button>
                   </>
                 )}
+                {mgrAppStatus === 'REJECTED' && (
+                  <button 
+                    onClick={() => handleViewRejectReason(mgr.rejectReason)} 
+                    className="flex-1 bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"
+                  >
+                    반려 사유 보기
+                  </button>
+                )}
               </div>
             </div>
           )) : (
-            <div className='flex justify-center py-8'>
+            <div className='col-span-full flex justify-center py-8'>
               <EmptyState message="해당하는 지원 내역이 없습니다." isTable={false} />
             </div>
           )}

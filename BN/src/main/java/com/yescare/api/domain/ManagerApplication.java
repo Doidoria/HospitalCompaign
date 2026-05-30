@@ -1,7 +1,11 @@
 package com.yescare.api.domain;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -9,7 +13,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ManagerApplication {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -37,7 +42,7 @@ public class ManagerApplication {
 
     @Builder
     public ManagerApplication(Member member, String licenseName, String experience, String motivation,
-                              String certificateUrl,String availableDays, String availableTime) {
+                              String certificateUrl, String availableDays, String availableTime) {
         this.member = member;
         this.licenseName = licenseName;
         this.experience = experience;
@@ -65,9 +70,13 @@ public class ManagerApplication {
         this.licenseName = licenseName;
         this.experience = experience;
         this.motivation = motivation;
-        if (certificateUrl != null) {
-            this.certificateUrl = certificateUrl; // 새 파일이 있을 때만 덮어씀
+
+        if (certificateUrl == null || certificateUrl.trim().isEmpty()) {
+            this.certificateUrl = null;
+        } else {
+            this.certificateUrl = certificateUrl;
         }
+
         this.availableDays = availableDays;
         this.availableTime = availableTime;
         this.status = "WAITING"; // 다시 대기 상태로

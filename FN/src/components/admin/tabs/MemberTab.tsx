@@ -182,7 +182,7 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
         </div>
 
         {/* 1. PC 뷰: 테이블 */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200">
               <tr>
@@ -246,7 +246,7 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
         </div>
 
         {/* 2. 모바일 뷰: 카드형 리스트 */}
-        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 flex-1 overflow-y-auto bg-slate-50/50 content-start">
           {loading ? (
             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto" /></div>
           ) : filteredMembers.length > 0 ? filteredMembers.map((member) => {
@@ -287,7 +287,7 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
               </div>
             );
           }) : (
-            <div className='flex justify-center py-8'>
+            <div className='col-span-full flex justify-center py-8'>
               <EmptyState message="검색 결과가 없습니다." isTable={false} />
             </div>
           )}

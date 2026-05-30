@@ -1,5 +1,6 @@
 package com.yescare.api.controller;
 
+import com.yescare.api.dto.ApiResponse;
 import com.yescare.api.dto.NoticeRequest;
 import com.yescare.api.dto.NoticeResponse;
 import com.yescare.api.service.NoticeService;
@@ -25,8 +26,9 @@ public class AdminNoticeController {
     }
 
     @PostMapping
-    public ResponseEntity<Long> createNotice(@RequestBody NoticeRequest request) {
-        return ResponseEntity.ok(noticeService.createNotice(request));
+    public ResponseEntity<ApiResponse<Long>> createNotice(@RequestBody NoticeRequest request) {
+        Long noticeId = noticeService.createNotice(request);
+        return ResponseEntity.ok(ApiResponse.success(noticeId));
     }
 
     @PutMapping("/{id}")

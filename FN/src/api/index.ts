@@ -94,6 +94,19 @@ export const adminApi = {
     return apiClient.get(url);
   },
 
+  // 엑셀 다운로드용 예약 데이터 전체 조회 (페이징 없이 전체 리스트 반환)
+  getAllReservationsForExcel: (keyword: string, status?: string) => {
+    let url = `/api/reservations/excel`;
+    const params = [];
+    if (keyword) params.push(`keyword=${encodeURIComponent(keyword)}`);
+    if (status) params.push(`status=${status}`);
+    
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+    return apiClient.get(url);
+  },
+
   // 예약 일정 업데이트
   updateReservation: (id: number, data: any) => apiClient.put(`/api/reservations/${id}/admin`, data),
 

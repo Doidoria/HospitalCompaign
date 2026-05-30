@@ -48,7 +48,7 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
               <p className="text-slate-400 font-bold text-sm">상세 정보를 불러오는 중입니다...</p>
             </div>
           ) : (
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar touch-pan-y overscroll-contain">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1. 고객 정보 카드 */}

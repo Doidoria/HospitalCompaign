@@ -168,4 +168,14 @@ public class ReservationController {
         reservationService.updateReservationByAdmin(id, request);
         return ResponseEntity.ok().build();
     }
+
+    // 어드민용 엑셀 다운로드 전체 데이터 조회 API (페이징 무시)
+    @GetMapping("/excel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ReservationResponse>> getAllForExcel(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status) {
+
+        return ResponseEntity.ok(reservationService.getAllReservationsForExcel(keyword, status));
+    }
 }

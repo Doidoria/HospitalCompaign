@@ -64,12 +64,6 @@ public class ManagerService {
         app.reject(reason);
     }
 
-//    @Transactional(readOnly = true)
-//    public List<ManagerAppResponse> getPendingManagerApplications() {
-//        return managerApplicationRepository.findByStatus("WAITING").stream()
-//                .map(ManagerAppResponse::new).collect(Collectors.toList());
-//    }
-
     @Transactional(readOnly = true)
     public List<ManagerAppResponse> getManagerApplicationsByStatus(String status) {
         // 💡 "WAITING" 고정값 대신 전달받은 status로 조회

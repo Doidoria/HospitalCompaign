@@ -14,6 +14,7 @@ public class ManagerAppResponse {
     private String certificateUrl;
     private String availableDays;
     private String availableTime;
+    private String rejectReason; // 반려 사유 필드
 
     public ManagerAppResponse(ManagerApplication entity) {
         this.id = entity.getId();
@@ -25,5 +26,6 @@ public class ManagerAppResponse {
         this.certificateUrl = entity.getCertificateUrl();
         this.availableDays = entity.getAvailableDays();
         this.availableTime = entity.getAvailableTime();
+        this.rejectReason = entity.getRejectionReason();
     }
 }

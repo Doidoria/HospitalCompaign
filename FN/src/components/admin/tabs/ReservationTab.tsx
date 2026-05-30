@@ -38,6 +38,7 @@ interface ReservationTabProps {
   handleAssignManager: (id: number) => Promise<boolean>;
   handleCancelAssign: (id: number) => Promise<boolean>;
   handleViewMemberProfile: (member: Member) => void;
+  refreshBadges?: () => void;
 }
 
 // ==========================================
@@ -82,7 +83,7 @@ const exportToCsv = (data: Reservation[]) => {
   // 3. 문자열 병합
   const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
 
-  // 4. Excel에서 한글(UTF-8)을 인식할 수 있도록 BOM(Byte Order Mark) 추가 🚨 (핵심!)
+  // 4. Excel에서 한글(UTF-8)을 인식할 수 있도록 BOM(Byte Order Mark)
   const BOM = '\uFEFF';
   const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
   
@@ -105,7 +106,8 @@ export default function ReservationTab({
   members, 
   handleAssignManager, 
   handleCancelAssign, 
-  handleViewMemberProfile 
+  handleViewMemberProfile,
+  refreshBadges
 }: ReservationTabProps) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +135,39 @@ export default function ReservationTab({
   const handleOpenEdit = (rawRes: any) => {
     setSelectedEditRes(rawRes);
     setIsEditModalOpen(true);
+  };
+
+  const handleExcelDownload = async () => {
+    try {
+      Toast.fire({ icon: 'info', title: '엑셀 데이터 추출 중...' });
+      
+      // '페이징 없는' 조건부 전체 데이터를 가져오는 API 호출
+      const res = await adminApi.getAllReservationsForExcel(searchTerm, statusFilter);
+      const allData = res.data || [];
+
+      // 2. 기존 컴포넌트의 데이터 포맷팅 로직 적용
+      const formattedData = allData.map((r: any): Reservation => {
+        const dateObj = new Date(r.reservationTime);
+        return {
+          id: r.id, 
+          date: dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+          time: dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+          patient: r.patientName,
+          hospital: r.hospitalName,
+          status: r.status, 
+          manager: r.managerName || (r.status === 'CONFIRMED' ? '배정완료' : '-'),
+          raw: r
+        };
+      });
+
+      // 3. 기존 엑셀 다운로드 헬퍼 함수 호출
+      exportToCsv(formattedData);
+      Toast.fire({ icon: 'success', title: '다운로드가 완료되었습니다.' });
+      
+    } catch (error) {
+      console.error('엑셀 다운로드 에러:', error);
+      YesAlert.fire({ icon: 'error', title: '오류', html: '데이터를 가져오는데 실패했습니다.' });
+    }
   };
 
   // [최적화 1] 데이터 페치 및 페이지네이션 보정
@@ -207,6 +242,7 @@ export default function ReservationTab({
       await reservationApi.updateStatus(id, newStatus);
       Toast.fire({ icon: 'success', title: '상태가 변경되었습니다.' });
       fetchReservations(currentPage, searchTerm, statusFilter);
+      if (refreshBadges) refreshBadges() // 대기 -> 확정 등으로 상태가 바뀌면 뱃지 리프레시
     } catch (error) {
       YesAlert.fire({ icon: 'error', title: '오류', html: '상태 변경에 실패했습니다.' });
     }
@@ -247,7 +283,7 @@ export default function ReservationTab({
             {/* 엑셀 다운로드 버튼 */}
             <button
               type="button"
-              onClick={() => exportToCsv(reservations)}
+              onClick={handleExcelDownload}
               className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-sm transition-colors cursor-pointer"
               title="현재 조회된 리스트를 엑셀 파일로 저장합니다"
             >
@@ -271,7 +307,7 @@ export default function ReservationTab({
         </div>
 
         {/* 1. PC 뷰: 테이블 */}
-        <div className="hidden md:block overflow-x-auto flex-1">
+        <div className="hidden lg:block overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-slate-50/90 text-slate-500 text-xs uppercase border-b border-slate-200">
               <tr>
@@ -337,8 +373,8 @@ export default function ReservationTab({
           </table>
         </div>
 
-        {/* 2. 모바일 뷰: 카드형 리스트 (md:hidden) */}
-        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+        {/* 2. 모바일 뷰: 카드형 리스트 (lg:hidden) */}
+        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 flex-1 overflow-y-auto bg-slate-50/50 content-start">
           {loading && reservations.length === 0 ? (
             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></div>
           ) : reservations.length > 0 ? reservations.map((res) => (
@@ -391,8 +427,6 @@ export default function ReservationTab({
                     <FileText className="w-3.5 h-3.5" /> 리포트
                   </button>
                 ) : null}
-                
-                {/* 상태 변경 Select는 공간 차지가 크므로 하단에 전체 너비로 배치 */}
                 <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="WAITING">매칭 대기</option>
                   <option value="CONFIRMED">예약 확정</option>
@@ -402,7 +436,7 @@ export default function ReservationTab({
               </div>
             </div>
           )) : (
-            <div className='flex justify-center py-8'>
+            <div className='col-span-full flex justify-center py-8'>
                <EmptyState message="조건에 맞는 예약이 없습니다." isTable={false} />
             </div>
           )}

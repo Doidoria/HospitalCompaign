@@ -430,4 +430,23 @@ public class ReservationService {
                 request.getMobility()
         );
     }
+
+    // 엑셀 다운로드용 전체 데이터 조회 (페이징 없음)
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> getAllReservationsForExcel(String keyword, String status) {
+        ReservationStatus enumStatus = null;
+        if (status != null && !status.trim().isEmpty()) {
+            enumStatus = ReservationStatus.valueOf(status);
+        }
+
+        // 기존 페이징 검색 메서드(searchByKeywordAndStatus)를 그대로 재활용하되,
+        // Pageable.unpaged()를 넘겨서 10개씩 자르지 않고 조건에 맞는 전체 데이터를 가져옵니다.
+        // (만약 JPA 버전 문제로 unpaged() 에러가 난다면 PageRequest.of(0, Integer.MAX_VALUE) 로 변경하세요)
+        Page<Reservation> reservations = reservationRepository.searchByKeywordAndStatus(keyword, enumStatus, Pageable.unpaged());
+
+        // Page 객체에서 내용물만 꺼내서 List로 반환
+        return reservations.getContent().stream()
+                .map(ReservationResponse::new)
+                .collect(Collectors.toList());
+    }
 }

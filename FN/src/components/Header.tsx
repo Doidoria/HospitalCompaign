@@ -1,4 +1,3 @@
-// src/components/Header.tsx
 'use client'; 
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,7 +17,6 @@ export default function Header() {
   const [userName, setUserName] = useState('');
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  // [최적화 1] 경로 변경 시 불필요한 API 중복 호출 방지
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     
@@ -30,7 +28,6 @@ export default function Header() {
       return;
     }
 
-    // 이미 로그인 데이터가 로드된 상태면 경로 이동 시 재호출 생략 (UX 깜빡임 방지)
     if (isLoggedIn && userName) return;
 
     setIsAuthChecking(true);
@@ -49,9 +46,8 @@ export default function Header() {
       .finally(() => {
         setIsAuthChecking(false);
       });
-  }, [pathname, isLoggedIn, userName]); // 의존성 조건 개선
+  }, [pathname, isLoggedIn, userName]);
 
-  // 로그아웃 처리
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     setIsLoggedIn(false);
@@ -61,7 +57,6 @@ export default function Header() {
     router.push('/login');
   };
 
-  // 모바일 메뉴 오픈 시 배경 스크롤 방지
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -69,7 +64,6 @@ export default function Header() {
 
   const isActive = (path: string) => pathname === path;
 
-  // [최적화 2] 모바일 메뉴 설정 배열화 (유지보수성 향상)
   const NAV_ITEMS = useMemo(() => [
     { name: '서비스 안내', path: '/guide', show: true },
     { name: '고객센터(FAQ)', path: '/support/faq', show: true },
@@ -82,91 +76,89 @@ export default function Header() {
     <>
       {/* 1. 상단 고정 헤더 바 */}
       <header className="bg-white/95 shadow-sm sticky top-0 z-40 border-b border-gray-100 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-4 z-50 relative group">
-            <div className="flex items-center gap-2 opacity-90">
-              <img src="/wel_logo.svg" alt="wel logo" className="h-8 w-auto"/>
-            </div>
-            <div className="h-8 w-px bg-gray-200" />
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <img src="/yescare.svg" alt="yescare logo" className="h-10 w-auto"/>
-              <h1 className="text-xl md:text-2xl font-extrabold text-blue-950 tracking-tight mt-1">
-                예스케어
-                <span className="font-semibold text-[#299245] text-sm inline ml-1">병원동행</span>
-              </h1>
-            </div>
-          </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 md:h-20 flex items-center justify-between w-full">
+          <div className="flex-1 flex justify-start">
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 z-50">
+              <img src="/wel_logo.svg" alt="wel logo" className="h-6 sm:h-8 w-auto"/>
+              <div className="h-6 sm:h-8 w-px bg-gray-200" />
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                <img src="/yescare.svg" alt="yescare logo" className="h-8 sm:h-10 w-auto"/>
+                <h1 className="text-base sm:text-2xl font-extrabold text-blue-950 tracking-tight mt-1">
+                  예스케어
+                  <span className="font-semibold text-[#299245] text-[10px] sm:text-sm inline ml-1">병원동행</span>
+                </h1>
+              </div>
+            </Link>
+          </div>
 
-          {/* PC 네비게이션 */}
-          <nav className="hidden lg:flex items-center gap-6 whitespace-nowrap">
-            <div className="flex items-center gap-6 text-base font-bold">
+          <div className="flex-1 flex items-center justify-end gap-3 md:gap-5 z-50">
+            <nav className="hidden xl:flex items-center justify-center gap-8 whitespace-nowrap shrink-0">
               {NAV_ITEMS.filter(item => item.show).map((item) => (
                 <Link 
                   key={item.path} 
                   href={item.path} 
-                  className={`transition duration-300 ${isActive(item.path) ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                  className={`text-base font-bold transition duration-300 ${isActive(item.path) ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                 >
                   {item.name}
                 </Link>
               ))}
-            </div>
-            
-            <div className="border-l border-gray-200 pl-8 flex items-center min-w-[120px] justify-end">
+            </nav>
+            <div className="hidden xl:block h-5 w-px bg-gray-200 mx-2" />
+            <div className="hidden xl:flex items-center justify-end">
               {isAuthChecking ? (
                 <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
               ) : isLoggedIn ? (
-                <div className="flex items-center gap-5">
-                  <Link href="/mypage" className={`font-bold transition duration-300 ${isActive('/mypage') ? 'text-blue-800' : 'text-blue-600 hover:text-blue-800'}`}>
+                <div className="flex items-center gap-4">
+                  <Link href="/mypage" className={`font-bold transition duration-300 whitespace-nowrap ${isActive('/mypage') ? 'text-blue-800' : 'text-blue-600 hover:text-blue-800'}`}>
                     마이페이지
                   </Link>
-
                   {userRole === 'ADMIN' && (
-                    <Link href="/admin" className="text-red-500 font-bold hover:text-red-700 flex items-center gap-1 transition duration-300 bg-red-50 px-3 py-1.5 rounded-full text-sm">
+                    <Link href="/admin" className="text-red-500 font-bold hover:text-red-700 flex items-center gap-1 transition duration-300 bg-red-50 px-3 py-1.5 rounded-full text-sm whitespace-nowrap">
                       <ShieldAlert className="w-4 h-4" /> 관리자
                     </Link>
                   )}
                   {userRole === 'MANAGER' && (
-                    <Link href="/manager/dashboard" className="text-emerald-600 font-bold hover:text-emerald-800 transition duration-300 bg-emerald-50 px-3 py-1.5 rounded-full text-sm">
+                    <Link href="/manager/dashboard" className="text-emerald-600 font-bold hover:text-emerald-800 transition duration-300 bg-emerald-50 px-3 py-1.5 rounded-full text-sm whitespace-nowrap">
                       매니저 시스템
                     </Link>
                   )}
-                  
-                  <div className="flex items-center gap-4 border-l border-gray-100 pl-5">
+                  <div className="flex items-center gap-3 border-l border-gray-200 pl-4 whitespace-nowrap">
                     <span className="text-sm font-bold text-gray-800"><span className="text-blue-700">{userName}</span>님</span>
-                    <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition duration-300 group">
+                    <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition duration-300 group">
                       <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" /> 로그아웃
                     </button>
                   </div>
                 </div>
               ) : (
-                <Link href="/login" className="px-6 py-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 font-bold active:scale-95">
+                <Link href="/login" className="px-5 py-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 hover:shadow-md transition-all duration-300 font-bold text-sm whitespace-nowrap">
                   로그인 / 가입
                 </Link>
               )}
             </div>
-          </nav>
+
+            {/* 햄버거 버튼 */}
+            <button className="xl:hidden p-2 text-gray-800 focus:outline-none bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? <X className="w-6 h-6 text-gray-500" /> : <Menu className="w-6 h-6 text-blue-950" />}
+            </button>
+          </div>
           
-          <button className="lg:hidden text-gray-800 p-2 -mr-2 z-50 relative focus:outline-none active:scale-90" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            {isMobileMenuOpen ? <X className="w-7 h-7 text-gray-500" /> : <Menu className="w-7 h-7 text-blue-950" />}
-          </button>
         </div>
       </header>
 
-      {/* 2. 모바일 서랍 메뉴 */}
+      {/* 4. 모바일 서랍 메뉴 */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
               onClick={() => setIsMobileMenuOpen(false)} 
-              className="fixed inset-0 bg-gray-900/40 z-40 lg:hidden backdrop-blur-sm" 
+              className="fixed inset-0 bg-gray-900/40 z-40 xl:hidden backdrop-blur-sm" 
             />
-            
             <motion.div 
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} 
               transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-40 lg:hidden flex flex-col pt-12 px-6 overflow-y-auto pb-10"
+              className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-50 xl:hidden flex flex-col pt-12 px-6 overflow-y-auto pb-10"
             >
               {isLoggedIn ? (
                 <div className="mb-8 p-5 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 flex items-center gap-4 shadow-sm">
@@ -200,7 +192,6 @@ export default function Header() {
                     {item.name} <ChevronRight className={`w-5 h-5 ${isActive(item.path) ? 'text-blue-400' : 'text-gray-300'}`} />
                   </Link>
                 ))}
-
                 {isLoggedIn && (
                   <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
                     <Link href="/mypage" onClick={() => setIsMobileMenuOpen(false)}>
@@ -208,7 +199,6 @@ export default function Header() {
                         <User className="w-5 h-5" /> 마이페이지
                       </button>
                     </Link>
-                    
                     {userRole === 'ADMIN' && (
                       <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)}>
                         <button className="w-full bg-red-50 text-red-600 py-3.5 rounded-xl border border-red-100 flex items-center justify-center gap-2 mt-3 font-bold">
@@ -216,7 +206,6 @@ export default function Header() {
                         </button>
                       </Link>
                     )}
-                    
                     {userRole === 'MANAGER' && (
                       <Link href="/manager/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                         <button className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-xl border border-emerald-100 mt-3 font-bold">
@@ -224,7 +213,6 @@ export default function Header() {
                         </button>
                       </Link>
                     )}
-                    
                     <button onClick={handleLogout} className="w-full bg-gray-50 text-gray-500 py-3.5 rounded-xl font-bold mt-3 flex items-center justify-center gap-2 active:bg-gray-100 transition-colors">
                       <LogOut className="w-5 h-5" /> 로그아웃
                     </button>

@@ -28,7 +28,11 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [loading, setLoading] = useState(true);
   
+  // 뱃지 카운트 상태 관리
   const [pendingManagerCount, setPendingManagerCount] = useState(0);
+  const [pendingReservationCount, setPendingReservationCount] = useState(0); 
+  const [pendingInquiryCount, setPendingInquiryCount] = useState(0);
+
   const [allManagers, setAllManagers] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
 
@@ -51,10 +55,25 @@ export default function AdminDashboardPage() {
     const loadGlobalData = async () => {
       setLoading(true);
       try {
-        const pendingRes = await adminApi.getPendingManagers('WAITING');
-        setPendingManagerCount(pendingRes.data?.length || 0);
+        const [managerRes, waitingRes, inquiryRes, memberRes] = await Promise.all([
+          adminApi.getPendingManagers('WAITING'),
+          reservationApi.getWaiting(), 
+          adminApi.getAllInquiries(0, 'PENDING'), // 1:1 문의 답변 대기 상태
+          adminApi.getAllMembers(0)
+        ]);
 
-        const memberRes = await adminApi.getAllMembers(0); 
+        // 1. 매니저 승인 대기
+        setPendingManagerCount(managerRes.data?.length || 0);
+
+        // 2. 예약 매칭 대기 (Spring Boot의 반환 형태에 따라 .data.length 또는 .data.content.length 로 조정하세요)
+        const resWaitingList = waitingRes.data?.content || waitingRes.data || [];
+        setPendingReservationCount(resWaitingList.length);
+
+        // 3. 문의 답변 대기 (Spring Boot Page 객체 반환 시 totalElements 사용)
+        const inqWaitingTotal = inquiryRes.data?.totalElements || inquiryRes.data?.content?.length || inquiryRes.data?.length || 0;
+        setPendingInquiryCount(inqWaitingTotal);
+
+        // 4. 회원 정보 세팅
         const allMembers = memberRes.data?.content || [];
         setMembers(allMembers);
         setAllManagers(allMembers.filter((m: any) => m.role.includes('MANAGER')));
@@ -65,7 +84,7 @@ export default function AdminDashboardPage() {
       }
     };
     loadGlobalData();
-  }, []);
+  }, [activeTab]);
 
   const handleOpenDetail = async (id: number) => {
     setSelectedRequest(null); 
@@ -108,6 +127,25 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // 뱃지 카운트만 전용으로 다시 불러오는 함수
+  const refreshBadges = async () => {
+    try {
+      const [managerRes, waitingRes, inquiryRes] = await Promise.all([
+        adminApi.getPendingManagers('WAITING'),
+        reservationApi.getWaiting(),
+        adminApi.getAllInquiries(0, 'PENDING')
+      ]);
+
+      setPendingManagerCount(managerRes.data?.length || 0);
+      const resWaitingList = waitingRes.data?.content || waitingRes.data || [];
+      setPendingReservationCount(resWaitingList.length);
+      const inqWaitingTotal = inquiryRes.data?.totalElements || inquiryRes.data?.content?.length || inquiryRes.data?.length || 0;
+      setPendingInquiryCount(inqWaitingTotal);
+    } catch (error) {
+      console.error('뱃지 갱신 실패:', error);
+    }
+  };
+
   // 2. 모달창 내에서 [배정 확정] 버튼을 눌렀을 때 최종 API를 쏘는 함수
   const handleConfirmAssign = async () => {
     if (!selectedResId || !selectedManagerEmail) {
@@ -117,16 +155,41 @@ export default function AdminDashboardPage() {
 
     try {
       await adminApi.assignManager(selectedResId, selectedManagerEmail);
-      
       Toast.fire({ icon: 'success', title: '매니저 배정이 완료되었습니다.' });
       setIsManagerModalOpen(false);
       
       setReservationRefreshKey(prev => prev + 1); 
+      refreshBadges();
     } catch (error) {
       console.error('매니저 배정 실패:', error);
       YesAlert.fire({ icon: 'error', title: '오류', html: '매니저 배정 처리에 실패했습니다.' });
     }
   };
+
+  useEffect(() => {
+    // 2. 초기 로드 시 뱃지 함수와 회원 정보 로드 함수 실행
+    const loadMembers = async () => {
+      setLoading(true);
+      try {
+        const memberRes = await adminApi.getAllMembers(0); 
+        const allMembers = memberRes.data?.content || [];
+        setMembers(allMembers);
+        setAllManagers(allMembers.filter((m: any) => m.role.includes('MANAGER')));
+      } catch (error) {
+        console.error('회원 데이터 로드 실패', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    refreshBadges();
+    loadMembers();
+  }, []);
+
+  // 3. 탭을 전환할 때마다 뱃지를 최신화
+  useEffect(() => {
+    refreshBadges();
+  }, [activeTab]);
 
   const handleCancelAssign = async (reservationId: number) => {
     const result = await YesAlert.fire({ title: '배정 취소', html: '배정을 취소하시겠습니까?', icon: 'warning', showCancelButton: true });
@@ -134,6 +197,7 @@ export default function AdminDashboardPage() {
       try {
         await adminApi.cancelAssignManager(reservationId);
         Toast.fire({ icon: 'success', title: '취소 완료' });
+        refreshBadges();
         return true;
       } catch (error) {
         YesAlert.fire({ icon: 'error', title: '실패', html: '오류가 발생했습니다.' });
@@ -236,10 +300,16 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans text-gray-900 flex flex-col md:flex-row relative">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} pendingManagerCount={pendingManagerCount} />
+    <div className="min-h-screen bg-slate-50/50 font-sans text-gray-900 flex flex-col lg:flex-row relative">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        pendingManagerCount={pendingManagerCount} 
+        pendingReservationCount={pendingReservationCount}
+        pendingInquiryCount={pendingInquiryCount}
+      />
 
-      <main className="flex-1 p-4 md:p-8 w-full overflow-x-hidden pb-24 md:pb-8">
+      <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden pb-24 lg:pb-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex flex-col gap-6">
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
@@ -250,15 +320,16 @@ export default function AdminDashboardPage() {
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <ReservationTab 
-                key={reservationRefreshKey} // 리프레시 트리거용 key 추가
+                key={reservationRefreshKey}
                 handleOpenDetail={handleOpenDetail}
                 members={members}
-                handleAssignManager={handleAssignManager} // 위에서 수정한 함수 전달
+                handleAssignManager={handleAssignManager}
                 handleCancelAssign={handleCancelAssign}
                 handleViewMemberProfile={handleViewMemberProfile}
+                refreshBadges={refreshBadges}
               />
             )}
-            {activeTab === 'managers' && <ManagerTab key="managers" />}
+            {activeTab === 'managers' && <ManagerTab key="managers" refreshBadges={refreshBadges} />}
             {activeTab === 'members' && <MemberTab key="members" handleViewMemberProfile={handleViewMemberProfile} />}
             {activeTab === 'reviews' && (
               <ReviewTab 
@@ -272,7 +343,7 @@ export default function AdminDashboardPage() {
               />
             )}
             {activeTab === 'notices' && <NoticeTab key="notices" />}
-            {activeTab === 'inquiries' && <InquiryTab key="inquiries" />}
+            {activeTab === 'inquiries' && <InquiryTab key="inquiries" refreshBadges={refreshBadges} />}
             {activeTab === 'popups' && <PopupTab key="popups" />}
           </AnimatePresence>
         </div>

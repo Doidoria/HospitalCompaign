@@ -129,12 +129,6 @@ public class MemberController {
         return ResponseEntity.ok("지원이 반려되었습니다.");
     }
 
-//    @GetMapping("/manager-applications")
-//    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
-//    public ResponseEntity<List<ManagerAppResponse>> getPendingApplications() {
-//        return ResponseEntity.ok(managerService.getPendingManagerApplications());
-//    }
-
     @GetMapping("/manager-applications")
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<ManagerAppResponse>> getApplications(
@@ -144,13 +138,14 @@ public class MemberController {
 
     @GetMapping("/manager-applications/stats")
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<Map<String, Long>> getManagerStats() {
-        return ResponseEntity.ok(managerService.getManagerStats());
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getManagerStats() {
+        Map<String, Long> stats = managerService.getManagerStats();
+        return ResponseEntity.ok(ApiResponse.success(stats));
     }
 
     @GetMapping("/me/manager-application")
-    public ResponseEntity<Map<String, String>> getMyApplicationStatus(@AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(managerService.getManagerApplicationStatus(email));
+    public ResponseEntity<ApiResponse<Map<String, String>>> getMyApplicationStatus(@AuthenticationPrincipal String email) {
+        return ResponseEntity.ok(ApiResponse.success(managerService.getManagerApplicationStatus(email)));
     }
 
     @GetMapping("/managers/count")
@@ -167,10 +162,10 @@ public class MemberController {
 
     // SMS 관련 API는 기존대로 유지
     @PostMapping("/sms/send")
-    public ResponseEntity<?> sendSms(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> sendSms(@RequestBody Map<String, String> request) {
         String phone = request.get("phone");
         smsService.sendVerificationCode(phone);
-        return ResponseEntity.ok(Map.of("message", "인증번호가 발송되었습니다."));
+        return ResponseEntity.ok(ApiResponse.success(Map.of("message", "인증번호가 발송되었습니다.")));
     }
 
     @PostMapping("/sms/verify")

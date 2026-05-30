@@ -1,3 +1,4 @@
+// src/components/admin/ui/EmptyState.tsx
 'use client';
 
 import React from 'react';

@@ -25,6 +25,10 @@ export interface Inquiry {
   answer?: string;
 }
 
+interface InquiryTabProps {
+  refreshBadges?: () => void;
+}
+
 // ==========================================
 // 2. 외부 분리 (렌더링마다 재생성 방지)
 // ==========================================
@@ -48,7 +52,7 @@ const getStatusStyles = (status: string) => {
     : 'bg-orange-50 text-orange-600 border-orange-200';
 };
 
-export default function InquiryTab() {
+export default function InquiryTab({ refreshBadges }: InquiryTabProps) {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [inquiryPage, setInquiryPage] = useState(0);
   const [inquiryTotalPages, setInquiryTotalPages] = useState(0);
@@ -119,6 +123,7 @@ export default function InquiryTab() {
       Toast.fire({ icon: 'success', title: '답변이 등록되었습니다.' });
       setIsInquiryModalOpen(false);
       fetchInquiries(); // 완료 후 목록 갱신
+      if (refreshBadges) refreshBadges(); // 답변 완료 시 대기 카운트 깎기 위해 호출
     } catch {
       YesAlert.fire({ icon: 'error', title: '오류', html: '등록에 실패했습니다.' });
     } finally { 
@@ -157,7 +162,7 @@ export default function InquiryTab() {
         </div>
 
         {/* 1. PC 뷰: 테이블 */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
               <tr>
@@ -215,7 +220,7 @@ export default function InquiryTab() {
         </div>
 
         {/* 2. 모바일 뷰: 카드형 리스트 */}
-        <div className="md:hidden flex flex-col gap-3 p-4 flex-1 overflow-y-auto bg-slate-50/50">
+        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 flex-1 overflow-y-auto bg-slate-50/50 content-start">
           {loading ? (
             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></div>
           ) : inquiries.length > 0 ? inquiries.map((inq) => (
@@ -249,7 +254,7 @@ export default function InquiryTab() {
               </div>
             </div>
           )) : (
-            <div className='flex justify-center py-8'>
+            <div className='col-span-full flex justify-center py-8'>
               <EmptyState message="조건에 맞는 문의 내역이 없습니다." isTable={false} />
             </div>
           )}
