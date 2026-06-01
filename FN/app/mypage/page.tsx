@@ -334,7 +334,7 @@ export default function MyPage() {
                               </div>
                               <div>
                                 <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 일시</p>
-                                <p className="text-xl sm:text-2xl font-extrabold text-slate-900">{req.date} <span className="text-indigo-600">{req.time}</span></p>
+                                <p className="text-lg sm:text-2xl font-extrabold text-slate-900">{req.date} <span className="text-indigo-600">{req.time}</span></p>
                               </div>
                             </div>
 

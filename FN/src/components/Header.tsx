@@ -11,6 +11,7 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userProvider, setUserProvider] = useState('');
   
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('USER');
@@ -36,6 +37,7 @@ export default function Header() {
         setIsLoggedIn(true);
         setUserRole(res.data.role);
         setUserName(res.data.name);
+        setUserProvider(res.data.provider); // 백엔드에서 받은 KAKAO 또는 LOCAL 저장
       })
       .catch(() => {
         localStorage.removeItem('accessToken');
@@ -49,12 +51,24 @@ export default function Header() {
   }, [pathname, isLoggedIn, userName]);
 
   const handleLogout = () => {
+    // 1. 공통: 프론트엔드 로컬스토리지 및 상태 초기화
     localStorage.removeItem('accessToken');
+    document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Strict';
+    
     setIsLoggedIn(false);
     setUserRole('USER');
     setUserName('');
     setIsMobileMenuOpen(false);
-    router.push('/login');
+
+    // 2. 분기 처리: 로그인 유형에 따른 로그아웃 액션
+    if (userProvider === 'KAKAO') {
+      // 카카오 유저 -> 카카오 세션 파기를 위해 리다이렉트
+      const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+      const LOGOUT_REDIRECT_URI = window.location.origin + '/'; 
+      window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
+    } else {
+      router.push('/login'); 
+    }
   };
 
   useEffect(() => {

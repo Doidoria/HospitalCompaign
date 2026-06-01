@@ -389,9 +389,11 @@ export default function ReservationTab({
                   <span className="text-slate-500 text-xs font-bold">일시</span>
                   <span className="text-slate-800 font-extrabold text-sm">{res.date} {res.time}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 text-xs font-bold">환자/병원</span>
-                  <span className="text-slate-800 font-bold text-sm truncate max-w-[200px]">{res.patient} / {res.hospital}</span>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500 text-xs font-bold shrink-0 mt-0.5">환자/병원</span>
+                  <span className="text-slate-800 font-bold text-sm text-right break-keep">
+                    {res.patient} <span className="text-slate-300 mx-1">|</span> {res.hospital}
+                  </span>
                 </div>
                 {(res.status === 'CONFIRMED' || res.status === 'COMPLETED') && res.manager !== '-' && (
                   <div className="flex items-center justify-between mt-1">
@@ -411,7 +413,11 @@ export default function ReservationTab({
                 <button onClick={() => handleOpenDetail(res.id)} className="flex-1 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
                   상세 보기
                 </button>
-                <button onClick={() => handleOpenEdit(res.raw)} className="flex-1 py-2 bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-1">
+                <button onClick={() => handleOpenEdit(res.raw)} disabled={res.status === 'COMPLETED'}
+                  className={`flex-1 py-2 border text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1
+                    ${res.status === 'COMPLETED' 
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' 
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}>
                   <Edit className="w-3.5 h-3.5" /> 수정
                 </button>
                 {res.status === 'WAITING' ? (

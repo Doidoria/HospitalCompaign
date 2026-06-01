@@ -97,8 +97,8 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                     <span className="font-bold text-slate-400 text-xs block mb-1.5">만나는 장소</span>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-800 text-sm truncate">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-bold text-slate-800 text-sm break-keep flex-1 pt-0.5">
                         {selectedRequest.meetingPoint ? selectedRequest.meetingPoint.replace(' /// ', ' ') : '자택'}
                       </span>
                       <button onClick={() => {
@@ -107,26 +107,23 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                           if (!searchTarget) return Toast.fire({ icon: 'warning', title: '주소 정보가 없습니다.' });
                           window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
                         }}
-                        className="shrink-0 px-3 py-2 sm:px-2 sm:py-1.5 bg-[#FEE500] hover:bg-[#FADA0A] text-[#191919] text-[10px] font-extrabold rounded-md transition-colors flex items-center gap-1 shadow-sm"
+                        className="shrink-0 px-3 py-2 sm:px-2 sm:py-1.5 bg-[#FEE500] hover:bg-[#FADA0A] text-[#191919] text-[10px] font-extrabold rounded-md transition-colors flex items-center gap-1 shadow-sm mt-0.5"
                       >
                         <Navigation className="w-3 h-3" /> 지도 열기
                       </button>
                     </div>
                   </div>
-                  
                   <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                     <span className="font-bold text-slate-400 text-xs block mb-1.5">목적지 (방문 병원)</span>
                     <button 
                       onClick={() => {
-                        // 1. 주소에 '///' 가 있다면 그 앞부분(기본 주소)만 추출하고 양옆 공백을 제거
                         const cleanAddress = selectedRequest.hospitalName.split('///')[0].trim();
-                        
-                        // 2. 추출한 주소를 안전하게 URL 인코딩하여 카카오맵 링크로 넘김
                         window.open(`https://map.kakao.com/link/search/${encodeURIComponent(cleanAddress)}`, '_blank');
                       }} 
-                      className="w-full text-left font-bold text-blue-600 text-sm truncate hover:text-blue-800 transition-colors flex items-center gap-1.5"
+                      className="w-full text-left font-bold text-blue-600 text-sm break-keep hover:text-blue-800 transition-colors flex items-start gap-1.5"
                     >
-                      {selectedRequest.hospitalName.split('///')[0].trim()} <MapPin className="w-3.5 h-3.5" />
+                      <span className="flex-1">{selectedRequest.hospitalName.split('///')[0].trim()}</span>
+                      <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
                     </button>
                   </div>
                 </div>
@@ -134,7 +131,6 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
 
               {/* 4. 진료 및 요청사항 상세 카드 영역 */}
               <div className="space-y-4">
-                {/* 보호자 특별 요청사항 */}
                 <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
                   <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
                     <div className="p-1.5 bg-slate-100 rounded-lg"><AlertCircle className="w-4 h-4 text-slate-600"/></div>
@@ -144,8 +140,6 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                     {selectedRequest.requirements || selectedRequest.memo || '요청사항이 없습니다.'}
                   </div>
                 </div>
-
-                {/* 상세 진료 및 검사 내용 */}
                 <div className="bg-white p-5 rounded-[20px] border border-blue-50 shadow-[0_2px_10px_rgb(59,130,246,0.04)] relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-400"></div>
                   <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -156,8 +150,6 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                     {selectedRequest.detailedContent || '상세 내용이 없습니다.'}
                   </div>
                 </div>
-
-                {/* 의사 선생님께 여쭤봐야 할 질문 */}
                 <div className="bg-white p-5 rounded-[20px] border border-orange-50 shadow-[0_2px_10px_rgb(249,115,22,0.04)] relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-400"></div>
                   <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -169,7 +161,6 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                   </div>
                 </div>
               </div>
-
             </div>
           )}
         </motion.div>
