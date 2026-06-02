@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { popupApi } from '@/src/api/index';
-import { X } from 'lucide-react';
 
 export default function EventPopup() {
   const [popup, setPopup] = useState<any>(null);
@@ -18,11 +17,18 @@ export default function EventPopup() {
       const data = Array.isArray(res.data) ? res.data[0] : res.data;
       
       if (data && (data.isActive || data.active)) {
-        const fullImageUrl = data.imageUrl?.startsWith('http') 
-          ? data.imageUrl 
-          : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${data.imageUrl}`;
+        const getFileUrl = (path: string) => {
+          if (!path) return '';
+          if (path.startsWith('http')) return path;
           
-        setPopup({ ...data, imageUrl: fullImageUrl });
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+          // path 앞에 붙은 쓸데없는 슬래시나 중복된 uploads/ 문자열을 싹 정리합니다.
+          const cleanPath = path.replace(/^\/?(uploads\/)?/, 'uploads/');
+            
+          return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
+        };
+          
+        setPopup({ ...data, imageUrl: getFileUrl(data.imageUrl) });
         setIsOpen(true);
       }
     }).catch(e => console.log('팝업 데이터를 불러오지 못했습니다.'));

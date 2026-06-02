@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { adminApi, reservationApi } from '@/src/api/index';
 import { User, Mail, Phone, ShieldCheck, Home } from 'lucide-react';
-import { Toast, YesAlert, MySwal, WideSwal } from '@/src/utils/alert';
+import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
 
 // UI & Layout
 import Sidebar from '@/src/components/admin/ui/Sidebar';

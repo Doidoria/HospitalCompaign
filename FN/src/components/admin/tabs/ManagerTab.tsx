@@ -115,7 +115,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
     const { value: reason } = await YesAlert.fire({
       title: '반려 사유 입력', input: 'textarea',
       showCancelButton: true, confirmButtonText: '반려 처리',
-      inputValidator: (value) => !value ? '반려 사유를 입력해야 합니다!' : null
+      inputValidator: (value: string) => !value ? '반려 사유를 입력해야 합니다!' : null
     });
     if (reason) {
       await adminApi.rejectManagerApp(applicationId, { reason: reason });
@@ -292,8 +292,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                   {mgrAppStatus === 'REJECTED' && (
                     <td className="p-4 pr-6 text-center">
                       <button onClick={() => handleViewRejectReason(mgr.rejectReason)} 
-                        className="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"
-                      >
+                        className="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
                         사유 보기
                       </button>
                     </td>
@@ -352,10 +351,8 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                   </>
                 )}
                 {mgrAppStatus === 'REJECTED' && (
-                  <button 
-                    onClick={() => handleViewRejectReason(mgr.rejectReason)} 
-                    className="flex-1 bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"
-                  >
+                  <button onClick={() => handleViewRejectReason(mgr.rejectReason)} 
+                    className="flex-1 bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
                     반려 사유 보기
                   </button>
                 )}

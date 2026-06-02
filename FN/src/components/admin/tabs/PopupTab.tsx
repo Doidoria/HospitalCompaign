@@ -1,3 +1,4 @@
+// src/components/admin/tabs/PopupTab.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -24,10 +25,16 @@ export default function PopupTab() {
         setIsActive(status || false);
 
         if (data.imageUrl) {
-          const fullImageUrl = data.imageUrl.startsWith('http') 
-            ? data.imageUrl 
-            : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${data.imageUrl}`;
-          setPreviewUrl(fullImageUrl);
+          const getFileUrl = (path: string) => {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+            const cleanPath = path.replace(/^\/?(uploads\/)?/, 'uploads/');
+              
+            return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
+          };
+          setPreviewUrl(getFileUrl(data.imageUrl));
         }
       }
     }).catch(e => {

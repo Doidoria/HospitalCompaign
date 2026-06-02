@@ -1,3 +1,4 @@
+// src/components/admin/popup/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -11,10 +12,23 @@ export default function AdminPopupPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // 초기 설정 로드
+  // ✨ 수정된 코드
   useEffect(() => {
     popupApi.getPopupSettings().then(res => {
       setIsActive(res.data.isActive);
-      setPreviewUrl(res.data.imageUrl);
+      
+      if (res.data.imageUrl) {
+        const getFileUrl = (path: string) => {
+          if (!path) return '';
+          if (path.startsWith('http')) return path;
+          
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+          const cleanPath = path.replace(/^\/?(uploads\/)?/, 'uploads/');
+            
+          return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
+        };
+        setPreviewUrl(getFileUrl(res.data.imageUrl));
+      }
     });
   }, []);
 

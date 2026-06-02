@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/src/components/Header";
 import Footer from "@/src/components/Footer";
 import ClientProvider from "@/src/components/providers/ClientProvider";
+import GlobalAlert from '@/src/components/admin/ui/GlobalAlert';
 
 // 1. 기존 영문 폰트
 const geistSans = Geist({
@@ -69,6 +70,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-grow">
             {children}
+            <GlobalAlert />
           </main>
           <Footer />
         </ClientProvider>

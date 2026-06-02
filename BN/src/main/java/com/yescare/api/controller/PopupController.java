@@ -39,7 +39,7 @@ public class PopupController {
             @RequestParam(value = "isActive", defaultValue = "true") boolean isActive,
             @RequestParam(value = "image", required = false) MultipartFile image) {
 
-        // 💡 핵심 수정: 매번 새로 만들지 말고, 기존에 저장된 팝업이 있다면 가져와서 엎어칩니다(Update).
+        // 핵심 수정: 매번 새로 만들지 말고, 기존에 저장된 팝업이 있다면 가져와서 엎어칩니다(Update).
         List<Popup> existingPopups = popupRepository.findAll();
         Popup popup;
 
@@ -55,9 +55,9 @@ public class PopupController {
         popup.setLinkUrl(linkUrl);
         popup.setActive(isActive);
 
-        // 💡 핵심 수정: 새 이미지가 들어왔을 때만 파일 업로드를 수행하고, 안 들어왔다면 기존의 이미지 파일명을 유지합니다.
+        // 새 이미지가 들어왔을 때만 파일 업로드를 수행하고, 안 들어왔다면 기존의 이미지 파일명을 유지
         if (image != null && !image.isEmpty()) {
-            String savedFileName = fileStorageService.uploadFile(image);
+            String savedFileName = fileStorageService.uploadFile(image, "popups");
             popup.setImageUrl(savedFileName);
         }
 
