@@ -56,9 +56,10 @@ export const reservationApi = {
 // ==========================================
 export const reportApi = {
   create: (data: any) => apiClient.post('/api/reports', data),
-  getDetail: (reservationId: string) => apiClient.get(`/api/reports/reservation/${reservationId}`), 
   getReportByReservationId: (reservationId: string) => apiClient.get(`/api/reports/reservation/${reservationId}`),
-  createWithPdf: (formData: FormData) => apiClient.post('/api/reports', formData),
+  createWithPdf: (formData: FormData) => apiClient.post('/api/reports', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+  }),
   updateWithPdf: (reportId: number, formData: FormData) => 
     apiClient.put(`/api/reports/${reportId}`, formData, {
       headers: {
@@ -76,8 +77,6 @@ export const adminApi = {
     apiClient.get(`/api/members/manager-applications?status=${status}`),
   approveManager: (memberId: number) => apiClient.patch(`/api/members/${memberId}/approve`),
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
-  rejectManager: (applicationId: number, data: { reason: string }) =>
-  apiClient.patch(`/api/members/applications/${applicationId}/reject`, data),
   rejectManagerApp: (id: number, data: { reason: string }) => 
     apiClient.patch(`/api/members/applications/${id}/reject`, data),
   getManagerStats: () => apiClient.get('/api/members/manager-applications/stats'),
@@ -228,5 +227,7 @@ export const popupApi = {
   
   // 어드민: 사용 여부(상태) 즉시 변경
   togglePopupStatus: (id: number, isActive: boolean) => 
-    apiClient.patch(`/api/admin/popups/${id}/status`, { isActive })
+    apiClient.patch(`/api/admin/popups/${id}/status`, { isActive }),
+
+  deletePopup: (id: number) => apiClient.delete(`/api/admin/popups/${id}`),
 };

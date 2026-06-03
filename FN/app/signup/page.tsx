@@ -111,25 +111,51 @@ export default function SignupPage() {
 
     try {
       setIsSendingEmail(true);
-      // 중복 체크 선행
+
+      // [1단계] 이메일 중복 체크 선행
       const checkRes = await authApi.checkEmail(formData.email);
-      const isAvailable = checkRes.data === true || checkRes.data?.isAvailable === true;
-      
+      const checkData = checkRes.data;
+      const isAvailable = checkData?.data === true || checkData === true;
+
       if (!isAvailable) {
-        YesAlert.fire({ icon: 'error', title: '사용 불가', text: '이미 가입된 이메일입니다.' });
-        return;
+        YesAlert.fire({ icon: 'warning', title: '이메일 중복', text: '이미 가입된 이메일입니다. 다른 이메일을 사용해 주세요.' });
+        return; // 여기서 로직이 멈추고 발송 API는 호출되지 않음
       }
       setIsEmailChecked(true);
 
-      // 인증번호 전송
+      // [2단계] 인증번호 전송
       await authApi.sendEmailCode(formData.email); 
       setIsEmailCodeSent(true);
       setEmailTimer(180);
       YesAlert.fire({ icon: 'success', title: '발송 완료', text: '이메일로 인증번호가 발송되었습니다.' });
-    } catch (error) {
-      YesAlert.fire({ icon: 'error', title: '발송 실패', text: '인증번호 발송에 실패했습니다.' });
+
+    } catch (error: any) {
+      console.error("이메일 처리 에러 상세:", error);
+      
+      const errData = error.response?.data;
+      let errorText = '서버 통신에 실패했습니다.';
+
+      if (errData) {
+        if (typeof errData === 'string') {
+          errorText = errData;
+        } else if (errData.message) {
+          errorText = errData.message;
+        } else if (errData.data?.message) {
+          errorText = errData.data.message;
+        } else {
+          errorText = JSON.stringify(errData);
+        }
+      }
+
+      // 최종 알림창 출력
+      if (errorText.includes('가입된')) {
+        YesAlert.fire({ icon: 'warning', title: '이메일 중복', text: '이미 가입된 이메일입니다.' });
+      } else {
+        YesAlert.fire({ icon: 'error', title: '오류 발생', text: errorText });
+      }
+      
     } finally {
-      setIsSendingEmail(false); // 무조건 로딩 끄기
+      setIsSendingEmail(false); 
     }
   };
 

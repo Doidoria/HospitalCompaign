@@ -43,7 +43,7 @@ public class MemberController {
     }
 
     @GetMapping("/check-email")
-    public ResponseEntity<Boolean> checkEmail(@RequestParam("email") String email) {
+    public ResponseEntity<?> checkEmail(@RequestParam("email") String email) {
         boolean isAvailable = memberService.isEmailAvailable(email);
         return ResponseEntity.ok(isAvailable);
     }
@@ -61,7 +61,7 @@ public class MemberController {
     }
 
     @PostMapping("/verify-password")
-    public ResponseEntity<Boolean> verifyPassword(@AuthenticationPrincipal String email, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> verifyPassword(@AuthenticationPrincipal String email, @RequestBody Map<String, String> request) {
         boolean isMatch = memberService.verifyPassword(email, request.get("password"));
         return ResponseEntity.ok(isMatch);
     }
@@ -149,7 +149,7 @@ public class MemberController {
     }
 
     @GetMapping("/managers/count")
-    public ResponseEntity<Long> getActiveManagerCount() {
+    public ResponseEntity<?> getActiveManagerCount() {
         return ResponseEntity.ok(managerService.getActiveManagerCount());
     }
 

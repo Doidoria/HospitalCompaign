@@ -12,7 +12,6 @@ export default function AdminPopupPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // 초기 설정 로드
-  // ✨ 수정된 코드
   useEffect(() => {
     popupApi.getPopupSettings().then(res => {
       setIsActive(res.data.isActive);
