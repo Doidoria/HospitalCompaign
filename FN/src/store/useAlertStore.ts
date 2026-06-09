@@ -1,3 +1,4 @@
+// src/store/useAlertStore.ts
 import { create } from 'zustand';
 
 interface AlertOptions {

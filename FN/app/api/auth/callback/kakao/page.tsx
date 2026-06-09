@@ -1,36 +1,45 @@
 // app/api/auth/callback/kakao/page.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/src/api/index'; 
 
-export default function KakaoCallbackPage() {
+// 실제 로직이 담긴 내부 컴포넌트
+function KakaoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get('code');
   
-  // 🚨 Strict Mode 더블 렌더링 방지용 Ref
   const isCalledRef = useRef(false);
 
   useEffect(() => {
     if (code && !isCalledRef.current) {
-      isCalledRef.current = true; // 스위치를 켜서 두 번째 실행 방지
+      isCalledRef.current = true; 
 
       authApi.loginWithKakao(code)
         .then((res: any) => {
-          const token = res.data.accessToken || res.data.token || res.data;
+          console.log("🚨 [디버깅] 카카오 응답 원본:", res);
+
+          const payload = res.data ? res.data : res;
+          
+          const token = 
+            payload?.accessToken || 
+            payload?.token || 
+            payload?.data?.accessToken || 
+            payload?.data?.token || 
+            (typeof payload === 'string' ? payload : null);
           
           if (token && typeof token === 'string') {
-            // 1. 클라이언트 사이드 보관 (기존 로직)
+            // 토큰 저장 (웹 + 라우팅 가드 완벽 대응)
             localStorage.setItem('accessToken', token);
-
-            // 2. Next.js 미들웨어(서버)가 읽을 수 있도록 쿠키에도 저장!
             document.cookie = `accessToken=${token}; path=/; max-age=86400; Secure; SameSite=Strict`;
 
-            console.log("카카오 로그인 성공! 토큰 저장 완료");
+            console.log("✅ 카카오 로그인 성공! 토큰 저장 완료");
             router.push('/mypage');
           } else {
+            // 실패 시 콘솔에 payload 구조를 찍어서 구조를 파악할 수 있게 함
+            console.error("❌ 토큰 추출 실패. payload 구조:", payload);
             throw new Error("유효한 토큰을 발급받지 못했습니다.");
           }
         })
@@ -43,10 +52,19 @@ export default function KakaoCallbackPage() {
   }, [code, router]);
 
   return (
+    <div className="text-lg font-semibold text-gray-600 animate-pulse">
+      카카오 로그인 처리 중...
+    </div>
+  );
+}
+
+// 최상위 Export 컴포넌트: Suspense로 감싸기
+export default function KakaoCallbackPage() {
+  return (
     <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-       <div className="text-lg font-semibold text-gray-600 animate-pulse">
-         카카오 로그인 처리 중...
-       </div>
+      <Suspense fallback={<div className="text-gray-500 animate-pulse">로딩 중...</div>}>
+        <KakaoCallbackContent />
+      </Suspense>
     </div>
   );
 }

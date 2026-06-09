@@ -25,6 +25,16 @@ export const authApi = {
   changePassword: (newPassword: string) => apiClient.put('/api/members/password', { newPassword }),
   updateMe: (data: any) => apiClient.put('/api/members/me', data),
   getManagerAppStatus: () => apiClient.get('/api/members/me/manager-application'),
+
+  // 토큰 재발급 API (HttpOnly 쿠키의 Refresh Token을 사용)
+  refreshToken: () => apiClient.post('/api/members/refresh'),
+  
+  // 로그아웃 (서버쪽 Refresh Token 무효화)
+  logout: () => apiClient.post('/api/members/logout'),
+
+  // Capacitor 푸시 알림용 디바이스 토큰 등록
+  registerDeviceToken: (fcmToken: string) => 
+    apiClient.post('/api/members/device-token', { token: fcmToken }),
 };
 
 // ==========================================
@@ -147,6 +157,15 @@ export const adminApi = {
   updateNotice: (id: number, data: { title: string; content: string; important: boolean }) => 
     apiClient.put(`/api/admin/notices/${id}`, data),
   deleteNotice: (id: number) => apiClient.delete(`/api/admin/notices/${id}`),
+
+  // 특정 예약에 대해 알림톡 재전송 (디버깅/CS용)
+  resendAlimtalk: (reservationId: number, type: 'RESERVATION' | 'ASSIGN' | 'REPORT') => 
+    apiClient.post(`/api/admin/reservations/${reservationId}/alimtalk`, { type }),
+};
+
+export const systemApi = {
+  getCheckStatus: () => apiClient.get('/api/system/status'),
+  toggleMaintenance: (maintenance: boolean) => apiClient.post('/api/system/admin/maintenance', { maintenance }),
 };
 
 export const managerApi = {

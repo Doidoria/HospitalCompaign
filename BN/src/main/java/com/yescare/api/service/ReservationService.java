@@ -32,6 +32,7 @@ public class ReservationService {
     private final MemberRepository memberRepository;
     private final ReviewRepository reviewRepository;
     private final ManagerRepository managerRepository;
+    private final KakaoAlimtalkService kakaoAlimtalkService;
 
     @Transactional
     public Long createReservation(String email, ReservationRequest request) {
@@ -78,6 +79,14 @@ public class ReservationService {
                 .build();
 
         reservationRepository.save(newReservation);
+
+        // 알림톡 발송
+        kakaoAlimtalkService.sendReservationComplete(
+                member.getPhoneNumber(),
+                request.getPatientName(),
+                request.getReservationTime().toString(),
+                request.getHospitalName()
+        );
         return newReservation.getId();
     }
 
@@ -154,6 +163,14 @@ public class ReservationService {
         // 매니저 배정 및 상태 변경 (CONFIRMED)
         reservation.assignManager(manager);
         reservation.updateStatus(ReservationStatus.CONFIRMED);
+
+        // 배정 알림톡
+        kakaoAlimtalkService.sendManagerAssigned(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getPatientName(),
+                manager.getName(),
+                reservation.getReservationTime().toString()
+        );
     }
 
     // 관리자 전용 매니저 강제 배정 취소 로직

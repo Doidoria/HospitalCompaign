@@ -1,10 +1,10 @@
 package com.yescare.api.dto;
 
 import com.yescare.api.domain.Reservation;
-import com.yescare.api.domain.ReservationStatus;
-import com.yescare.api.domain.Review;
 import lombok.Getter;
+
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Getter
 public class ReservationResponse {
@@ -13,13 +13,22 @@ public class ReservationResponse {
     private String patientPhone;
     private String guardianName;
     private String guardianPhone;
-    private String hospitalName;
+
+    // 렌더링용 가공 데이터 (BFF)
+    private String date;
+    private String time;
+    private String hospital;
+
+    // 원본/상세 모달용 데이터
     private LocalDateTime reservationTime;
+    private String hospitalName; // rawHospitalName 역할
+    private String meetingPoint; // 가공된 만나는 장소
+    private String rawMeetingPoint; // 모달 수정용 원본
+
     private String status;
     private String requirements;
     private String managerName;
     private String category;
-    private String meetingPoint;
     private String transportation;
     private String memo;
     private String mobility;
@@ -39,36 +48,53 @@ public class ReservationResponse {
         this.patientPhone = entity.getPatientPhone();
         this.guardianName = entity.getGuardianName();
         this.guardianPhone = entity.getGuardianPhone();
-        this.hospitalName = entity.getHospitalName();
+
+        // 1. 날짜/시간 포맷팅 (프론트엔드 렌더링용)
         this.reservationTime = entity.getReservationTime();
+        if (this.reservationTime != null) {
+            this.date = this.reservationTime.format(DateTimeFormatter.ofPattern("yyyy. MM. dd."));
+            this.time = this.reservationTime.format(DateTimeFormatter.ofPattern("a hh:mm"));
+        }
+
+        // 2. 병원명 가공 (/// 자르기)
+        this.hospitalName = entity.getHospitalName();
+        this.hospital = (this.hospitalName != null && this.hospitalName.contains("///"))
+                ? this.hospitalName.split("///")[0].trim()
+                : this.hospitalName;
+
+        // 3. 만나는 장소 가공
+        this.rawMeetingPoint = entity.getMeetingPoint();
+        this.meetingPoint = (this.rawMeetingPoint != null && !this.rawMeetingPoint.isBlank())
+                ? this.rawMeetingPoint.replace(" /// ", " ")
+                : "자택";
+
         this.status = entity.getStatus().name();
         this.requirements = entity.getRequirements();
-        this.managerName = entity.getManager() != null ? entity.getManager().getName() : "-";
         this.category = entity.getCategory();
-        this.meetingPoint = entity.getMeetingPoint();
         this.transportation = entity.getTransportation();
         this.memo = entity.getMemo();
         this.mobility = entity.getMobility();
         this.detailedContent = entity.getDetailedContent();
         this.doctorInquiry = entity.getDoctorInquiry();
-        this.patientAddress = entity.getMember().getAddress();
+        this.patientAddress = entity.getMember() != null ? entity.getMember().getAddress() : "";
         this.hasProxy = entity.getHasProxy() != null ? entity.getHasProxy() : false;
         this.noRevisit = entity.getNoRevisit() != null ? entity.getNoRevisit() : false;
         this.revisitCount = entity.getRevisitCount();
 
-        if (entity.getReview() != null) {
-            this.reviewRating = entity.getReview().getRating();
-            this.reviewComment = entity.getReview().getComment();
-        }
-
-        // 매니저가 배정된 경우 반드시 ID와 이름을 가져옴
+        // 매니저 처리 로직 강화
         if (entity.getManager() != null) {
             this.managerId = entity.getManager().getId();
             this.managerName = entity.getManager().getName();
+        } else if ("CONFIRMED".equals(this.status) || "COMPLETED".equals(this.status)) {
+            this.managerName = "배정완료";
+        } else {
+            this.managerName = "-";
         }
 
+        // 리뷰 세팅 (중복 제거 완료)
         if (entity.getReview() != null) {
             this.reviewRating = entity.getReview().getRating();
+            this.reviewComment = entity.getReview().getComment();
         }
     }
 }

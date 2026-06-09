@@ -19,6 +19,7 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final ReservationRepository reservationRepository;
     private final EmailService emailService;
+    private final KakaoAlimtalkService kakaoAlimtalkService;
 
     @Transactional
     public Long createReport(ReportRequest request, MultipartFile pdfFile) {
@@ -72,6 +73,11 @@ public class ReportService {
                 false // 신규 작성이므로 false 전달
         );
 
+        // 리포트 발송 완료 알림톡
+        kakaoAlimtalkService.sendReportCompleted(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getPatientName()
+        );
         return report.getId();
     }
 

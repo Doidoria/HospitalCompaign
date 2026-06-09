@@ -180,25 +180,22 @@ export default function ReservationTab({
       
       const content = res.data?.content || [];
 
-      // 필터링 등으로 현재 페이지 결과가 0개가 되면 이전 페이지로 자동 보정
       if (content.length === 0 && page > 0) {
         setCurrentPage(prev => prev - 1);
-        return;
+        return; 
       }
 
-      const formattedData = content.map((r: any): Reservation => {
-        const dateObj = new Date(r.reservationTime);
-        return {
-          id: r.id, 
-          date: dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-          time: dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-          patient: r.patientName,
-          hospital: r.hospitalName,
-          status: r.status, 
-          manager: r.managerName || (r.status === 'CONFIRMED' ? '배정완료' : '-'),
-          raw: r
-        };
-      });
+      // 백엔드 BFF 구조에 맞춤
+      const formattedData = content.map((r: any): Reservation => ({
+        id: r.id,
+        date: r.date,
+        time: r.time,
+        patient: r.patient,
+        hospital: r.hospital,
+        status: r.status,
+        manager: r.manager,
+        raw: r
+      }));
       
       setReservations(formattedData);
       setTotalPages(res.data?.totalPages || 0);

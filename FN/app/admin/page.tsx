@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { adminApi, reservationApi } from '@/src/api/index';
+import { adminApi, reservationApi, systemApi } from '@/src/api/index';
 import { User, Mail, Phone, ShieldCheck, Home } from 'lucide-react';
 import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
 
@@ -47,6 +47,9 @@ export default function AdminDashboardPage() {
   // 배정 완료 후 ReservationTab을 즉시 새로고침하기 위한 리프레시 키
   const [reservationRefreshKey, setReservationRefreshKey] = useState(0);
 
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
@@ -85,6 +88,53 @@ export default function AdminDashboardPage() {
     };
     loadGlobalData();
   }, [activeTab]);
+
+  // 초기 점검 상태 로드
+  useEffect(() => {
+    const checkMaintenanceStatus = async () => {
+      try {
+        const res = await systemApi.getCheckStatus();
+        setIsMaintenance(res.data.maintenance);
+      } catch (e) {
+        console.error("점검 상태 로드 실패", e);
+      }
+    };
+    checkMaintenanceStatus();
+  }, []);
+
+  // 토글 버튼 핸들러
+  const handleToggleMaintenance = async () => {
+    const targetStatus = !isMaintenance;
+    const confirmText = targetStatus 
+      ? "시스템 점검 모드를 활성화하시겠습니까?<br/><span class='text-red-500 font-bold'>일반 사용자의 접근이 전면 차단됩니다.</span>" 
+      : "시스템 점검 모드를 해제하고 서비스를 정상화하시겠습니까?";
+
+    const result = await YesAlert.fire({
+      title: '시스템 상태 변경',
+      html: confirmText,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '변경 적용',
+      cancelButtonText: '취소'
+    });
+
+    if (result.isConfirmed) {
+      setIsToggling(true);
+      try {
+        await systemApi.toggleMaintenance(targetStatus);
+        setIsMaintenance(targetStatus);
+        Toast.fire({
+          icon: 'success',
+          title: targetStatus ? '점검 모드 활성화 완료' : '서비스 정상화 완료',
+          timer: 1500,
+        });
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '실패', html: '상태 변경에 실패했습니다.' });
+      } finally {
+        setIsToggling(false);
+      }
+    }
+  };
 
   const handleOpenDetail = async (id: number) => {
     setSelectedRequest(null); 
@@ -312,9 +362,31 @@ export default function AdminDashboardPage() {
       <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden pb-24 lg:pb-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex flex-col gap-6">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
-              {getPageTitle()}
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+                {getPageTitle()}
+              </h1>
+              
+              {/* 시스템 점검 토글 스위치 UI */}
+              <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm self-start sm:self-auto">
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-bold text-slate-700">서비스 점검 모드</span>
+                  <span className={`text-[10px] font-black ${isMaintenance ? 'text-red-500' : 'text-emerald-500'}`}>
+                    {isMaintenance ? '● 서비스 중단중' : '○ 정상 운영중'}
+                  </span>
+                </div>
+                <button onClick={handleToggleMaintenance} disabled={isToggling}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 focus:outline-none ${
+                    isMaintenance ? 'bg-red-500' : 'bg-slate-200'
+                  }`}
+                >
+                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+                      isMaintenance ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">

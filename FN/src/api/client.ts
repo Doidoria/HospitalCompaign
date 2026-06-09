@@ -36,7 +36,7 @@ apiClient.interceptors.request.use(
 
 let isAlertOpen = false; 
 
-// 2. 응답 인터셉터: 🌟 개발자님의 원래 훌륭한 코드로 완전 원상 복구!
+// 2. 응답 인터셉터
 apiClient.interceptors.response.use(
   (response) => {
     const resData = response.data;
@@ -51,10 +51,17 @@ apiClient.interceptors.response.use(
       }
     }
     
-    return response; // 🌟 핵심: 알맹이가 아닌 response 전체를 리턴!
+    return response; // 핵심: 알맹이가 아닌 response 전체를 리턴!
   },
   (error) => {
     const originalRequestUrl = error.config?.url;
+
+    // 만약 점검중 상태인데 일반 유저가 API를 호출해 에러가 났다면 점검 페이지로 리다이렉트
+    if (error.response?.status === 503 || error.response?.data?.message?.includes("점검")) {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/maintenance';
+      }
+    }
 
     if (error.response?.status === 401 && originalRequestUrl && !originalRequestUrl.includes('/login')) {
       if (typeof window !== 'undefined') {
