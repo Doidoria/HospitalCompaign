@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 @Service
 public class SmsService {
@@ -29,11 +26,19 @@ public class SmsService {
 
     private DefaultMessageService messageService;
 
-    // 인증번호를 임시 저장할 메모리 저장소 (Key: 전화번호, Value: 인증번호)
+    // 1. 인증번호 저장소
     private final Map<String, String> verificationCodes = new ConcurrentHashMap<>();
 
-    // 클래스 레벨에 미리 선언하여 재사용
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    // 2. 어뷰징 방어(쿨타임)를 위한 마지막 전송 시간 저장소
+    private final Map<String, Long> lastRequestTimes = new ConcurrentHashMap<>();
+
+    // 3. 기존 타이머가 겹치지 않게 관리하는 저장소
+    private final Map<String, ScheduledFuture<?>> expiryTasks = new ConcurrentHashMap<>();
+
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+    // 쿨타임 제한 (예: 1분 = 60000 밀리초)
+    private static final long COOLDOWN_MILLIS = 60000;
 
     @PostConstruct
     public void init() {
@@ -60,7 +65,18 @@ public class SmsService {
 //    }
 
     public void sendVerificationCode(String phoneNumber) {
-        String code = String.format("%06d", new Random().nextInt(999999));
+        long currentTime = System.currentTimeMillis();
+
+        // 🚨 [보안] 쿨타임 체크 로직 (1분 내 재요청 방어)
+        if (lastRequestTimes.containsKey(phoneNumber)) {
+            long timePassed = currentTime - lastRequestTimes.get(phoneNumber);
+            if (timePassed < COOLDOWN_MILLIS) {
+                long timeLeft = (COOLDOWN_MILLIS - timePassed) / 1000;
+                throw new IllegalStateException("인증번호 요청이 너무 잦습니다. " + timeLeft + "초 후에 다시 시도해주세요.");
+            }
+        }
+
+        String code = String.format("%06d", new Random().nextInt(1000000));
 
         Message message = new Message();
         message.setFrom(senderNumber);
@@ -68,27 +84,40 @@ public class SmsService {
         message.setText("[예스케어] 본인확인 인증번호는 [" + code + "] 입니다. 3분 내에 입력해주세요.");
 
         try {
-            // 실제 솔라피 서버로 전송
             this.messageService.sendOne(new SingleMessageSendingRequest(message));
+
+            // 발송이 성공해야만 쿨타임 저장
+            lastRequestTimes.put(phoneNumber, currentTime);
+            verificationCodes.put(phoneNumber, code);
+
+            // 사용자가 재전송을 누른 경우, 예전 타이머 취소 (안 그러면 새 인증번호도 3분 전에 지워짐)
+            if (expiryTasks.containsKey(phoneNumber)) {
+                expiryTasks.get(phoneNumber).cancel(false);
+            }
+
+            // 새로운 3분 타이머 등록
+            ScheduledFuture<?> task = scheduler.schedule(() -> {
+                verificationCodes.remove(phoneNumber);
+                expiryTasks.remove(phoneNumber);
+            }, 3, TimeUnit.MINUTES);
+
+            expiryTasks.put(phoneNumber, task);
+
         } catch (Exception e) {
             System.out.println("SMS 발송 실패: " + e.getMessage());
-            throw new RuntimeException("문자 발송 중 오류가 발생했습니다.");
+            throw new RuntimeException("문자 발송 중 오류가 발생했습니다. 번호를 확인해주세요.");
         }
-
-        // 3. 검증을 위해 메모리에 저장
-        verificationCodes.put(phoneNumber, code);
-
-        // 4. 3분 뒤 삭제 로직 유지
-        scheduler.schedule(() -> {
-            verificationCodes.remove(phoneNumber);
-        }, 3, TimeUnit.MINUTES);
     }
 
-    // 2. 인증번호 검증
     public boolean verifyCode(String phoneNumber, String code) {
         String savedCode = verificationCodes.get(phoneNumber);
         if (savedCode != null && savedCode.equals(code)) {
-            verificationCodes.remove(phoneNumber); // 인증 성공 시 즉시 삭제
+            // 인증 성공 시 즉시 데이터 파기 (타이머도 취소하여 메모리 절약)
+            verificationCodes.remove(phoneNumber);
+            if (expiryTasks.containsKey(phoneNumber)) {
+                expiryTasks.get(phoneNumber).cancel(false);
+                expiryTasks.remove(phoneNumber);
+            }
             return true;
         }
         return false;

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,10 +82,12 @@ public class ReservationService {
         reservationRepository.save(newReservation);
 
         // 알림톡 발송
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+
         kakaoAlimtalkService.sendReservationComplete(
                 member.getPhoneNumber(),
                 request.getPatientName(),
-                request.getReservationTime().toString(),
+                request.getReservationTime().format(formatter),
                 request.getHospitalName()
         );
         return newReservation.getId();
@@ -164,12 +167,13 @@ public class ReservationService {
         reservation.assignManager(manager);
         reservation.updateStatus(ReservationStatus.CONFIRMED);
 
-        // 배정 알림톡
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+
         kakaoAlimtalkService.sendManagerAssigned(
                 reservation.getMember().getPhoneNumber(),
                 reservation.getPatientName(),
                 manager.getName(),
-                reservation.getReservationTime().toString()
+                reservation.getReservationTime().format(formatter)
         );
     }
 

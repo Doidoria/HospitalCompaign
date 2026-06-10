@@ -19,15 +19,24 @@ public class KakaoAlimtalkService {
 
     @Value("${coolsms.api.key}")
     private String apiKey;
-
     @Value("${coolsms.api.secret}")
     private String apiSecret;
-
     @Value("${coolsms.sender}")
-    private String senderNumber; // 솔라피에 등록된 발신번호
+    private String senderNumber;
 
-    // 카카오 채널(플러스친구) 연동 시 솔라피에서 발급해주는 고유 PF ID (미리 비워두기)
-    private final String PF_ID = "KA0123456789";
+    // 🚀 application.yml에서 ID 값들을 주입받음 (하드코딩 제거!)
+    @Value("${coolsms.kakao.pf-id}")
+    private String pfId;
+    @Value("${coolsms.kakao.template.reservation-complete}")
+    private String tplReservationComplete;
+    @Value("${coolsms.kakao.template.manager-assigned}")
+    private String tplManagerAssigned;
+    @Value("${coolsms.kakao.template.inquiry-answered}")
+    private String tplInquiryAnswered;
+    @Value("${coolsms.kakao.template.join-complete}")
+    private String tplJoinComplete;
+    @Value("${coolsms.kakao.template.report-completed}")
+    private String tplReportCompleted;
 
     private DefaultMessageService messageService;
 
@@ -36,83 +45,79 @@ public class KakaoAlimtalkService {
         this.messageService = NurigoApp.INSTANCE.initialize(apiKey, apiSecret, "https://api.coolsms.co.kr");
     }
 
-    @Async
-    public void sendReservationComplete(String phoneNumber, String patientName, String date, String hospitalName) {
+    // 공통 알림톡 발송 모듈
+    private void sendAlimtalk(String to, String text, String templateId, HashMap<String, String> variables) {
         try {
-            HashMap<String, String> variables = new HashMap<>();
-            variables.put("#{환자명}", patientName);
-            variables.put("#{예약일}", date);
-            variables.put("#{병원명}", hospitalName);
-
             KakaoOption kakaoOption = new KakaoOption();
-            kakaoOption.setPfId(PF_ID);
-            kakaoOption.setTemplateId("TEMPLATE_ID_WAITING_FOR_APPROVAL");
+            kakaoOption.setPfId(pfId); // yml에서 가져온 진짜 채널 ID
+            kakaoOption.setTemplateId(templateId); // yml에서 가져온 진짜 템플릿 ID
             kakaoOption.setVariables(variables);
 
             Message message = new Message();
-            message.setTo(phoneNumber.replace("-", ""));
+            message.setTo(to.replace("-", ""));
             message.setFrom(senderNumber.replace("-", ""));
             message.setKakaoOptions(kakaoOption);
-            message.setText("[예스케어] " + patientName + "님의 예약이 접수되었습니다.");
+            message.setText(text); // 카카오톡 실패 시 대체 발송될 문자(SMS) 내용
 
             messageService.sendOne(new SingleMessageSendingRequest(message));
-            log.info("✅ 예약 접수 알림톡 발송 성공: {}", phoneNumber);
-
+            log.info("✅ 알림톡 API 전송 완료 (템플릿: {}, 수신자: {})", templateId, to);
         } catch (Exception e) {
-            log.error("❌ 예약 접수 알림톡 발송 실패 (수신번호: {}): {}", phoneNumber, e.getMessage());
+            log.error("❌ 알림톡 API 전송 실패 (수신자: {}): {}", to, e.getMessage());
         }
     }
 
+    // 1. 예약 접수 완료 (제공된 변수 적용: #{환자명}, #{예약일시}, #{병원명})
     @Async
-    public void sendManagerAssigned(String phoneNumber, String patientName, String managerName, String date) {
-        try {
-            HashMap<String, String> variables = new HashMap<>();
-            variables.put("#{환자명}", patientName);
-            variables.put("#{매니저명}", managerName);
-            variables.put("#{예약일}", date);
+    public void sendReservationComplete(String phoneNumber, String patientName, String datetime, String hospitalName) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{환자명}", patientName);
+        variables.put("#{예약일시}", datetime);
+        variables.put("#{병원명}", hospitalName);
 
-            KakaoOption kakaoOption = new KakaoOption();
-            kakaoOption.setPfId(PF_ID);
-            kakaoOption.setTemplateId("TEMPLATE_ID_WAITING_FOR_APPROVAL");
-            kakaoOption.setVariables(variables);
-
-            Message message = new Message();
-            message.setTo(phoneNumber.replace("-", ""));
-            message.setFrom(senderNumber.replace("-", ""));
-            message.setKakaoOptions(kakaoOption);
-            message.setText("[예스케어] " + patientName + "님의 예약에 매니저 배정이 완료되었습니다.");
-
-            messageService.sendOne(new SingleMessageSendingRequest(message));
-            log.info("✅ 매니저 배정 알림톡 발송 성공: {}", phoneNumber);
-
-        } catch (Exception e) {
-            log.error("❌ 매니저 배정 알림톡 발송 실패: {}", e.getMessage());
-        }
+        String text = "[예스케어] " + patientName + "님의 예약이 정상 접수되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplReservationComplete, variables);
     }
 
+    // 2. 매니저 배정 완료 (제공된 변수 적용: #{환자명}, #{예약일시}, #{매니저명})
+    @Async
+    public void sendManagerAssigned(String phoneNumber, String patientName, String managerName, String datetime) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{환자명}", patientName);
+        variables.put("#{매니저명}", managerName);
+        variables.put("#{예약일시}", datetime);
+
+        String text = "[예스케어] " + patientName + "님의 동행 매니저가 배정되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplManagerAssigned, variables);
+    }
+
+    // 3. 1:1 문의 답변 완료 (제공된 변수 적용: #{고객명}, #{문의제목})
+    @Async
+    public void sendInquiryAnswered(String phoneNumber, String customerName, String title) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{문의제목}", title);
+
+        String text = "[예스케어] " + customerName + "님, 문의하신 내역에 답변이 등록되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplInquiryAnswered, variables);
+    }
+
+    // 4. 회원가입 환영 알림 (제공된 변수 적용: #{고객명})
+    @Async
+    public void sendJoinComplete(String phoneNumber, String customerName) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+
+        String text = "[예스케어] " + customerName + "님, 예스케어의 회원이 되신 것을 환영합니다!";
+        sendAlimtalk(phoneNumber, text, tplJoinComplete, variables);
+    }
+
+    // 5. 케어 리포트 작성 완료 (제공된 변수 적용: #{환자명})
     @Async
     public void sendReportCompleted(String phoneNumber, String patientName) {
-        try {
-            HashMap<String, String> variables = new HashMap<>();
-            variables.put("#{환자명}", patientName);
-            variables.put("#{마이페이지링크}", "https://yescare.com/mypage");
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{환자명}", patientName);
 
-            KakaoOption kakaoOption = new KakaoOption();
-            kakaoOption.setPfId(PF_ID);
-            kakaoOption.setTemplateId("TEMPLATE_ID_WAITING_FOR_APPROVAL");
-            kakaoOption.setVariables(variables);
-
-            Message message = new Message();
-            message.setTo(phoneNumber.replace("-", ""));
-            message.setFrom(senderNumber.replace("-", ""));
-            message.setKakaoOptions(kakaoOption);
-            message.setText("[예스케어] " + patientName + "님의 케어 리포트 작성이 완료되었습니다.");
-
-            messageService.sendOne(new SingleMessageSendingRequest(message));
-            log.info("✅ 케어 리포트 알림톡 발송 성공: {}", phoneNumber);
-
-        } catch (Exception e) {
-            log.error("❌ 케어 리포트 알림톡 발송 실패: {}", e.getMessage());
-        }
+        String text = "[예스케어] " + patientName + "님의 케어 리포트 작성이 완료되었습니다. 마이페이지에서 확인해 주세요.";
+        sendAlimtalk(phoneNumber, text, tplReportCompleted, variables);
     }
 }

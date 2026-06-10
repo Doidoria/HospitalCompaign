@@ -21,6 +21,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
+    private final KakaoAlimtalkService kakaoAlimtalkService;
 
     @Transactional
     public Long join(MemberJoinRequest request) {
@@ -43,6 +44,8 @@ public class MemberService {
                 .build();
 
         memberRepository.save(newMember);
+        // 회원가입 성공 시 알림톡 발송
+        kakaoAlimtalkService.sendJoinComplete(newMember.getPhoneNumber(), newMember.getName());
         return newMember.getId();
     }
 

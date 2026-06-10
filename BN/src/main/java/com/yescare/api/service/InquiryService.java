@@ -32,6 +32,7 @@ public class InquiryService {
     private final InquiryRepository inquiryRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
+    private final KakaoAlimtalkService kakaoAlimtalkService;
 
     // 1:1 문의 전용 이미지 제한 용량 (5MB)
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -163,6 +164,13 @@ public class InquiryService {
 
         // 엔티티 내부에 만들어둔 비즈니스 메서드 호출 (더티 체킹으로 자동 UPDATE 쿼리 발생)
         inquiry.addAnswer(answer);
+
+        // 답변 완료 시 알림톡 발송
+        kakaoAlimtalkService.sendInquiryAnswered(
+                inquiry.getMember().getPhoneNumber(),
+                inquiry.getMember().getName(),
+                inquiry.getTitle()
+        );
     }
 
     // 비밀번호 확인 로직

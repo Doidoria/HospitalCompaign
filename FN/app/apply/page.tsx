@@ -215,7 +215,9 @@ export default function ApplyPage() {
         meetingPoint: finalMeetingPoint,
         transportation: basicExtraData.transportation,
         mobility: basicExtraData.mobility,
-        requirements: formData.memo || undefined,
+        // 수정된 부분: 백엔드 DTO에 맞게 분리
+        memo: formData.memo || undefined,             // 보호자 특별 요청사항
+        requirements: formData.requirements || undefined, // 만약 따로 쓰는 요구사항이 없다면 생략 가능
         detailedContent: combinedDetailedContent,
         doctorInquiry: formData.doctorInquiry || undefined
       };

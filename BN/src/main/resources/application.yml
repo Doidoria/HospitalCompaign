@@ -1,3 +1,4 @@
+# application.yml
 server:
   port: 8081
 
@@ -67,3 +68,12 @@ coolsms:
     key: ${COOLSMS_API_KEY}
     secret: ${COOLSMS_API_SECRET}
   sender: ${COOLSMS_SENDER}
+  kakao:
+    pf-id: TEST_PF_ID_1234 # 승인 후 카카오 플러스친구 ID로 교체
+    template:
+      reservation-complete: TEST_TPL_RESERVATION # 예약 접수 완료 템플릿 ID
+      manager-assigned: TEST_TPL_ASSIGN        # 매니저 배정 완료 템플릿 ID
+      inquiry-answered: TEST_TPL_INQUIRY       # 1:1 문의 답변 완료 템플릿 ID
+      join-complete: TEST_TPL_JOIN             # 회원가입 완료 템플릿 ID
+      report-completed: TEST_TPL_REPORT
+      # 필요시 여기에 취소, 변경 등의 템플릿 ID를 계속 추가
