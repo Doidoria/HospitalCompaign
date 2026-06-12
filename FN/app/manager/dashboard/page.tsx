@@ -1,16 +1,16 @@
-// app/manager/dashboard/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { 
   CalendarDays, Activity, CheckCircle2, MapPin, FileText, X, CalendarPlus, XCircle, Star,
-  Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight, UserCog 
+  Search, ChevronLeft as PageLeft, ChevronRight as PageRight, RefreshCw, ChevronRight, UserCog,
+  PlayCircle, CheckSquare, PlusCircle, CreditCard
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
+import { Toast, YesAlert } from '@/src/utils/alert';
 import Link from 'next/link';
-import Swal from 'sweetalert2';
 
 const formatDateTime = (dateString: string) => {
   const dateObj = new Date(dateString);
@@ -34,6 +34,10 @@ export default function ManagerDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [extraChargeData, setExtraChargeData] = useState({ amount: '', reason: '' });
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState<number>(0);
+  const [isExtraChargeModalOpen, setIsExtraChargeModalOpen] = useState(false);
+  const [selectedExtraChargeId, setSelectedExtraChargeId] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -66,7 +70,8 @@ export default function ManagerDashboard() {
 
       const meRes = await authApi.getMe();
       if (meRes.data.role !== 'MANAGER' && meRes.data.role !== 'ADMIN') {
-        Swal.fire({ icon: 'error', title: '접근 제한', text: '매니저 전용 페이지입니다.' });
+        // 🚨 text -> html 속성으로 변경, Swal -> YesAlert 로 변경
+        YesAlert.fire({ icon: 'error', title: '접근 제한', html: '매니저 전용 페이지입니다.' });
         router.push('/');
         return;
       }
@@ -87,7 +92,131 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     fetchDashboardData(true);
-  }, [router]);
+  }, [fetchDashboardData]);
+
+  // 동행 시작 핸들러
+  const handleStartAccompany = async (id: number) => {
+    const result = await YesAlert.fire({
+      title: '동행을 시작하시겠습니까?',
+      html: '보호자에게 동행 시작 알림톡이 발송됩니다.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      confirmButtonText: '네, 시작합니다',
+      cancelButtonText: '취소'
+    });
+
+    if (result && result.isConfirmed) {
+      try {
+        await reservationApi.startAccompany(id);
+        Toast.fire({ icon: 'success', title: '동행이 시작되었습니다.' });
+        fetchDashboardData(false);
+      } catch (e) {
+        YesAlert.fire({ icon: 'error', title: '오류', html: '상태 변경에 실패했습니다.' });
+      }
+    }
+  };
+
+  // 동행 완료 핸들러
+  const handleCompleteAccompany = async (id: number) => {
+    const result = await YesAlert.fire({
+      title: '동행을 완료하시겠습니까?',
+      html: '보호자에게 동행 종료 알림톡이 발송됩니다.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3b82f6',
+      confirmButtonText: '네, 완료합니다',
+      cancelButtonText: '취소'
+    });
+
+    if (result && result.isConfirmed) {
+      try {
+        await reservationApi.completeAccompany(id);
+        Toast.fire({ icon: 'success', title: '동행이 완료되었습니다. 케어 리포트를 작성해주세요!' });
+        fetchDashboardData(false);
+      } catch (e) {
+        YesAlert.fire({ icon: 'error', title: '오류', html: '상태 변경에 실패했습니다.' });
+      }
+    }
+  };
+
+  // 예스케어 추가 요금 정책 가이드 상수
+  const EXTRA_CHARGE_PRESETS = [
+    { label: '시간 초과 (30분)', amount: 8000, reason: '시간 초과 (30분)' },
+    { label: '시간 초과 (60분)', amount: 16000, reason: '시간 초과 (60분)' },
+    { label: '시간 초과 (90분)', amount: 24000, reason: '시간 초과 (90분)' },
+    { label: '시간 초과 (120분)', amount: 32000, reason: '시간 초과 (120분)' },
+    { label: '주말 / 공휴일 할증', amount: 5000, reason: '주말/공휴일 할증 부과' },
+    { label: '야간 할증 (18시 이후)', amount: 5000, reason: '야간 할증 (18시 이후) 부과' },
+    { label: '기타 (직접 입력)', amount: 0, reason: '' }
+  ];
+
+  // 중복 선택을 위한 상태 관리
+  const [chargeState, setChargeState] = useState({
+    timeCount: 0, // 30분 단위 카운트
+    isWeekend: false, // 주말 할증
+    isNight: false, // 야간 할증
+    customAmount: '', // 기타 직접 입력 금액
+    customReason: ''  // 기타 사유
+  });
+
+  const calculatedCharge = useMemo(() => {
+    let total = chargeState.timeCount * 8000;
+    if (chargeState.isWeekend) total += 5000;
+    if (chargeState.isNight) total += 5000;
+    
+    const customNum = parseInt(chargeState.customAmount.replace(/,/g, ''), 10);
+    if (!isNaN(customNum) && customNum > 0) total += customNum;
+
+    const reasons = [];
+    if (chargeState.timeCount > 0) reasons.push(`시간 연장(${chargeState.timeCount * 30}분)`);
+    if (chargeState.isWeekend) reasons.push('주말/공휴일 할증');
+    if (chargeState.isNight) reasons.push('야간 할증');
+    if (chargeState.customReason.trim()) reasons.push(chargeState.customReason.trim());
+
+    return { amount: total, reason: reasons.join(', ') };
+  }, [chargeState]);
+
+  // 서밋 핸들러
+  const submitExtraCharge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedExtraChargeId) return;
+
+    if (calculatedCharge.amount <= 0) {
+      YesAlert.fire({ icon: 'warning', title: '입력 오류', html: '추가할 요금 항목을 선택해주세요.' });
+      return;
+    }
+
+    try {
+      await reservationApi.addExtraCharge(selectedExtraChargeId, {
+        amount: calculatedCharge.amount,
+        reason: calculatedCharge.reason
+      });
+
+      Toast.fire({ icon: 'success', title: '추가 요금이 정상적으로 청구되었습니다.' });
+      setIsExtraChargeModalOpen(false);
+      // 상태 초기화
+      setChargeState({ timeCount: 0, isWeekend: false, isNight: false, customAmount: '', customReason: '' });
+      fetchDashboardData(false);
+    } catch (error) {
+      YesAlert.fire({ icon: 'error', title: '오류', html: '추가 요금 등록에 실패했습니다.' });
+    }
+  };
+
+  // 프리셋 선택 시 금액과 사유를 자동 세팅하는 핸들러
+  const handlePresetChange = (index: number) => {
+    setSelectedPresetIndex(index);
+    const preset = EXTRA_CHARGE_PRESETS[index];
+    
+    if (preset.label === '기타 (직접 입력)') {
+      setExtraChargeData({ amount: '', reason: '' });
+    } else {
+      setExtraChargeData({ 
+        amount: preset.amount.toLocaleString(), 
+        reason: preset.reason 
+      });
+    }
+  };
 
   const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
   const itemVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } };
@@ -175,7 +304,6 @@ export default function ManagerDashboard() {
 
         {/* 탭 2(나의 일정) */}
         <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-4">
-          {/* 상단 타이틀 */}
           <div className="flex items-center gap-2 mb-2 px-2">
             <CalendarDays className="w-5 h-5 text-emerald-600" />
             <h2 className="text-lg font-bold text-slate-800">나의 배정 일정 <span className="text-emerald-600 ml-1">{activeData.length}</span>건</h2>
@@ -192,7 +320,10 @@ export default function ManagerDashboard() {
               </div>
             ) : (
               currentItems.map((req) => {
+                console.log("예약번호", req.id, "의 백엔드 데이터:", req);
                 const { date, time } = formatDateTime(req.reservationTime);
+                const isConfirmed = req.status === 'CONFIRMED' || req.status === '예약 확정';
+                const isInProgress = req.status === 'IN_PROGRESS' || req.status === '동행 진행 중';
                 const isCompleted = req.status === 'COMPLETED' || req.status === '이용 완료';
                 
                 return (
@@ -201,15 +332,16 @@ export default function ManagerDashboard() {
                       isCompleted ? 'border-slate-200/60 opacity-85' : 'border-emerald-100'
                     }`}>
                     
-                    {/* 예약 확정일 경우 좌측에 살짝 포인트 컬러 바 */}
                     {!isCompleted && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>}
 
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <span className={`inline-block px-3 py-1.5 text-[11px] font-bold rounded-lg tracking-wide mb-3 border ${
-                          isCompleted ? 'bg-slate-50 text-slate-500 border-slate-200/60' : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                          isCompleted ? 'bg-slate-50 text-slate-500 border-slate-200/60' : 
+                          isInProgress ? 'bg-orange-50 text-orange-600 border-orange-100/50' :
+                          'bg-emerald-50 text-emerald-600 border-emerald-100/50'
                         }`}>
-                          {isCompleted ? '이용 완료' : '예약 확정'}
+                          {isCompleted ? '이용 완료' : isInProgress ? '동행 진행 중' : '예약 확정'}
                         </span>
                         <h3 className="text-xl font-extrabold text-slate-800">{req.patientName} 환자님</h3>
                       </div>
@@ -230,19 +362,46 @@ export default function ManagerDashboard() {
                         상세 정보 보기
                       </button>
                       
-                      {!isCompleted ? (
-                        <Link href={`/manager/report/${req.id}`} 
-                          className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-[0_2px_4px_rgb(59,130,246,0.1)] flex items-center justify-center gap-1.5">
-                          <FileText className="w-4 h-4" /> 케어 리포트 작성
-                        </Link>
-                      ) : (
-                        <>
-                          <Link href={`/manager/report/${req.id}`} 
-                            className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-indigo-200/60 shadow-[0_2px_4px_rgb(79,70,229,0.1)] flex items-center justify-center gap-1.5">
-                            <FileText className="w-4 h-4" /> 조회/수정
-                          </Link>
+                      {isConfirmed && (
+                        <button onClick={() => handleStartAccompany(req.id)}
+                          className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-emerald-200/60 shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                          <PlayCircle className="w-4 h-4" /> 동행 시작
+                        </button>
+                      )}
 
-                          {/* 3. 재방문 관련 버튼들 */}
+                      {isInProgress && (
+                    <>
+                      <button onClick={() => { setSelectedExtraChargeId(req.id); setIsExtraChargeModalOpen(true); }}
+                        className={`flex-1 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98] ${
+                          req.extraChargeAmount 
+                            ? 'bg-purple-50 hover:bg-purple-100 text-purple-600 border-purple-200/60' 
+                            : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200/60'
+                        }`}
+                      >
+                        <PlusCircle className="w-4 h-4" /> 
+                        {req.extraChargeAmount ? '추가 요금 수정' : '추가 요금'}
+                      </button>
+                      
+                      <button onClick={() => handleCompleteAccompany(req.id)}
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                        <CheckSquare className="w-4 h-4" /> 동행 완료
+                      </button>
+                    </>
+                  )}
+                      
+                      {isCompleted && (
+                        <>
+                          {req.hasReport ? (
+                            <Link href={`/manager/report/${req.id}`} 
+                              className="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-indigo-200/60 shadow-sm flex items-center justify-center gap-1.5">
+                              <FileText className="w-4 h-4" /> 리포트 조회/수정
+                            </Link>
+                          ) : (
+                            <Link href={`/manager/report/${req.id}`} 
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-colors text-center text-sm shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                              <FileText className="w-4 h-4" /> 케어 리포트 작성
+                            </Link>
+                          )}
                           {req.noRevisit ? (
                             <button disabled className="flex-1 bg-slate-50 text-slate-400 font-bold py-3.5 rounded-xl text-center text-sm border border-slate-200/60 flex items-center justify-center gap-1.5 cursor-not-allowed">
                               <XCircle className="w-4 h-4" /> 재방문 없음
@@ -265,7 +424,7 @@ export default function ManagerDashboard() {
                       {req.reviewRating && (
                         <button 
                           onClick={() => {
-                            Swal.fire({
+                            YesAlert.fire({
                               title: '고객님의 소중한 후기',
                               html: `
                                 <div style="margin-top: -5px;">
@@ -278,8 +437,7 @@ export default function ManagerDashboard() {
                                 </div>
                               `,
                               confirmButtonText: '확인',
-                              confirmButtonColor: '#1e293b',
-                              customClass: { popup: 'rounded-[32px]' }
+                              confirmButtonColor: '#1e293b'
                             });
                           }}
                           className="flex-1 sm:flex-none sm:w-28 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-amber-200/60 shadow-[0_2px_4px_rgb(245,158,11,0.1)] flex items-center justify-center gap-1.5 active:scale-[0.98]"
@@ -336,7 +494,8 @@ export default function ManagerDashboard() {
                         <button onClick={() => {
                             const rawPoint = selectedRequest.meetingPoint || '자택';
                             const searchTarget = rawPoint === '자택' ? selectedRequest.patientAddress : rawPoint.split(' /// ')[0];
-                            if (!searchTarget) return Swal.fire({ icon: 'warning', title: '주소 미등록', text: '정확한 주소가 없습니다.' });
+                            // 🚨 경고창도 YesAlert로 변경, text -> html
+                            if (!searchTarget) return YesAlert.fire({ icon: 'warning', title: '주소 미등록', html: '정확한 주소가 없습니다.' });
                             window.open(`https://map.kakao.com/link/search/${encodeURIComponent(searchTarget)}`, '_blank');
                           }}
                           className="px-2.5 py-1 bg-[#FEE500] text-[#191919] text-[11px] font-bold rounded-md hover:bg-[#FADA0A] transition-colors flex items-center gap-1 shadow-sm">
@@ -406,6 +565,78 @@ export default function ManagerDashboard() {
           </div>
         )}
       </main>
+
+      {/* 추가 요금 청구 모달 */}
+      {isExtraChargeModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }} 
+            className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl overflow-hidden flex flex-col border border-slate-100"
+          >
+            <div className="px-6 py-5 flex justify-between items-center border-b border-slate-100 bg-slate-50">
+              <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                <div className="p-1.5 bg-orange-50 rounded-lg"><CreditCard className="w-5 h-5 text-orange-600" /></div> 추가 요금 청구
+              </h3>
+              <button onClick={() => setIsExtraChargeModalOpen(false)} className="w-8 h-8 bg-white shadow-sm hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={submitExtraCharge} className="p-6 bg-white flex flex-col gap-5">
+              
+              {/* 1. 시간 연장 카운터 */}
+              <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div>
+                  <span className="font-bold text-slate-700 block">시간 연장</span>
+                  <span className="text-[11px] text-slate-400 font-medium">30분당 8,000원</span>
+                </div>
+                <div className="flex items-center gap-3 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                  <button type="button" onClick={() => setChargeState(prev => ({...prev, timeCount: Math.max(0, prev.timeCount - 1)}))} className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-lg font-bold text-slate-600">-</button>
+                  <span className="font-bold text-slate-800 w-4 text-center">{chargeState.timeCount}</span>
+                  <button type="button" onClick={() => setChargeState(prev => ({...prev, timeCount: prev.timeCount + 1}))} className="w-8 h-8 flex items-center justify-center bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg font-bold">+</button>
+                </div>
+              </div>
+
+              {/* 2. 할증 체크박스 */}
+              <div className="space-y-3">
+                <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50 cursor-pointer hover:border-orange-200 transition-colors">
+                  <div>
+                    <span className="font-bold text-slate-700 block">주말 / 공휴일 할증</span>
+                    <span className="text-[11px] text-slate-400 font-medium">+ 5,000원</span>
+                  </div>
+                  <input type="checkbox" checked={chargeState.isWeekend} onChange={(e) => setChargeState(prev => ({...prev, isWeekend: e.target.checked}))} className="w-5 h-5 accent-orange-500 rounded" />
+                </label>
+
+                <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50 cursor-pointer hover:border-orange-200 transition-colors">
+                  <div>
+                    <span className="font-bold text-slate-700 block">야간 할증 (18시 이후)</span>
+                    <span className="text-[11px] text-slate-400 font-medium">+ 5,000원</span>
+                  </div>
+                  <input type="checkbox" checked={chargeState.isNight} onChange={(e) => setChargeState(prev => ({...prev, isNight: e.target.checked}))} className="w-5 h-5 accent-orange-500 rounded" />
+                </label>
+              </div>
+
+              {/* 3. 총 청구 금액 표시 (자동 계산) */}
+              <div className="mt-2 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-between">
+                <span className="font-extrabold text-orange-800">최종 청구 금액</span>
+                <span className="text-xl font-black text-orange-600">{calculatedCharge.amount.toLocaleString()}원</span>
+              </div>
+
+              {/* 4. 자동 생성된 사유 내역 */}
+              {calculatedCharge.reason && (
+                <div className="text-[12px] text-slate-500 font-medium bg-slate-50 p-3 rounded-xl">
+                  <span className="font-bold text-slate-600">청구 내역: </span> {calculatedCharge.reason}
+                </div>
+              )}
+
+              <button type="submit" className="mt-2 w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-md transition-colors active:scale-95 text-base">
+                보호자에게 요금 청구하기
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
       {/* 페이지네이션 */}
       {activeData.length > 0 && (

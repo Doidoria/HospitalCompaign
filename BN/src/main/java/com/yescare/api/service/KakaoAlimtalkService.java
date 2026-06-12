@@ -37,6 +37,16 @@ public class KakaoAlimtalkService {
     private String tplJoinComplete;
     @Value("${coolsms.kakao.template.report-completed}")
     private String tplReportCompleted;
+    @Value("${coolsms.kakao.template.accompany-started}")
+    private String tplAccompanyStarted;
+    @Value("${coolsms.kakao.template.accompany-completed}")
+    private String tplAccompanyCompleted;
+    @Value("${coolsms.kakao.template.extra-charge}")
+    private String tplExtraCharge;
+    @Value("${coolsms.kakao.template.extra-charge-modified}")
+    private String tplExtraChargeModified;
+    @Value("${coolsms.kakao.template.report-modified}")
+    private String tplReportModified;
 
     private DefaultMessageService messageService;
 
@@ -119,5 +129,65 @@ public class KakaoAlimtalkService {
 
         String text = "[예스케어] " + patientName + "님의 케어 리포트 작성이 완료되었습니다. 마이페이지에서 확인해 주세요.";
         sendAlimtalk(phoneNumber, text, tplReportCompleted, variables);
+    }
+
+    // 6. 동행 시작 알림 (변수: #{고객명}, #{환자명}, #{매니저명}, #{출발시간})
+    @Async
+    public void sendAccompanyStarted(String phoneNumber, String customerName, String patientName, String managerName, String startTime) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{환자명}", patientName);
+        variables.put("#{매니저명}", managerName);
+        variables.put("#{출발시간}", startTime);
+
+        String text = "[예스케어] " + customerName + "님, 예약하신 병원 동행 서비스가 시작되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplAccompanyStarted, variables);
+    }
+
+    // 7. 동행 종료 및 리포트 안내 (변수: #{고객명}, #{환자명}, #{고객이메일})
+    @Async
+    public void sendAccompanyCompleted(String phoneNumber, String customerName, String patientName, String customerEmail) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{환자명}", patientName);
+        variables.put("#{고객이메일}", customerEmail);
+
+        String text = "[예스케어] " + customerName + "님, 동행 서비스가 안전하게 종료되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplAccompanyCompleted, variables);
+    }
+
+    // 8. 추가 요금 안내 (변수: #{고객명}, #{추가요금}, #{사유})
+    @Async
+    public void sendExtraChargeNotification(String phoneNumber, String customerName, Integer extraCharge, String reason) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{추가요금}", String.format("%,d", extraCharge)); // 15,000 처럼 콤마 자동 생성
+        variables.put("#{사유}", reason);
+
+        String text = "[예스케어] " + customerName + "님, 동행 서비스 추가 요금 결제 안내입니다.";
+        sendAlimtalk(phoneNumber, text, tplExtraCharge, variables);
+    }
+
+    // 추가 요금 정정 안내 (변수: #{고객명}, #{추가요금}, #{사유})
+    @Async
+    public void sendExtraChargeModified(String phoneNumber, String customerName, Integer extraCharge, String reason) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{추가요금}", String.format("%,d", extraCharge));
+        variables.put("#{사유}", reason);
+
+        String text = "[예스케어] " + customerName + "님, 청구된 추가 요금 내역이 정정되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplExtraChargeModified, variables); // (tpl은 yml에 등록될 새 ID)
+    }
+
+    // 동행 리포트 수정 안내 (변수: #{고객명}, #{환자명})
+    @Async
+    public void sendReportModified(String phoneNumber, String customerName, String patientName) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{환자명}", patientName);
+
+        String text = "[예스케어] " + customerName + "님, 발송해 드린 " + patientName + "님의 동행 리포트 내용이 수정되었습니다.";
+        sendAlimtalk(phoneNumber, text, tplReportModified, variables); // (tpl은 yml에 등록될 새 ID)
     }
 }

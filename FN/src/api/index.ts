@@ -59,6 +59,11 @@ export const reservationApi = {
 
   submitReview: (id: number, data: { rating: number; comment: string }) => 
     apiClient.post(`/api/reservations/${id}/reviews`, data),
+
+  startAccompany: (id: number) => apiClient.patch(`/api/managers/reservations/${id}/start`),
+  completeAccompany: (id: number) => apiClient.patch(`/api/managers/reservations/${id}/complete`),
+  addExtraCharge: (id: number, data: { amount: number; reason: string }) => 
+    apiClient.post(`/api/managers/reservations/${id}/extra-charge`, data),
 };
 
 // ==========================================

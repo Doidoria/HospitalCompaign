@@ -237,7 +237,7 @@ public class ReservationService {
     // 특정 매니저에게 배정된 내역만 조회
     @Transactional(readOnly = true)
     public List<ReservationResponse> getManagerSchedules(String email) {
-        return reservationRepository.findByManagerEmail(email).stream()
+        return reservationRepository.findByManagerEmailOrderByReservationTimeAsc(email).stream()
                 .map(ReservationResponse::new)
                 .collect(Collectors.toList());
     }
@@ -469,5 +469,84 @@ public class ReservationService {
         return reservations.getContent().stream()
                 .map(ReservationResponse::new)
                 .collect(Collectors.toList());
+    }
+
+    // 동행 시작 (매니저 전용)
+    @Transactional
+    public void startAccompany(Long id, String email) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        if (reservation.getManager() == null || !reservation.getManager().getEmail().equals(email)) {
+            throw new IllegalStateException("본인이 배정된 예약만 동행을 시작할 수 있습니다.");
+        }
+
+        reservation.startAccompany();
+
+        // 현재 시간을 템플릿에 맞게 포맷팅
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+        String startTime = LocalDateTime.now().format(formatter);
+        String customerName = reservation.getMember().getName();
+
+        kakaoAlimtalkService.sendAccompanyStarted(
+                reservation.getMember().getPhoneNumber(),
+                customerName,
+                reservation.getPatientName(),
+                reservation.getManager().getName(),
+                startTime
+        );
+    }
+
+    // 동행 완료 (매니저 전용)
+    @Transactional
+    public void completeAccompany(Long id, String email) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        if (reservation.getManager() == null || !reservation.getManager().getEmail().equals(email)) {
+            throw new IllegalStateException("본인이 배정된 예약만 완료 처리할 수 있습니다.");
+        }
+
+        reservation.completeAccompany();
+
+        String customerName = reservation.getMember().getName();
+        String customerEmail = reservation.getMember().getEmail();
+
+        kakaoAlimtalkService.sendAccompanyCompleted(
+                reservation.getMember().getPhoneNumber(),
+                customerName,
+                reservation.getPatientName(),
+                customerEmail
+        );
+    }
+
+    // 추가 요금 부과 (매니저 전용)
+    @Transactional
+    public void addExtraCharge(Long id, String email, Integer amount, String reason) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        if (reservation.getManager() == null || !reservation.getManager().getEmail().equals(email)) {
+            throw new IllegalStateException("본인이 배정된 예약에 대해서만 요금을 추가할 수 있습니다.");
+        }
+
+        // 🚀 [핵심 분기 점검] DB에 저장하기 전, 기존에 청구한 금액이 이미 있었는지 확인합니다.
+        boolean isModification = (reservation.getExtraChargeAmount() != null && reservation.getExtraChargeAmount() > 0);
+
+        // 비즈니스 메서드 호출하여 값 덮어쓰기
+        reservation.addExtraCharge(amount, reason);
+
+        String customerName = reservation.getMember().getName();
+        String phoneNumber = reservation.getMember().getPhoneNumber();
+
+        if (isModification) {
+            // 1️⃣ 이미 요금이 나가서 고치는 경우 ➡️ 정정 알림톡 발송
+            kakaoAlimtalkService.sendExtraChargeModified(phoneNumber, customerName, amount, reason);
+            System.out.println("🔄 [알림톡 분기] 추가 요금 정정 메시지 트리거");
+        } else {
+            // 2️⃣ 이번에 처음 요금을 매기는 경우 ➡️ 최초 안내 알림톡 발송
+            kakaoAlimtalkService.sendExtraChargeNotification(phoneNumber, customerName, amount, reason);
+            System.out.println("🆕 [알림톡 분기] 최초 추가 요금 청구 메시지 트리거");
+        }
     }
 }

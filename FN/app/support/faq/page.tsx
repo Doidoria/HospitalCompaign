@@ -11,7 +11,7 @@ import {
   ChevronDown, MessageCircleQuestion, Bell, Headphones, Search, ChevronLeft, 
   ChevronRight, PenSquare, Lock
 } from 'lucide-react';
-import { Toast, YesAlert, MySwal } from '@/src/utils/alert'; 
+import { Toast, YesAlert } from '@/src/utils/alert'; 
 import Link from 'next/link';
 
 const faqs = [
@@ -140,7 +140,7 @@ export default function CustomerSupportPage() {
 
   // 비밀글 비밀번호 확인 핸들러
   const handleCheckPassword = async (id: number) => {
-    const { value: password } = await MySwal.fire({
+    const { value: password } = await YesAlert.fire({
       title: '비밀번호 확인',
       input: 'password',
       html: '<p class="text-sm text-slate-500 mb-2">이 문의글을 작성할 때 설정한<br/>비밀번호를 입력해주세요.</p>',

@@ -5,9 +5,8 @@ import { motion, Variants } from 'framer-motion';
 import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, FileText, MessageSquare, HelpCircle, ChevronRight, Navigation } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
-import { Toast } from '@/src/utils/alert';
+import { Toast, YesAlert } from '@/src/utils/alert';
 import Link from 'next/link';
-import Swal from 'sweetalert2';
 
 // TypeScript 인터페이스
 interface Manager {
@@ -56,6 +55,8 @@ export default function ReservationDetailPage() {
     category: '', detailedContent: '', doctorInquiry: '', meetingPoint: '', patientAddress: '',
     transportation: '', mobility: ''
   });
+  // 로그인 제공자(provider) 저장용 상태
+  const [authProvider, setAuthProvider] = useState("LOCAL");
 
   // 주소의 '///' 기호를 공백으로 예쁘게 치환해주는 포맷 함수
   const formatAddress = (address: string) => {
@@ -83,6 +84,8 @@ export default function ReservationDetailPage() {
         if (!isMounted) return;
 
         setUserEmail(userRes.data.email);
+        // 백엔드에서 주는 가입 경로 정보 저장 (없으면 기본값 LOCAL)
+        setAuthProvider(userRes.data.provider || 'LOCAL');
         const apiData = resDetail.data;
 
         const dateObj = new Date(apiData.reservationTime);
@@ -138,7 +141,30 @@ export default function ReservationDetailPage() {
       return;
     }
 
-    const { value: password } = await Swal.fire({
+    if (authProvider === 'KAKAO') {
+      const confirmResult = await YesAlert.fire({
+        title: '예약 취소',
+        text: '정말 예약을 취소하시겠습니까?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: '네, 취소합니다',
+        cancelButtonText: '닫기'
+      });
+
+      if (confirmResult.isConfirmed) {
+        try {
+          await reservationApi.cancel(reservation.id); 
+          Toast.fire({ icon: 'success', title: '예약이 정상적으로 취소되었습니다.' });
+          router.push('/mypage');
+        } catch (error) {
+          Toast.fire({ icon: 'error', title: '오류가 발생했습니다.' });
+        }
+      }
+      return;
+    }
+
+    const { value: password } = await YesAlert.fire({
       title: '예약 취소 본인 확인',
       text: '보안을 위해 계정 비밀번호를 한 번 더 입력해 주세요.',
       input: 'password',

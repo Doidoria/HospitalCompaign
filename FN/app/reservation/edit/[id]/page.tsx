@@ -9,8 +9,7 @@ import {
   Car, Accessibility, Building2, X, Stethoscope
 } from 'lucide-react';
 import { reservationApi } from '@/src/api/index';
-import { Toast } from '@/src/utils/alert';
-import Swal from 'sweetalert2';
+import { Toast, YesAlert } from '@/src/utils/alert';
 
 export default function ReservationEditPage() {
   const { id } = useParams();
@@ -55,7 +54,7 @@ export default function ReservationEditPage() {
       .then(res => {
         const data = res.data;
         if (data.status !== 'WAITING' && data.status !== '매칭 대기') {
-          Swal.fire('수정 불가', '매칭 대기 상태에서만 수정할 수 있습니다.', 'error');
+          YesAlert.fire('수정 불가', '매칭 대기 상태에서만 수정할 수 있습니다.', 'error');
           router.push(`/reservation/${id}`);
           return;
         }
@@ -112,7 +111,7 @@ export default function ReservationEditPage() {
       })
       .catch(err => {
         console.error(err);
-        Swal.fire('오류', '데이터를 불러올 수 없습니다.', 'error');
+        YesAlert.fire('오류', '데이터를 불러올 수 없습니다.', 'error');
       })
       .finally(() => setLoading(false));
   }, [id, router]);
@@ -168,7 +167,7 @@ export default function ReservationEditPage() {
 
     // 2. 타겟이 '병원'인데 병원 키워드가 없는 경우
     if (currentTarget === 'hospital' && !isHospital) {
-      Swal.fire({
+      YesAlert.fire({
         title: '병원이 맞나요?',
         text: `선택하신 주소(${bName || '건물명 없음'})에서 병원 관련 단어가 발견되지 않았습니다. 그래도 등록하시겠습니까?`,
         icon: 'warning',
@@ -327,9 +326,7 @@ export default function ReservationEditPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-3 ml-1">매니저와 만나는 장소</label>
                 <div className="flex gap-3 mb-4">
                   {['자택', '직접 지정'].map((type) => (
-                    <button 
-                      key={type} 
-                      type="button" 
+                    <button key={type} type="button" 
                       onClick={() => setBasicExtraData({...basicExtraData, meetingType: type})} 
                       className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border-2 ${basicExtraData.meetingType === type ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'border-gray-100 bg-white text-gray-400 hover:bg-gray-50'}`}
                     >
@@ -349,7 +346,7 @@ export default function ReservationEditPage() {
                       <button 
                         type="button" 
                         onClick={() => {
-                          if(!formData.hospitalName) return Swal.fire('알림', '먼저 1번 항목에서 방문 병원을 입력해주세요.', 'warning');
+                          if(!formData.hospitalName) return YesAlert.fire('알림', '먼저 1번 항목에서 방문 병원을 입력해주세요.', 'warning');
                           setBasicExtraData({...basicExtraData, meetingAddress: formData.hospitalName});
                         }} 
                         className="w-16 shrink-0 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap flex items-center justify-center gap-1 text-[13px]"

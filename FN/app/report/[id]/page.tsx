@@ -5,9 +5,7 @@ import { motion, Variants } from 'framer-motion';
 import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reportApi } from '@/src/api/index';
-import { Toast } from '@/src/utils/alert';
-import Link from 'next/link';
-import Swal from 'sweetalert2';
+import { Toast, YesAlert } from '@/src/utils/alert';
 
 export default function ReportDetailPage() {
   const params = useParams();
@@ -24,7 +22,7 @@ export default function ReportDetailPage() {
 
     const fetchReportData = async () => {
       try {
-        const res = await reportApi.getDetail(params.id as string);
+        const res = await reportApi.getReportByReservationId(params.id as string);
         const data = res.data;
 
         if (!isMounted) return;

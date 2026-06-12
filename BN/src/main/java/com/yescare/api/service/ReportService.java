@@ -61,6 +61,7 @@ public class ReportService {
 
         // 예약 상태를 완료로 변경하고 리포트 저장
         reservation.updateStatus(ReservationStatus.COMPLETED);
+        reservation.setReport(report);
         reportRepository.save(report);
 
         // 저장 직후, 보호자 이메일로 메일 발송
@@ -119,6 +120,12 @@ public class ReportService {
                 request.getDoctorOpinion(),
                 pdfFile,
                 true // 수정 후 재전송이므로 true 전달!
+        );
+
+        kakaoAlimtalkService.sendReportModified(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getMember().getName(), // 고객명
+                reservation.getPatientName()       // 환자명
         );
 
         return report.getId();

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 public enum ReservationStatus {
     WAITING("매칭 대기"),
     CONFIRMED("예약 확정"),
+    IN_PROGRESS("동행 진행 중"),
     COMPLETED("이용 완료"),
     CANCELLED("예약 취소");
 

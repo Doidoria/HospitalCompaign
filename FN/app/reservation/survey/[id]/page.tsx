@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Star, CheckCircle2, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { reviewApi } from '@/src/api/index';
-import Swal from 'sweetalert2';
+import { Toast, YesAlert } from '@/src/utils/alert';
 
 export default function ReservationSurveyPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function ReservationSurveyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (comment.trim().length < 10) {
-      Swal.fire({ 
+      YesAlert.fire({ 
         icon: 'warning', 
         title: '안내', 
         text: '매니저님에게 큰 힘이 되는 후기를 최소 10자 이상 작성해주세요.',
@@ -49,7 +49,7 @@ export default function ReservationSurveyPage() {
 
       localStorage.removeItem(`draft_review_${reservationId}`);
       
-      await Swal.fire({
+      await YesAlert.fire({
         icon: 'success',
         title: '소중한 후기 감사합니다!',
         text: '작성해주신 후기가 성공적으로 등록되었습니다.',
@@ -57,7 +57,7 @@ export default function ReservationSurveyPage() {
       });
       router.push('/mypage'); 
     } catch (error: any) {
-      Swal.fire({ 
+      YesAlert.fire({ 
         icon: 'error', 
         title: '등록 실패', 
         text: error.response?.data?.message || '오류가 발생했습니다. 다시 시도해 주세요.' 

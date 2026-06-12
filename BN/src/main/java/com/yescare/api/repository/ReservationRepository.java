@@ -28,6 +28,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @EntityGraph(attributePaths = {"member", "manager", "review"})
     List<Reservation> findByManagerEmail(String email);
 
+    List<Reservation> findByManagerEmailOrderByReservationTimeAsc(String email);
+
     @EntityGraph(attributePaths = {"member", "manager", "review"})
     Page<Reservation> findByPatientNameContainingIgnoreCaseOrHospitalNameContainingIgnoreCase(
             String patientName, String hospitalName, Pageable pageable);

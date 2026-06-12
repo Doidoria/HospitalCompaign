@@ -49,10 +49,5 @@ public class MemberResponse {
             this.availableDays = member.getManager().getAvailableDays();
             this.availableTime = member.getManager().getAvailableTime();
         }
-
-        if (member.getManager() != null) {
-            this.availableDays = member.getManager().getAvailableDays();
-            this.availableTime = member.getManager().getAvailableTime();
-        }
     }
 }

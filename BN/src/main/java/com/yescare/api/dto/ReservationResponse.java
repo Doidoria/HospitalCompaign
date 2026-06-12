@@ -41,6 +41,9 @@ public class ReservationResponse {
     private Integer reviewRating;
     private String reviewComment;
     private Long managerId;
+    private Boolean hasReport;
+    private Integer extraChargeAmount;
+    private String extraChargeReason;
 
     public ReservationResponse(Reservation entity) {
         this.id = entity.getId();
@@ -80,6 +83,9 @@ public class ReservationResponse {
         this.hasProxy = entity.getHasProxy() != null ? entity.getHasProxy() : false;
         this.noRevisit = entity.getNoRevisit() != null ? entity.getNoRevisit() : false;
         this.revisitCount = entity.getRevisitCount();
+        this.hasReport = (entity.getReport() != null); // 리포트가 DB에 존재하면 true, 없으면 false 반환
+        this.extraChargeAmount = entity.getExtraChargeAmount();
+        this.extraChargeReason = entity.getExtraChargeReason();
 
         // 매니저 처리 로직 강화
         if (entity.getManager() != null) {

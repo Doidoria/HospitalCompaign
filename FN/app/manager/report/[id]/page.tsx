@@ -201,7 +201,7 @@ export default function ReportWritePage() {
           title: existingReportId ? '리포트 수정 완료' : '리포트 작성 완료', 
           text: '보호자에게 알림이 전송되었습니다.' 
         });
-        router.push('/manager/dashboard');
+        window.location.href = '/manager/dashboard';
       }
 
     } catch (error) {

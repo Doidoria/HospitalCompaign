@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
 import { ReservationRequest } from '@/src/types/reservation';
 import DaumPostcodeEmbed from 'react-daum-postcode';
+import { Toast, YesAlert } from '@/src/utils/alert';
 import Link from 'next/link';
-import Swal from 'sweetalert2';
 
 export default function ApplyPage() {
   const router = useRouter();
@@ -53,6 +53,8 @@ export default function ApplyPage() {
     testType: '', 
     isFasting: '금식 완료'
   });
+
+  const [isPolicyAgreed, setIsPolicyAgreed] = useState(false); // 규정 동의 상태 관리
 
   const HOURS = Array.from({ length: 10 }, (_, i) => String(i + 9).padStart(2, '0')); // ['09', '10', ... '18']
   const MINUTES = ['00', '10', '20', '30', '40', '50'];
@@ -109,7 +111,7 @@ export default function ApplyPage() {
 
     // 2. 타겟이 '병원'인데 병원 키워드가 없는 경우
     if (currentTarget === 'hospital' && !isHospital) {
-      Swal.fire({
+      YesAlert.fire({
         title: '병원이 맞나요?',
         text: `선택하신 주소(${bName || '건물명 없음'})에서 병원 관련 단어가 발견되지 않았습니다. 그래도 등록하시겠습니까?`,
         icon: 'warning',
@@ -184,6 +186,11 @@ export default function ApplyPage() {
       if (!detailData.testType) missing.push('검사 종류');
     }
 
+    // 매니저 보호 규정 동의 여부 체크
+    if (!isPolicyAgreed) {
+      missing.push('안전 이용 규정 동의');
+    }
+
     // 누락된 항목이 있다면 State 업데이트 후 종료
     if (missing.length > 0) {
       setMissingFields(missing);
@@ -223,7 +230,7 @@ export default function ApplyPage() {
       };
 
       await reservationApi.create(requestBody);
-      await Swal.fire({ 
+      await YesAlert.fire({ 
         icon: 'success', 
         title: '신청 완료', 
         text: '동행 서비스 예약이 성공적으로 접수되었습니다.', 
@@ -231,7 +238,7 @@ export default function ApplyPage() {
       });
       router.push('/mypage');
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '신청 실패', text: '서버 오류로 인해 신청에 실패했습니다.' });
+      YesAlert.fire({ icon: 'error', title: '신청 실패', text: '서버 오류로 인해 신청에 실패했습니다.' });
     }
   };
 
@@ -573,7 +580,7 @@ export default function ApplyPage() {
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="pt-6">
+          <motion.div variants={itemVariants} className="pt-0">
             
             {/* 누락된 필드가 있을 때 보여주는 에러 안내 태그 */}
             {missingFields.length > 0 && (
@@ -595,6 +602,34 @@ export default function ApplyPage() {
                 </div>
               </motion.div>
             )}
+
+            {/* 매니저 보호 및 안전 이용 규정 동의 체크박스 */}
+            <div className="mb-6 p-5 sm:p-6 bg-slate-50 border border-slate-200 rounded-[24px] shadow-sm">
+              <div className="flex items-start gap-3">
+                <input type="checkbox" id="policy-agree" checked={isPolicyAgreed}
+                  onChange={(e) => {
+                    setIsPolicyAgreed(e.target.checked);
+                    if (e.target.checked) setMissingFields([]); // 체크 시 에러메시지 해제
+                  }}
+                  className="mt-1 w-5 h-5 sm:w-6 sm:h-6 accent-emerald-600 rounded-md border-gray-300 cursor-pointer shrink-0"
+                />
+                <div className="flex-1">
+                  <label htmlFor="policy-agree" className="text-[14px] sm:text-base font-extrabold text-slate-800 cursor-pointer block mb-1">
+                    예스케어 매니저 보호 및 안전 이용 규정에 동의합니다. <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-[12px] sm:text-[13px] text-slate-500 font-medium break-keep leading-relaxed">
+                    안전한 동행을 위해 의료 행위 요구, 개인 심부름, 폭언 등이 엄격히 금지됨을 확인했습니다.
+                  </p>
+                  <Link 
+                    href="/policy/manager-protection" 
+                    target="_blank" 
+                    className="inline-block mt-2 text-[13px] font-bold text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors"
+                  >
+                    안전 이용 규정 전문 보기 ↗
+                  </Link>
+                </div>
+              </div>
+            </div>
 
             <button type="submit" className="w-full bg-blue-950 text-white text-xl font-bold py-6 rounded-[24px] shadow-xl hover:bg-blue-900 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
               <CheckCircle2 className="w-7 h-7" /> 동행 서비스 신청 완료하기

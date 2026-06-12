@@ -6,8 +6,8 @@ import { motion, Variants } from 'framer-motion';
 import { Mail, Lock, User, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/src/api/index';
+import { Toast, YesAlert } from '@/src/utils/alert';
 import Link from 'next/link';
-import Swal from 'sweetalert2';
 
 export default function LoginPage() {
   const [loginType, setLoginType] = useState<'user' | 'manager'>('user');
@@ -40,7 +40,7 @@ export default function LoginPage() {
       
       if (!token || typeof token !== 'string') {
         console.error("🚨 [로그인 오류] 백엔드에서 받은 데이터에 토큰이 없습니다:", response);
-        Swal.fire({ icon: 'error', title: '시스템 오류', text: '서버로부터 유효한 토큰을 받지 못했습니다.' });
+        YesAlert.fire({ icon: 'error', title: '시스템 오류', text: '서버로부터 유효한 토큰을 받지 못했습니다.' });
         return;
       }
 
@@ -53,14 +53,14 @@ export default function LoginPage() {
       
       // [유저 탭]으로 로그인했는데 매니저 권한인 경우
       if (loginType === 'user' && userRole === 'MANAGER') {
-        await Swal.fire({ icon: 'info', title: '안내', text: '매니저 계정입니다. 다음부터는 [동행 매니저] 탭에서 로그인해 주세요.', timer: 2500 });
+        await YesAlert.fire({ icon: 'info', title: '안내', text: '매니저 계정입니다. 다음부터는 [동행 매니저] 탭에서 로그인해 주세요.', timer: 2500 });
         router.push('/manager/dashboard'); 
         return;
       }
 
       // [매니저 탭]으로 로그인했는데 아직 승인 안 된 일반 유저인 경우
       if (loginType === 'manager' && userRole === 'USER') {
-        await Swal.fire({ icon: 'error', title: '접근 제한', text: '매니저 승인이 완료되지 않은 계정입니다.' });
+        await YesAlert.fire({ icon: 'error', title: '접근 제한', text: '매니저 승인이 완료되지 않은 계정입니다.' });
         localStorage.removeItem('accessToken'); 
         return;
       }
@@ -73,14 +73,14 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("🚨 [로그인 실패 상세]:", error);
       if (error.response?.status === 409) {
-        Swal.fire({
+        YesAlert.fire({
           icon: 'error',
           title: '이용 정지 안내',
           text: '정지된 계정입니다. 관리자에게 문의하세요.',
         });
       } 
       else {
-        Swal.fire({
+        YesAlert.fire({
           icon: 'error',
           title: '로그인 실패',
           text: '이메일 또는 비밀번호를 다시 확인해주세요.',

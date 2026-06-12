@@ -83,8 +83,17 @@ public class Reservation {
     @Column(length = 20)
     private String revisitCount; // 재방문 카운트
 
+    @Column(nullable = true)
+    private Integer extraChargeAmount; // 추가 요금 (원)
+
+    @Column(length = 100)
+    private String extraChargeReason;  // 추가 요금 발생 사유
+
     @OneToOne(mappedBy = "reservation")
     private Review review;
+
+    @OneToOne(mappedBy = "reservation") // 리포트 연결
+    private Report report;
 
     @Builder
     public Reservation(Member member, String patientName, String patientPhone, String hospitalName, LocalDateTime reservationTime,
@@ -144,5 +153,36 @@ public class Reservation {
         this.noRevisit = noRevisit;
     }
 
+    // 동행 시작 처리
+    public void startAccompany() {
+        if (this.status != ReservationStatus.CONFIRMED) {
+            throw new IllegalStateException("예약이 확정된 상태에서만 동행을 시작할 수 있습니다.");
+        }
+        this.status = ReservationStatus.IN_PROGRESS;
+    }
+
+    // 동행 완료 처리 (리포트 작성 전 임시 완료 상태)
+    public void completeAccompany() {
+        if (this.status != ReservationStatus.IN_PROGRESS) {
+            throw new IllegalStateException("동행이 진행 중인 상태에서만 완료 처리를 할 수 있습니다.");
+        }
+        // (주의) 완전한 COMPLETED 상태는 리포트 작성이 끝나야 넘어갑니다.
+        // 프론트엔드의 화면 상태와 맞추려면 여기서 COMPLETED로 바꾸셔도 무방합니다.
+        // 현재 로직에서는 바로 COMPLETED로 보내겠습니다.
+        this.status = ReservationStatus.COMPLETED;
+    }
+
+    // 추가 요금 부과 처리
+    public void addExtraCharge(Integer amount, String reason) {
+        if (this.status != ReservationStatus.IN_PROGRESS) {
+            throw new IllegalStateException("동행이 진행 중인 상태에서만 추가 요금을 등록할 수 있습니다.");
+        }
+        this.extraChargeAmount = amount;
+        this.extraChargeReason = reason;
+    }
+
+    public void setReport(Report report) {
+        this.report = report;
+    }
 
 }

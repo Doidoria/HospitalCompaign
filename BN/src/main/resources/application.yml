@@ -76,4 +76,9 @@ coolsms:
       inquiry-answered: TEST_TPL_INQUIRY       # 1:1 문의 답변 완료 템플릿 ID
       join-complete: TEST_TPL_JOIN             # 회원가입 완료 템플릿 ID
       report-completed: TEST_TPL_REPORT
+      accompany-started: TEST_TPL_START      # 동행 시작 알림
+      accompany-completed: TEST_TPL_END      # 동행 완료 알림
+      extra-charge: TEST_TPL_EXTRA           # 추가 요금 알림
+      extra-charge-modified: TEST_TPL_EXTRA_MOD # 추가 요금 수정/정정용 템플릿 임시 ID
+      report-modified: TEST_TPL_REPORT_MOD # 리포트 수정/정정용 템플릿 임시 ID
       # 필요시 여기에 취소, 변경 등의 템플릿 ID를 계속 추가
