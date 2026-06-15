@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/members/join", "/api/members/login",
                                 "/api/members/check-email", "/api/members/sms/**", "/api/members/auth/kakao",
                                 "/api/notices/", "/error", "/uploads/**", "/api/members/email/send",
@@ -47,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/notices/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/managers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/popups/active").permitAll()
                         .requestMatchers("/api/managers/profile").authenticated()
                         .requestMatchers("/api/members/managers/count").permitAll()
                         .requestMatchers("/api/members/apply-manager").authenticated()
@@ -65,6 +67,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",                 // 로컬 웹
                 "https://hospital-compaign.vercel.app",  // 배포된 웹
+                "https://wellcommunity-yescare.co.kr",
+                "https://www.wellcommunity-yescare.co.kr",
                 "http://localhost",                      // Android 앱 내부 웹뷰
                 "capacitor://localhost"                  // iOS 앱 내부 웹뷰
         ));
