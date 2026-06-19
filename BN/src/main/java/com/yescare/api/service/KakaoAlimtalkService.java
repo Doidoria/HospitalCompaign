@@ -24,7 +24,7 @@ public class KakaoAlimtalkService {
     @Value("${coolsms.sender}")
     private String senderNumber;
 
-    // 🚀 application.yml에서 ID 값들을 주입받음 (하드코딩 제거!)
+    // application.yml에서 ID 값들을 주입
     @Value("${coolsms.kakao.pf-id}")
     private String pfId;
     @Value("${coolsms.kakao.template.reservation-complete}")
@@ -35,8 +35,8 @@ public class KakaoAlimtalkService {
     private String tplInquiryAnswered;
     @Value("${coolsms.kakao.template.join-complete}")
     private String tplJoinComplete;
-    @Value("${coolsms.kakao.template.report-completed}")
-    private String tplReportCompleted;
+    @Value("${coolsms.kakao.template.reservation-changed-or-canceled}")
+    private String tplReservationChangedOrCanceled;
     @Value("${coolsms.kakao.template.accompany-started}")
     private String tplAccompanyStarted;
     @Value("${coolsms.kakao.template.accompany-completed}")
@@ -121,14 +121,23 @@ public class KakaoAlimtalkService {
         sendAlimtalk(phoneNumber, text, tplJoinComplete, variables);
     }
 
-    // 5. 케어 리포트 작성 완료 (제공된 변수 적용: #{환자명})
+    // 5. 예약 변경 및 취소 안내
     @Async
-    public void sendReportCompleted(String phoneNumber, String patientName) {
+    public void sendReservationChangedOrCanceled(String phoneNumber, String customerName, String changeDetails, String reason) {
         HashMap<String, String> variables = new HashMap<>();
-        variables.put("#{환자명}", patientName);
+        variables.put("#{고객명}", customerName);
+        variables.put("#{변경사항}", changeDetails);
+        variables.put("#{취소사유}", reason);
 
-        String text = "[예스케어] " + patientName + "님의 케어 리포트 작성이 완료되었습니다. 마이페이지에서 확인해 주세요.";
-        sendAlimtalk(phoneNumber, text, tplReportCompleted, variables);
+        // 템플릿 검수용 가이드 텍스트 빌드
+        String text = "[예스케어] " + customerName + "님, 요청하신 예약 건이 정상 처리되었습니다.\n" +
+                "■ 처리 내역\n" +
+                "변경/취소 사항: " + changeDetails + "\n" +
+                "상세 사유: " + reason;
+
+        // 알림톡 전송 요청 트리거
+        sendAlimtalk(phoneNumber, text, tplReservationChangedOrCanceled, variables);
+        log.info("🔔 [알림톡 발송] 예약 변경/취소 알림톡 전송 완료 -> 수신처: {}", phoneNumber);
     }
 
     // 6. 동행 시작 알림 (변수: #{고객명}, #{환자명}, #{매니저명}, #{출발시간})
@@ -188,6 +197,6 @@ public class KakaoAlimtalkService {
         variables.put("#{환자명}", patientName);
 
         String text = "[예스케어] " + customerName + "님, 발송해 드린 " + patientName + "님의 동행 리포트 내용이 수정되었습니다.";
-        sendAlimtalk(phoneNumber, text, tplReportModified, variables); // (tpl은 yml에 등록될 새 ID)
+        sendAlimtalk(phoneNumber, text, tplReportModified, variables);
     }
 }

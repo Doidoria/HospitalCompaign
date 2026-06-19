@@ -126,6 +126,14 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다. (ID: " + id + ")"));
 
+        // 예약이 DB에서 지워지기 직전에 취소 알림톡 발송!
+        kakaoAlimtalkService.sendReservationChangedOrCanceled(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getMember().getName(),
+                "예약 취소 (환불/취소 절차 접수)",
+                "고객님의 요청에 의한 예약 취소"
+        );
+
         // 2. 찾아온 예약을 DB에서 완전히 삭제합니다.
         reservationRepository.delete(reservation);
     }
@@ -215,6 +223,14 @@ public class ReservationService {
                 request.getMeetingPoint(),
                 request.getTransportation(),
                 request.getMobility()
+        );
+
+        // 수정 사항이 DB에 반영된 직후 변경 안내 알림톡 발송!
+        kakaoAlimtalkService.sendReservationChangedOrCanceled(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getMember().getName(),
+                "예약 일정 및 상세 정보 변경",
+                "고객님의 직접 수정"
         );
     }
 
@@ -449,6 +465,14 @@ public class ReservationService {
                 request.getMeetingPoint(),
                 request.getTransportation(),
                 request.getMobility()
+        );
+
+        // 관리자가 고객 정보를 변경해 주었을 때 변경 안내 알림톡 발송!
+        kakaoAlimtalkService.sendReservationChangedOrCanceled(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getMember().getName(),
+                "예약 일정 및 상세 정보 변경",
+                "예스케어 고객센터를 통한 정보 변경"
         );
     }
 

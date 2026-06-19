@@ -24,6 +24,7 @@ public class KakaoAuthService {
 
     private final MemberRepository memberRepository;
     private final JwtProvider jwtProvider;
+    private final KakaoAlimtalkService kakaoAlimtalkService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
@@ -148,6 +149,13 @@ public class KakaoAuthService {
 
             try {
                 member = memberRepository.saveAndFlush(newMember);
+
+                // 신규 가입 환영 알림톡 발송!
+                // 단, 필수 동의를 거부해서 들어온 더미 번호(01000000000)가 아닐 때만 발송
+                if (phoneNumber != null && !phoneNumber.equals("01000000000")) {
+                    kakaoAlimtalkService.sendJoinComplete(phoneNumber, member.getName());
+                    log.info("🔔 카카오 신규 가입자 환영 알림톡 발송 완료: {}", phoneNumber);
+                }
             } catch (DataIntegrityViolationException e) {
                 log.warn("동시 가입 요청 감지 (더블클릭 방어): {}", email);
                 throw new IllegalStateException("회원가입/로그인이 처리 중입니다. 잠시 후 다시 시도해주세요.");

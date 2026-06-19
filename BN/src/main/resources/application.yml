@@ -69,16 +69,15 @@ coolsms:
     secret: ${COOLSMS_API_SECRET}
   sender: ${COOLSMS_SENDER}
   kakao:
-    pf-id: TEST_PF_ID_1234 # 승인 후 카카오 플러스친구 ID로 교체
+    pf-id: KA01PF260610022751924he8OYMm5jY7 # 카카오 채널 템플릿 ID
     template:
-      reservation-complete: TEST_TPL_RESERVATION # 예약 접수 완료 템플릿 ID
-      manager-assigned: TEST_TPL_ASSIGN        # 매니저 배정 완료 템플릿 ID
-      inquiry-answered: TEST_TPL_INQUIRY       # 1:1 문의 답변 완료 템플릿 ID
-      join-complete: TEST_TPL_JOIN             # 회원가입 완료 템플릿 ID
-      report-completed: TEST_TPL_REPORT
-      accompany-started: TEST_TPL_START      # 동행 시작 알림
-      accompany-completed: TEST_TPL_END      # 동행 완료 알림
-      extra-charge: TEST_TPL_EXTRA           # 추가 요금 알림
-      extra-charge-modified: TEST_TPL_EXTRA_MOD # 추가 요금 수정/정정용 템플릿 임시 ID
-      report-modified: TEST_TPL_REPORT_MOD # 리포트 수정/정정용 템플릿 임시 ID
-      # 필요시 여기에 취소, 변경 등의 템플릿 ID를 계속 추가
+      report-modified: KA01TP260612061229963g7YuS9ctkvO       # 리포트 수정
+      extra-charge-modified: KA01TP260612061114064hmI6Aoze8vj # 추가 요금 수정
+      inquiry-answered: KA01TP260610051333569jabJivnkzG6      # 1:1 문의 답변 완료
+      reservation-changed-or-canceled: KA01TP26061003351045985qNDAAsFtJ  # 예약 변경/취소 안내
+      extra-charge: KA01TP260610033213746m65rnzmIAEl          # 추가 요금 알림
+      accompany-completed: KA01TP260610032406168UQKwvSHyI24   # 동행 종료 알림
+      accompany-started: KA01TP260610032149453t3H87Nvh2BC     # 동행 시작 알림
+      manager-assigned: KA01TP260610031814693YOYoTBSpJeo      # 매니저 배정 완료
+      reservation-complete: KA01TP260610031303911kWgOH3HfBwd  # 예약 접수 완료
+      join-complete: KA01TP260610023305261Vl3MpZG0Sez         # 회원가입 완료
