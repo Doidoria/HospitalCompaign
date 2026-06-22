@@ -73,6 +73,13 @@ public class ReportService {
                 pdfFile,
                 false // 신규 작성이므로 false 전달
         );
+
+        // 리포트 작성 후 알림톡 발송 트리거
+        kakaoAlimtalkService.sendReportCompleted(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getMember().getName(),
+                reservation.getMember().getEmail()
+        );
         return report.getId();
     }
 
@@ -117,9 +124,9 @@ public class ReportService {
         );
 
         kakaoAlimtalkService.sendReportModified(
+                reservation.getMember().getEmail(),
                 reservation.getMember().getPhoneNumber(),
-                reservation.getMember().getName(), // 고객명
-                reservation.getPatientName()       // 환자명
+                reservation.getMember().getName()
         );
 
         return report.getId();

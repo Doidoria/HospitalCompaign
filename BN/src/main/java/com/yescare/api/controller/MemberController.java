@@ -2,6 +2,7 @@ package com.yescare.api.controller;
 
 import com.yescare.api.domain.Member;
 import com.yescare.api.dto.*;
+import com.yescare.api.exception.RequireAccountLinkException;
 import com.yescare.api.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -184,15 +185,31 @@ public class MemberController {
     @PostMapping("/auth/kakao")
     public ResponseEntity<?> kakaoLogin(@RequestBody KakaoLoginRequest request) {
         try {
-            // 카카오 인가 코드를 넘겨주고 JWT 토큰을 발급받음
             String jwtToken = kakaoAuthService.loginWithKakao(request.getCode());
-
-            // 기존 프론트엔드 코드(response.data.accessToken)가 받을 수 있도록 Map 형태로 반환
             return ResponseEntity.ok(Map.of("accessToken", jwtToken));
+
+        } catch (RequireAccountLinkException e) {
+            throw e;
 
         } catch (Exception e) {
             log.error("카카오 로그인 실패: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("카카오 인증에 실패했습니다.");
+        }
+    }
+
+    // 카카오 연동 승인 API
+    @PostMapping("/auth/kakao/confirm-link")
+    public ResponseEntity<?> confirmKakaoLink(@RequestBody Map<String, String> request) {
+        try {
+            String tempToken = request.get("tempToken");
+            // KakaoAuthService에 만든 연동 로직 호출
+            String jwtToken = kakaoAuthService.confirmAndLinkKakao(tempToken);
+
+            // 프론트엔드가 토큰을 받을 수 있도록 형태를 맞춤
+            return ResponseEntity.ok(Map.of("accessToken", jwtToken));
+        } catch (Exception e) {
+            log.error("카카오 연동 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("계정 연동에 실패했습니다.");
         }
     }
 

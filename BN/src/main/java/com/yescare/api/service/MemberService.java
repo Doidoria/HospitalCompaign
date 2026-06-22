@@ -30,11 +30,23 @@ public class MemberService {
                     throw new IllegalStateException("이미 가입된 이메일입니다.");
                 });
 
+        // 전화번호 중복 검사 (데이터 정합성을 위해 숫자만 추출)
+        String normalizedPhone = request.getPhoneNumber() != null ?
+                request.getPhoneNumber().replaceAll("[^0-9]", "") : "";
+
+        if (!normalizedPhone.isEmpty()) {
+            memberRepository.findByPhoneNumber(normalizedPhone)
+                    .ifPresent(m -> {
+                        // 프론트엔드에서 Catch하여 사용자에게 알림을 띄워줄 메시지
+                        throw new IllegalStateException("이미 해당 전화번호로 가입된 계정이 존재합니다. 기존 계정 또는 카카오 로그인을 이용해주세요.");
+                    });
+        }
+
         Member newMember = Member.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
-                .phoneNumber(request.getPhoneNumber())
+                .phoneNumber(normalizedPhone) // 정규화된 번호 저장
                 .provider("LOCAL")
                 .zipCode(request.getZipCode())
                 .address(request.getAddress())
@@ -44,8 +56,16 @@ public class MemberService {
                 .build();
 
         memberRepository.save(newMember);
-        // 회원가입 성공 시 알림톡 발송
-        kakaoAlimtalkService.sendJoinComplete(newMember.getPhoneNumber(), newMember.getName());
+
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+        String joinDate = java.time.LocalDateTime.now().format(formatter);
+
+        kakaoAlimtalkService.sendJoinComplete(
+                newMember.getPhoneNumber(),
+                newMember.getName(),
+                joinDate,
+                newMember.getEmail()
+        );
         return newMember.getId();
     }
 

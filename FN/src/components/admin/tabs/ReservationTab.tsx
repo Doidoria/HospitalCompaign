@@ -193,7 +193,7 @@ export default function ReservationTab({
         patient: r.patient,
         hospital: r.hospital,
         status: r.status,
-        manager: r.manager,
+        manager: r.managerName || '-',
         raw: r
       }));
       

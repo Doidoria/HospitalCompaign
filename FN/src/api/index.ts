@@ -10,6 +10,8 @@ export const authApi = {
   
   // 카카오 로그인 처리
   loginWithKakao: (code: string) => apiClient.post('/api/members/auth/kakao', { code }),
+  // 카카오 연동 승인 요청
+  confirmKakaoLink: (tempToken: string) => apiClient.post('/api/members/auth/kakao/confirm-link', { tempToken }),
 
   // 2. 회원가입
   signup: (data: any) => apiClient.post('/api/members/join', data),

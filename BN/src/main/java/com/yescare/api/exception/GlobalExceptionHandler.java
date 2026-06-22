@@ -6,6 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestControllerAdvice // 프로젝트 내의 모든 컨트롤러에서 발생하는 에러를 여기서 감시합니다!
 public class GlobalExceptionHandler {
 
@@ -33,5 +36,19 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(RequireAccountLinkException.class)
+    public ResponseEntity<Map<String, String>> handleRequireAccountLinkException(RequireAccountLinkException ex) {
+        Map<String, String> response = new HashMap<>();
+
+        // 프론트엔드가 if (code === 'REQUIRE_ACCOUNT_LINK') 로 잡을 수 있게 세팅
+        response.put("code", "REQUIRE_ACCOUNT_LINK");
+        response.put("message", ex.getMessage());
+        response.put("tempToken", ex.getTempToken());
+        response.put("email", ex.getEmail());
+
+        // 409 Conflict (충돌) 상태 코드로 반환하는 것이 RESTful 설계에 적합합니다.
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 }

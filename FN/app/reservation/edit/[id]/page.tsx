@@ -187,7 +187,7 @@ export default function ReservationEditPage() {
       if (currentTarget === 'hospital') {
         setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
       } else if (currentTarget === 'meeting') {
-        setFormData(prev => ({ ...prev, meetingPoint: fullAddress })); 
+        setBasicExtraData(prev => ({ ...prev, meetingAddress: fullAddress }));
       }
     }
   };
@@ -394,14 +394,6 @@ export default function ReservationEditPage() {
             </div>
 
             <div className="space-y-6">
-              
-              {/* 회색 박스: 보호자 요청사항 */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  보호자 특별 요청사항
-                </label>
-                <textarea name="requirements" rows={3} value={formData.requirements} onChange={handleChange} placeholder="매니저가 알아야 할 특별한 사항을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-gray-400 outline-none resize-none bg-gray-50"></textarea>
-              </div>
 
               {/* 파란 박스: 상세 진료 내용 UI (개선본) */}
               <div className="bg-blue-50/40 p-5 md:p-6 rounded-[20px] border border-blue-100 shadow-sm">
@@ -451,6 +443,14 @@ export default function ReservationEditPage() {
                 )}
               </div>
 
+              {/* 회색 박스: 보호자 요청사항 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  보호자 특별 요청사항
+                </label>
+                <textarea name="requirements" rows={3} value={formData.requirements} onChange={handleChange} placeholder="매니저가 알아야 할 특별한 사항을 적어주세요." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-gray-400 outline-none resize-none bg-gray-50"></textarea>
+              </div>
+
               {/* 주황 박스: 의사 선생님께 질문할 내용 */}
               <div>
                 <label className="block text-sm font-semibold text-amber-600 mb-2 flex items-center gap-1">
@@ -462,9 +462,18 @@ export default function ReservationEditPage() {
             </div>
           </div>
 
-          <button type="submit" className="w-full bg-blue-900 text-white font-bold text-lg py-5 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]">
-            <Save className="w-5 h-5" /> 예약 수정 완료하기
-          </button>
+          {/* 하단 버튼 영역 */}
+          <div className="flex gap-3">
+            <button type="button" onClick={() => router.back()} 
+              className="w-1/3 bg-gray-200 text-gray-700 font-bold text-lg py-5 rounded-2xl shadow-sm hover:bg-gray-300 transition-colors active:scale-[0.98]"
+            > 수정 취소
+            </button>
+            <button type="submit" 
+              className="flex-1 bg-blue-900 text-white font-bold text-lg py-5 rounded-2xl shadow-lg hover:bg-blue-950 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <Save className="w-5 h-5" /> 예약 수정 완료하기
+            </button>
+          </div>
         </form>
       </main>
     </div>

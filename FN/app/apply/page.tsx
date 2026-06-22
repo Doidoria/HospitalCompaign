@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle, RefreshCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
 import { ReservationRequest } from '@/src/types/reservation';
@@ -96,6 +96,17 @@ export default function ApplyPage() {
     if (missingFields.length > 0) setMissingFields([]);
   };
 
+  // 환자 <-> 보호자 정보 교체 핸들러
+  const handleSwapPatientGuardian = () => {
+    setFormData(prev => ({
+      ...prev,
+      patientName: prev.guardianName,
+      patientPhone: prev.guardianPhone,
+      guardianName: prev.patientName,
+      guardianPhone: prev.patientPhone
+    }));
+  };
+
   const handlePostComplete = (data: any) => {
     let fullAddress = data.address;
     let bName = data.buildingName || '';
@@ -119,13 +130,11 @@ export default function ApplyPage() {
         confirmButtonColor: '#2563EB',
         cancelButtonColor: '#94A3B8',
         confirmButtonText: '네, 병원 맞습니다',
-        cancelButtonText: '다시 검색하기'
+        cancelButtonText: '취소'
       }).then((result) => {
         if (result.isConfirmed) {
           setFormData(prev => ({ ...prev, hospitalName: fullAddress }));
           if (missingFields.length > 0) setMissingFields([]);
-        } else {
-          setTimeout(() => setPostTarget('hospital'), 300);
         }
       });
     } else {
@@ -194,13 +203,27 @@ export default function ApplyPage() {
     // 누락된 항목이 있다면 State 업데이트 후 종료
     if (missing.length > 0) {
       setMissingFields(missing);
-      // 화면을 버튼 쪽으로 살짝 스크롤 해주면 더 좋습니다 (선택 사항)
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       return;
     }
     // 검사 통과 시 초기화
     setMissingFields([]);
-    // ---------------------------------
+
+    const confirmResult = await YesAlert.fire({
+      title: '서비스 신청',
+      text: '입력하신 내용으로 동행 서비스를 신청하시겠습니까?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#1e3a8a',
+      cancelButtonColor: '#94A3B8',
+      confirmButtonText: '네, 신청하겠습니다', // 텍스트를 알맞게 수정
+      cancelButtonText: '닫기'
+    });
+
+    // 사용자가 '닫기'를 누르면 여기서 함수를 즉시 종료
+    if (!confirmResult.isConfirmed) {
+      return; 
+    }
 
     try {
       const finalMeetingPoint = basicExtraData.meetingType === '자택' 
@@ -234,15 +257,24 @@ export default function ApplyPage() {
         icon: 'success', 
         title: '신청 완료', 
         text: '동행 서비스 예약이 성공적으로 접수되었습니다.', 
+        confirmButtonText: '확인',
+        showCancelButton: false,
         confirmButtonColor: '#1e3a8a' 
       });
       router.push('/mypage');
-    } catch (error) {
-      YesAlert.fire({ icon: 'error', title: '신청 실패', text: '서버 오류로 인해 신청에 실패했습니다.' });
+    } catch (error: any) {
+      console.error("예약 신청 에러 상세:", error.response?.data);
+      const errorMsg = error.response?.data?.message || error.response?.data || '서버 오류로 인해 신청에 실패했습니다.';
+      
+      YesAlert.fire({ 
+        icon: 'error', 
+        title: '신청 실패', 
+        text: typeof errorMsg === 'string' ? errorMsg : '다시 시도해주세요.' 
+      });
     }
   };
 
-  // 🌟 시/분 분리 입력 처리용 핸들러
+  // 시/분 분리 입력 처리용 핸들러
   const handleTimeSelect = (type: 'hour' | 'minute', value: string) => {
     const currentHour = formData.time ? formData.time.split(':')[0] : '09'; // 기본값 09시
     const currentMinute = formData.time ? formData.time.split(':')[1] : '00'; // 기본값 00분
@@ -380,10 +412,21 @@ export default function ApplyPage() {
 
           {/* 2. 기본 정보 입력 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3 border-b border-gray-50 pb-4">
-              <div className="p-2.5 bg-emerald-50 rounded-xl"><User className="w-6 h-6 text-emerald-600" /></div>
-              2. 기본 정보 입력
-            </h3>
+            <div className="flex items-center justify-between border-b border-gray-50 pb-4 mb-6">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-50 rounded-xl"><User className="w-6 h-6 text-emerald-600" /></div>
+                2. 기본 정보 입력
+              </h3>
+              <button 
+                type="button" 
+                onClick={handleSwapPatientGuardian}
+                className="flex items-center gap-1.5 text-sm font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                환자/보호자 바꾸기
+              </button>
+            </div>
+            
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 text-[15px] md:text-base">
                 <div>

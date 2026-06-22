@@ -153,6 +153,14 @@ public class Member {
         this.kakaoAccessToken = kakaoAccessToken;
     }
 
+    // 카카오 연동 (기존 회원)
+    public void overwriteWithKakaoInfo(String kakaoEmail, String kakaoName, String kakaoAccessToken) {
+        this.email = kakaoEmail;          // 이메일을 카카오 계정 메일로 완전 교체
+        this.name = kakaoName;            // 이름도 카카오 이름으로 동기화
+        this.provider = "KAKAO";          // 가입 출처를 KAKAO로 명시
+        this.kakaoAccessToken = kakaoAccessToken; // 새로운 카카오 액세스 토큰 바인딩
+    }
+
     // 토큰 갱신용 메서드 (기존 회원 로그인 시 사용)
     public void updateKakaoToken(String kakaoAccessToken) {
         this.kakaoAccessToken = kakaoAccessToken;

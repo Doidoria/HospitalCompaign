@@ -51,7 +51,7 @@ public class TestDataInit implements CommandLineRunner {
                 .email("shth15926@gmail.com")
                 .password(passwordEncoder.encode("shth1234!!"))
                 .name("윤태현")
-                .phoneNumber("01012341234")
+                .phoneNumber("01088107708")
                 .guardianName("윤보호자")
                 .guardianPhone("01034563456")
                 .zipCode("42482")

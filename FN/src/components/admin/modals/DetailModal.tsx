@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, X, Loader2, Users, MapPin, CalendarDays, Navigation, Stethoscope, AlertCircle, HelpCircle } from 'lucide-react';
+import { FileText, X, Loader2, Users, MapPin, CalendarDays, Navigation, Stethoscope, AlertCircle, HelpCircle, ShieldCheck } from 'lucide-react';
 import { Toast } from '@/src/utils/alert';
 
 interface DetailModalProps {
@@ -126,6 +126,29 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                       <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* 매니저 카드 */}
+              <div className="bg-emerald-50/40 p-5 rounded-[20px] border border-emerald-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-100 rounded-lg"><ShieldCheck className="w-4 h-4 text-emerald-600"/></div>
+                  담당 매니저
+                </h4>
+                <div className="bg-white p-4 rounded-xl border border-emerald-100/50 flex items-center gap-4">
+                  {selectedRequest.managerName && selectedRequest.managerName !== '-' && selectedRequest.managerName !== '배정완료' ? (
+                    <>
+                      <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-lg shrink-0 border border-emerald-100">
+                        {selectedRequest.managerName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-extrabold text-slate-800 text-base">{selectedRequest.managerName} <span className="font-medium text-xs text-slate-500">매니저</span></p>
+                        {selectedRequest.managerId && <p className="text-xs font-bold text-slate-400 mt-0.5">사번(ID): {selectedRequest.managerId}</p>}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm font-bold text-slate-400 py-1">아직 배정된 매니저가 없습니다.</p>
+                  )}
                 </div>
               </div>
 

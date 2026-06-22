@@ -2,6 +2,7 @@ package com.yescare.api.service;
 
 import com.yescare.api.domain.Member;
 import com.yescare.api.domain.Role;
+import com.yescare.api.exception.RequireAccountLinkException;
 import com.yescare.api.repository.MemberRepository;
 import com.yescare.api.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -110,6 +111,26 @@ public class KakaoAuthService {
         Member member;
         Optional<Member> existingMemberOpt = memberRepository.findByEmail(email);
 
+        // 카카오 이메일과 기존 이메일이 다르더라도, '전화번호'가 같다면 동일인으로 간주하여 연동 시도!
+        if (existingMemberOpt.isEmpty() && phoneNumber != null && !phoneNumber.equals("01000000000")) {
+            existingMemberOpt = memberRepository.findByPhoneNumber(phoneNumber);
+            if (existingMemberOpt.isPresent()) {
+                member = existingMemberOpt.get();
+
+                if ("LOCAL".equals(member.getProvider())) {
+                    // 🚨 [수정됨] 자동 연동하지 않고, 프론트엔드에 카카오 토큰과 함께 예외를 던집니다.
+                    // 프론트엔드는 이 에러를 잡아서 사용자에게 "연동하시겠습니까?" 팝업을 띄웁니다.
+                    throw new RequireAccountLinkException(
+                            "이미 동일한 전화번호로 가입된 일반 계정이 있습니다. 카카오 계정으로 통합하시겠습니까?",
+                            kakaoAccessToken,
+                            email
+                    );
+                } else {
+                    member.updateKakaoToken(kakaoAccessToken);
+                }
+            }
+        }
+
         if (existingMemberOpt.isPresent()) {
             // [케이스 A] 기존 회원이 이미 존재하는 경우
             member = existingMemberOpt.get();
@@ -150,10 +171,13 @@ public class KakaoAuthService {
             try {
                 member = memberRepository.saveAndFlush(newMember);
 
-                // 신규 가입 환영 알림톡 발송!
                 // 단, 필수 동의를 거부해서 들어온 더미 번호(01000000000)가 아닐 때만 발송
                 if (phoneNumber != null && !phoneNumber.equals("01000000000")) {
-                    kakaoAlimtalkService.sendJoinComplete(phoneNumber, member.getName());
+                    java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+                    String joinDate = java.time.LocalDateTime.now().format(formatter);
+
+                    // 이름, 가입시간, 이메일(아이디)을 꽉 채워서 알림톡 발송!
+                    kakaoAlimtalkService.sendJoinComplete(phoneNumber, member.getName(), joinDate, member.getEmail());
                     log.info("🔔 카카오 신규 가입자 환영 알림톡 발송 완료: {}", phoneNumber);
                 }
             } catch (DataIntegrityViolationException e) {
@@ -163,6 +187,30 @@ public class KakaoAuthService {
         }
 
         // 8. 우리 서비스 전용 JWT 토큰 발급 후 프론트엔드로 반환
+        return jwtProvider.createToken(member.getId(), member.getEmail(), member.getRole().name());
+    }
+
+    @Transactional
+    public String confirmAndLinkKakao(String kakaoAccessToken) {
+        // 1. 프론트에서 다시 넘겨준 임시 카카오 토큰으로 카카오 유저 정보를 다시 조회
+        Map<String, Object> userInfo = getKakaoUserInfo(kakaoAccessToken);
+        Map<String, Object> kakaoAccount = (Map<String, Object>) userInfo.get("kakao_account");
+
+        String kakaoEmail = (String) kakaoAccount.get("email");
+        String kakaoPhone = normalizePhoneNumber((String) kakaoAccount.get("phone_number"));
+
+        // 2. 전화번호로 기존 LOCAL 회원 찾기
+        Member member = memberRepository.findByPhoneNumber(kakaoPhone)
+                .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
+
+        // 3. 카카오 정보 우선 덮어쓰기 (기존 기록은 id로 유지됨)
+        member.overwriteWithKakaoInfo(
+                kakaoEmail, // 이메일을 카카오 이메일로 완전 교체
+                (String) kakaoAccount.get("name"),
+                kakaoAccessToken
+        );
+
+        // 4. 연동 완료 후 정상적인 로그인 토큰 발급
         return jwtProvider.createToken(member.getId(), member.getEmail(), member.getRole().name());
     }
 

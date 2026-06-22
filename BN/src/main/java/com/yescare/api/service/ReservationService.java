@@ -86,7 +86,7 @@ public class ReservationService {
 
         kakaoAlimtalkService.sendReservationComplete(
                 member.getPhoneNumber(),
-                request.getPatientName(),
+                member.getName(),
                 request.getReservationTime().format(formatter),
                 request.getHospitalName()
         );
@@ -113,7 +113,18 @@ public class ReservationService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다. (ID: " + id + ")"));
 
         // String으로 들어온 상태값을 Enum으로 변환해서 업데이트
-        reservation.updateStatus(ReservationStatus.valueOf(newStatus));
+        ReservationStatus status = ReservationStatus.valueOf(newStatus);
+        reservation.updateStatus(status);
+
+        // 관리자가 상태를 'CANCELLED(취소)'로 변경했을 때 알림톡 발송
+        if (status == ReservationStatus.CANCELLED) {
+            kakaoAlimtalkService.sendReservationChangedOrCanceled(
+                    reservation.getMember().getPhoneNumber(),
+                    reservation.getMember().getName(),
+                    "예약 취소 처리 완료",
+                    "예스케어 고객센터를 통한 예약 취소"
+            );
+        }
     }
 
     /**
@@ -177,11 +188,17 @@ public class ReservationService {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
 
+        // 1. 만나는 장소 '///' 기호 제거 및 깔끔하게 띄어쓰기 정제
+        String rawMeetingPoint = reservation.getMeetingPoint() != null ? reservation.getMeetingPoint() : "자택";
+        String cleanMeetingPoint = rawMeetingPoint.replace("///", " ").replaceAll("\\s+", " ").trim();
+
+        // 2. 파라미터 5개 전달 (환자명 대신 고객명 주입)
         kakaoAlimtalkService.sendManagerAssigned(
                 reservation.getMember().getPhoneNumber(),
-                reservation.getPatientName(),
+                reservation.getMember().getName(),
                 manager.getName(),
-                reservation.getReservationTime().format(formatter)
+                reservation.getReservationTime().format(formatter),
+                cleanMeetingPoint
         );
     }
 
@@ -515,7 +532,6 @@ public class ReservationService {
         kakaoAlimtalkService.sendAccompanyStarted(
                 reservation.getMember().getPhoneNumber(),
                 customerName,
-                reservation.getPatientName(),
                 reservation.getManager().getName(),
                 startTime
         );
@@ -538,9 +554,7 @@ public class ReservationService {
 
         kakaoAlimtalkService.sendAccompanyCompleted(
                 reservation.getMember().getPhoneNumber(),
-                customerName,
-                reservation.getPatientName(),
-                customerEmail
+                customerName
         );
     }
 

@@ -50,6 +50,9 @@ export default function SignupPage() {
   const isPasswordValid = passwordRegex.test(formData.password);
   const isPasswordMatch = formData.password === formData.passwordConfirm && formData.password !== '';
 
+  // 3분(180초) 타이머가 120초(1분 경과) 이하로 떨어졌을 때만 재전송 가능하도록 설정
+  const isSmsCooldown = isCodeSent && timer > 120; // 서버의 1분(60초) 쿨타임과 동기화
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isEmailCodeSent && !isEmailVerified && emailTimer > 0) {
@@ -187,10 +190,11 @@ export default function SignupPage() {
     try {
       await authApi.sendSms(cleanPhone);
       setIsCodeSent(true);
-      setTimer(180);
+      setTimer(180); // 발송 성공 시 타이머 180초로 리셋
       YesAlert.fire({ icon: 'success', title: '발송 완료', text: '인증번호가 발송되었습니다. 3분 내에 입력해 주세요.' });
-    } catch (error) {
-      YesAlert.fire({ icon: 'error', title: '발송 실패', text: '문자 발송에 실패했습니다. 번호를 확인해 주세요.' });
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || error.response?.data || '문자 발송에 실패했습니다. 번호를 확인해 주세요.';
+      YesAlert.fire({ icon: 'error', title: '발송 실패', text: typeof errorMsg === 'string' ? errorMsg : '잠시 후 다시 시도해주세요.' });
     }
   };
 
@@ -416,9 +420,18 @@ export default function SignupPage() {
                   className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500 
                   transition-all text-base placeholder:text-[12px] sm:placeholder:text-[15px]" required />
                 </div>
-                <button type="button" onClick={handleSendCode} disabled={isPhoneVerified} className={`px-4 py-3.5 font-bold rounded-xl whitespace-nowrap 
-                  transition-colors text-sm sm:text-base ${isPhoneVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                  {isPhoneVerified ? '인증 완료' : isCodeSent ? '재전송' : '인증요청'}
+                <button 
+                  type="button" 
+                  onClick={handleSendCode} 
+                  disabled={isPhoneVerified || isSmsCooldown} 
+                  className={`px-4 py-3.5 font-bold rounded-xl whitespace-nowrap min-w-[90px] flex items-center justify-center transition-colors text-sm sm:text-base 
+                    ${isPhoneVerified ? 'bg-emerald-100 text-emerald-700' : 
+                      isSmsCooldown ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 
+                      'bg-gray-800 text-white hover:bg-gray-900'}`}
+                >
+                  {isPhoneVerified ? '인증 완료' : 
+                   isSmsCooldown ? `${timer - 120}초 후` : // 60초 카운트다운 보여주기
+                   isCodeSent ? '재전송' : '인증요청'}
                 </button>
               </div>
               {isCodeSent && !isPhoneVerified && (

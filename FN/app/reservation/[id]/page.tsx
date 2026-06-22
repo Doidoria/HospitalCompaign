@@ -101,10 +101,10 @@ export default function ReservationDetailPage() {
           patientName: apiData.patientName,
           patientPhone: apiData.patientPhone || '연락처 없음', 
           memo: apiData.requirements || '',
-          manager: apiData.managerId 
-            ? { id: apiData.managerId, name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
+          manager: (apiData.managerName && apiData.managerName !== '-' && apiData.managerName !== '배정완료')
+            ? { id: apiData.managerId || '', name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
             : null,
-          payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 }, 
+          payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 },
           category: apiData.category || '진료',
           detailedContent: apiData.detailedContent || '',
           doctorInquiry: apiData.doctorInquiry || '',
@@ -379,12 +379,12 @@ export default function ReservationDetailPage() {
         </motion.section>
 
         {/* 2. 매니저 정보 카드 */}
-        {reservation.manager && reservation.status !== '취소됨' && (
+        {reservation.status !== '취소됨' && (
           <motion.section variants={itemVariants}>
             <h3 className="text-sm font-bold text-slate-500 mb-3 ml-2 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4" /> 동행 매니저 정보
             </h3>
-            {reservation.manager.id ? (
+            {reservation.manager ? (
               <Link href={`/manager/profile/${reservation.manager.id}`} className="block group">
                 <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex items-center justify-between group-hover:border-emerald-200 group-hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
