@@ -64,14 +64,23 @@ public class ReportService {
         reservation.setReport(report);
         reportRepository.save(report);
 
-        // 저장 직후, 보호자 이메일로 메일 발송
+        byte[] pdfBytes = null;
+        try {
+            if (pdfFile != null && !pdfFile.isEmpty()) {
+                pdfBytes = pdfFile.getBytes();
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("PDF 파일 변환 중 오류 발생", e);
+        }
+
+        // 변환된 byte 배열을 EmailService로 전달
         emailService.sendCareReport(
                 reservation.getMember().getEmail(),
                 reservation.getMember().getName(),
                 reservation.getHospitalName(),
                 request.getDoctorOpinion(),
-                pdfFile,
-                false // 신규 작성이므로 false 전달
+                pdfBytes,
+                false
         );
 
         // 리포트 작성 후 알림톡 발송 트리거
@@ -113,14 +122,23 @@ public class ReportService {
                 request.getPatientCondition()
         );
 
-        // 4. 수정한 내용과 새로운 PDF로 보호자에게 이메일 재전송
+        byte[] pdfBytes = null;
+        try {
+            if (pdfFile != null && !pdfFile.isEmpty()) {
+                pdfBytes = pdfFile.getBytes();
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("PDF 파일 변환 중 오류 발생", e);
+        }
+
+        // 변환된 byte 배열을 EmailService로 전달
         emailService.sendCareReport(
                 reservation.getMember().getEmail(),
                 reservation.getMember().getName(),
                 reservation.getHospitalName(),
                 request.getDoctorOpinion(),
-                pdfFile,
-                true // 수정 후 재전송이므로 true 전달!
+                pdfBytes,
+                true
         );
 
         kakaoAlimtalkService.sendReportModified(

@@ -90,7 +90,7 @@ export default function Footer() {
               className="group flex items-center gap-2 text-lg font-bold text-white tracking-wide hover:text-blue-400 transition-colors active:scale-95 outline-none"
               title="계좌번호 복사하기"
             >
-              국민은행 000-000000-00000
+              하나은행 053-982277-80904
               <Copy className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors" />
             </button>
             <p className="text-slate-400 mt-1">예금주 : 예스케어</p>

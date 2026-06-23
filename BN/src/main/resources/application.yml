@@ -73,13 +73,14 @@ coolsms:
     pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
     template:
       report-completed: TEST_TPL_REPORT_COMPLETE              # 동행 리포트 전송
-      report-modified: KA01TP260612061229963g7YuS9ctkvO       # 리포트 수정
+      report-modified: KA01TP260622053627054rdN5lrJXqBS       # 동행 리포트 수정
       extra-charge-modified: KA01TP260612061114064hmI6Aoze8vj # 추가 요금 수정
       inquiry-answered: KA01TP260610051333569jabJivnkzG6      # 1:1 문의 답변 완료
       reservation-changed-or-canceled: KA01TP26061003351045985qNDAAsFtJ  # 예약 변경/취소 안내
       extra-charge: KA01TP260610033213746m65rnzmIAEl          # 추가 요금 알림
-      accompany-completed: KA01TP260610032406168UQKwvSHyI24   # 동행 종료 알림
-      accompany-started: KA01TP260610032149453t3H87Nvh2BC     # 동행 시작 알림
+      accompany-completed: KA01TP2606220630547222QhgdF0fTva   # 동행 종료 알림
+      accompany-started: KA01TP260622035523521kAng1VBr7UY     # 동행 시작 알림
       manager-assigned: KA01TP260610031814693YOYoTBSpJeo      # 매니저 배정 완료
       reservation-complete: KA01TP260610031303911kWgOH3HfBwd  # 예약 접수 완료
       join-complete: KA01TP260610023305261Vl3MpZG0Sez         # 회원가입 완료
+      proxy-reservation-complete: KA01TP260610023305261Vl3MpZG0Se2 # 대리 신청 완료

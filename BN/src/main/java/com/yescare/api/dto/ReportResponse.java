@@ -17,6 +17,7 @@ public class ReportResponse {
     private String nextSchedule;
     private String patientCondition;
     private boolean isModified;
+    private boolean noNextSchedule;
 
     public ReportResponse(Report entity) {
         this.id = entity.getId();
@@ -33,5 +34,6 @@ public class ReportResponse {
         this.nextSchedule = entity.getNextSchedule();
         this.patientCondition = entity.getPatientCondition();
         this.isModified = entity.isModified();
+        this.noNextSchedule = entity.getReservation().getNoRevisit();
     }
 }

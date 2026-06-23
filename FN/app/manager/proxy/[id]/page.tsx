@@ -9,12 +9,16 @@ import {
   CalendarPlus, ArrowLeft, Loader2, CheckCircle2, Calendar, X,
   MapPin, User, Stethoscope, Car, Accessibility, Info, Search, Building2, HelpCircle
 } from 'lucide-react';
-import { reservationApi } from '@/src/api/index';
-import Swal from 'sweetalert2';
+import { reservationApi, reportApi } from '@/src/api/index';
+import { useSearchParams } from 'next/navigation';
+import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
 
 export default function ProxyReservationPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams(); 
+  const defaultDate = searchParams.get('date') || '';
+  const defaultTime = searchParams.get('time') || '';
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,8 +35,8 @@ export default function ProxyReservationPage() {
 
   const [formData, setFormData] = useState({
     revisitCount: '1차 재방문',
-    date: '',
-    time: '',
+    date: defaultDate,
+    time: defaultTime,
     hospitalName: '',
     guardianName: '',
     guardianPhone: '',
@@ -74,6 +78,26 @@ export default function ProxyReservationPage() {
           doctorInquiry: data.doctorInquiry || ''
         }));
 
+        try {
+          const reportRes = await reportApi.getReportByReservationId(params.id as string);
+          
+          if (reportRes.data && reportRes.data.nextSchedule) {
+            const [nDate, nTimeFull] = reportRes.data.nextSchedule.split('T');
+            const nTime = nTimeFull ? nTimeFull.substring(0, 5) : '';
+
+            // nDate가 선택 가능한 최소 날짜(minDate)보다 과거가 아닐 때만 자동 입력
+            if (nDate >= minDate) {
+              setFormData(prev => ({
+                ...prev,
+                date: nDate || '',
+                time: nTime || ''
+              }));
+            }
+          }
+        } catch (reportError) {
+          console.log("리포트 정보가 없거나 일정이 없습니다.");
+        }
+
         setCategory(data.category || '일반 진료');
 
         // 상세 내용 파싱
@@ -109,7 +133,7 @@ export default function ProxyReservationPage() {
         });
 
       } catch (error) {
-        Swal.fire({ icon: 'error', title: '오류', text: '기존 예약 정보를 불러올 수 없습니다.' });
+        MySwal.fire({ icon: 'error', title: '오류', text: '기존 예약 정보를 불러올 수 없습니다.' });
         router.back();
       } finally {
         setLoading(false);
@@ -146,7 +170,7 @@ export default function ProxyReservationPage() {
     setPostTarget('none');
 
     if (currentTarget === 'hospital' && !isHospital) {
-      Swal.fire({
+      MySwal.fire({
         title: '병원이 맞나요?',
         text: `선택하신 주소(${bName || '건물명 없음'})에서 병원 관련 단어가 발견되지 않았습니다. 그래도 등록하시겠습니까?`,
         icon: 'warning',
@@ -174,7 +198,7 @@ export default function ProxyReservationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.date || !formData.time || !formData.hospitalName) {
-      return Swal.fire({ icon: 'warning', title: '입력 확인', text: '방문 일시와 병원명은 필수입니다.' });
+      return MySwal.fire({ icon: 'warning', title: '입력 확인', text: '방문 일시와 병원명은 필수입니다.' });
     }
 
     setIsSubmitting(true);
@@ -206,10 +230,15 @@ export default function ProxyReservationPage() {
       };
 
       await reservationApi.createProxy(Number(params.id), payload);
-      await Swal.fire({ icon: 'success', title: '신청 완료', text: '다음 동행 일정이 성공적으로 접수되었습니다.', confirmButtonColor: '#ea580c' });
+      await MySwal.fire({ 
+        icon: 'success', 
+        title: '대리 신청 완료', 
+        text: '다음 일정이 성공적으로 접수되었으며, 고객님께 접수 안내 알림톡이 발송되었습니다.', 
+        confirmButtonColor: '#ea580c' 
+      });
       router.push('/manager/dashboard');
     } catch (error) {
-      Swal.fire({ icon: 'error', title: '신청 실패', text: '서버 오류가 발생했습니다.' });
+      MySwal.fire({ icon: 'error', title: '신청 실패', text: '서버 오류가 발생했습니다.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -357,7 +386,7 @@ export default function ProxyReservationPage() {
                             <Search className="w-4 h-4" />
                         </button>
                         <button type="button" onClick={() => {
-                            if(!formData.hospitalName) return Swal.fire('알림', '먼저 방문 병원을 입력해주세요.', 'warning');
+                            if(!formData.hospitalName) return MySwal.fire('알림', '먼저 방문 병원을 입력해주세요.', 'warning');
                             setBasicExtraData({...basicExtraData, meetingAddress: formData.hospitalName});
                             }} 
                             className="w-16 shrink-0 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-[13px]"
@@ -405,12 +434,6 @@ export default function ProxyReservationPage() {
             </h3>
             
             <div className="space-y-6">
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">보호자 특별 요청사항</label>
-                <textarea name="requirements" rows={2} value={formData.requirements} onChange={handleChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-300 transition-all outline-none font-medium text-gray-800 resize-none"></textarea>
-              </div>
-
               <div className="bg-blue-50/40 p-5 rounded-[20px] border border-blue-100 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-5 border-b border-blue-200/60 pb-4 gap-3">
                   <label className="text-sm font-bold text-blue-900 flex items-center gap-2">
@@ -450,7 +473,10 @@ export default function ProxyReservationPage() {
                   </div>
                 )}
               </div>
-
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">보호자 특별 요청사항</label>
+                <textarea name="requirements" rows={2} value={formData.requirements} onChange={handleChange} className="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-300 transition-all outline-none font-medium text-gray-800 resize-none"></textarea>
+              </div>
               <div>
                 <label className="block text-sm font-bold text-amber-600 mb-2 flex items-center gap-1.5 ml-1">
                   <HelpCircle className="w-4 h-4" /> 의사 선생님께 꼭 여쭤봐야 할 질문

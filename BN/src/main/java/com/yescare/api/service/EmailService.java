@@ -8,7 +8,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +25,7 @@ public class EmailService {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1); // 3분 뒤 삭제를 실행할 스케줄러
 
     @Async
-    public void sendCareReport(String toEmail, String patientName, String hospitalName, String content, MultipartFile pdfFile, boolean isModified) {
+    public void sendCareReport(String toEmail, String patientName, String hospitalName, String content, byte[] pdfBytes, boolean isModified) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -47,8 +46,8 @@ public class EmailService {
             helper.setText(text);
 
             // PDF 첨부파일이 넘어왔을 경우에만 메일에 첨부
-            if (pdfFile != null && !pdfFile.isEmpty()) {
-                helper.addAttachment(patientName + "_케어리포트.pdf", new ByteArrayResource(pdfFile.getBytes()));
+            if (pdfBytes != null && pdfBytes.length > 0) {
+                helper.addAttachment(patientName + "_케어리포트.pdf", new ByteArrayResource(pdfBytes));
             }
 
             mailSender.send(message);

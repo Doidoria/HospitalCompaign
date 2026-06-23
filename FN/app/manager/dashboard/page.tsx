@@ -325,6 +325,13 @@ export default function ManagerDashboard() {
                 const isConfirmed = req.status === 'CONFIRMED' || req.status === '예약 확정';
                 const isInProgress = req.status === 'IN_PROGRESS' || req.status === '동행 진행 중';
                 const isCompleted = req.status === 'COMPLETED' || req.status === '이용 완료';
+
+                let proxyQuery = '';
+                if (req.nextSchedule) {
+                  const [nDate, nTimeFull] = req.nextSchedule.split('T');
+                  const nTime = nTimeFull ? nTimeFull.substring(0, 5) : ''; // "14:30" 형태로 자르기
+                  proxyQuery = `?date=${nDate}&time=${nTime}`;
+                }
                 
                 return (
                   <motion.div layout key={req.id} variants={itemVariants} exit={{ opacity: 0, scale: 0.95 }}
@@ -370,25 +377,24 @@ export default function ManagerDashboard() {
                       )}
 
                       {isInProgress && (
-                    <>
-                      <button onClick={() => { setSelectedExtraChargeId(req.id); setIsExtraChargeModalOpen(true); }}
-                        className={`flex-1 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98] ${
-                          req.extraChargeAmount 
-                            ? 'bg-purple-50 hover:bg-purple-100 text-purple-600 border-purple-200/60' 
-                            : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200/60'
-                        }`}
-                      >
-                        <PlusCircle className="w-4 h-4" /> 
-                        {req.extraChargeAmount ? '추가 요금 수정' : '추가 요금'}
-                      </button>
-                      
-                      <button onClick={() => handleCompleteAccompany(req.id)}
-                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98]">
-                        <CheckSquare className="w-4 h-4" /> 동행 완료
-                      </button>
-                    </>
-                  )}
-                      
+                        <>
+                          <button onClick={() => { setSelectedExtraChargeId(req.id); setIsExtraChargeModalOpen(true); }}
+                            className={`flex-1 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98] ${
+                              req.extraChargeAmount 
+                                ? 'bg-purple-50 hover:bg-purple-100 text-purple-600 border-purple-200/60' 
+                                : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200/60'
+                            }`}
+                          >
+                            <PlusCircle className="w-4 h-4" /> 
+                            {req.extraChargeAmount ? '추가 요금 수정' : '추가 요금'}
+                          </button>
+                          
+                          <button onClick={() => handleCompleteAccompany(req.id)}
+                            className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-blue-200/60 shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                            <CheckSquare className="w-4 h-4" /> 동행 완료
+                          </button>
+                        </>
+                      )}
                       {isCompleted && (
                         <>
                           {req.hasReport ? (
@@ -411,7 +417,7 @@ export default function ManagerDashboard() {
                               <CheckCircle2 className="w-4 h-4" /> 재방문 신청 완료
                             </button>
                           ) : (
-                            <Link href={`/manager/proxy/${req.id}`}
+                            <Link href={`/manager/proxy/${req.id}${proxyQuery}`}
                               className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3.5 rounded-xl transition-colors text-center text-sm border border-orange-200/60 shadow-[0_2px_4px_rgb(249,115,22,0.1)] flex items-center justify-center gap-1.5"
                             >
                               <CalendarPlus className="w-4 h-4" /> 대리 신청

@@ -110,8 +110,16 @@ public class ReservationController {
 
     // 매니저 대리 예약 신청 API
     @PostMapping("/{id}/proxy")
-    public ResponseEntity<?> createProxyReservation(@PathVariable Long id, @RequestBody Map<String, String> request) {
-        reservationService.createProxyReservation(id, request);
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    public ResponseEntity<?> createProxyReservation(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request,
+            Principal principal) {
+
+        if (principal == null) return ResponseEntity.status(403).body("로그인이 필요합니다.");
+
+        // 서비스로 요청자의 이메일을 함께 넘겨줍니다.
+        reservationService.createProxyReservation(id, principal.getName(), request);
         return ResponseEntity.ok(Map.of("message", "대리 예약이 완료되었습니다."));
     }
 

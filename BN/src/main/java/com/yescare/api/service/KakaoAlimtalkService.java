@@ -49,6 +49,8 @@ public class KakaoAlimtalkService {
     private String tplReportModified;
     @Value("${coolsms.kakao.template.report-completed}")
     private String tplReportCompleted;
+    @Value("${coolsms.kakao.template.proxy-reservation-complete}")
+    private String tplProxyReservationComplete;
 
     private DefaultMessageService messageService;
 
@@ -221,5 +223,25 @@ public class KakaoAlimtalkService {
 
         String text = "[예스케어] " + customerName + "님, 청구된 추가 요금 내역이 정정되었습니다.";
         sendAlimtalk(phoneNumber, text, tplExtraChargeModified, variables); // (tpl은 yml에 등록될 새 ID)
+    }
+
+    // 대리 신청 접수 완료 안내
+    @Async
+    public void sendProxyReservationComplete(String phoneNumber, String customerName, String datetime, String hospitalName) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{고객명}", customerName);
+        variables.put("#{예약일시}", datetime);
+        variables.put("#{병원명}", hospitalName);
+
+        // 카톡 실패 시 발송될 대체 문자(SMS/LMS) 세팅
+        String text = "[예스케어] 안녕하세요, " + customerName + "님.\n" +
+                "고객님(또는 환자님)께서 현장에서 직접 요청하신 다음 병원 진료 동행 서비스 예약이 정상적으로 대리 접수되었습니다.\n\n" +
+                "■ 다음 예약 정보\n" +
+                "예약일시: " + datetime + "\n" +
+                "방문병원: " + hospitalName + "\n\n" +
+                "상세 접수 내역 및 결제 정보는 예스케어 마이페이지에서 확인하실 수 있습니다. 다시 한번 예스케어를 믿고 찾아주셔서 감사합니다.";
+
+        sendAlimtalk(phoneNumber, text, tplProxyReservationComplete, variables);
+        log.info("🔔 [알림톡 발송] 대리 신청 완료 알림톡 전송 -> 수신처: {}", phoneNumber);
     }
 }

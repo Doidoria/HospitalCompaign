@@ -176,7 +176,7 @@ export default function ReportWritePage() {
         department: formData.department,
         doctorOpinion: formData.doctorOpinion,
         prescription: formData.prescription,
-        nextSchedule: noNextSchedule ? '' : formData.nextSchedule, 
+        nextSchedule: finalNextSchedule,
         managerComment: formData.managerComment,
         patientCondition: formData.patientCondition,
         noNextSchedule: noNextSchedule
@@ -196,12 +196,14 @@ export default function ReportWritePage() {
 
       if (res.status === 200 || res.status === 201) {
         localStorage.removeItem(`draft_care_report_${params.id}`);
-        MySwal.fire({ 
+
+        await MySwal.fire({ 
           icon: 'success', 
           title: existingReportId ? '리포트 수정 완료' : '리포트 작성 완료', 
           text: '보호자에게 알림이 전송되었습니다.' 
         });
-        window.location.href = '/manager/dashboard';
+        
+        router.push('/manager/dashboard');
       }
 
     } catch (error) {

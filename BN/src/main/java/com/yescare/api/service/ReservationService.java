@@ -276,19 +276,29 @@ public class ReservationService {
     }
 
     @Transactional
-    public void createProxyReservation(Long originalId, Map<String, String> data) {
+    public void createProxyReservation(Long originalId, String requesterEmail, Map<String, String> data) {
         Reservation old = reservationRepository.findById(originalId)
                 .orElseThrow(() -> new IllegalArgumentException("원본 예약을 찾을 수 없습니다."));
 
-        // 1. 원본 예약 버튼을 '신청 완료'로 잠금 처리!
+        Member requester = memberRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new IllegalArgumentException("요청자 정보를 찾을 수 없습니다."));
+
+        // 요청자가 관리자(ADMIN)가 아닐 경우에만 소유권 검사
+        if (!requester.getRole().name().contains("ADMIN")) {
+            // 원본 예약에 매니저가 배정되어 있지 않거나, 배정된 매니저의 이메일과 요청자의 이메일이 다르면 차단!
+            if (old.getManager() == null || !old.getManager().getEmail().equals(requesterEmail)) {
+                throw new IllegalStateException("본인이 담당한 예약에 대해서만 대리 신청이 가능합니다.");
+            }
+        }
+
+        // 원본 예약 버튼을 '신청 완료'로 잠금 처리!
         old.setHasProxy(true);
 
-        // 2. 팝업에서 건너온 데이터를 조합하여 새 예약 생성
+        // 팝업에서 건너온 데이터를 조합하여 새 예약 생성
         Reservation newRes = Reservation.builder()
                 .member(old.getMember())
                 .patientName(old.getPatientName())
                 .patientPhone(old.getPatientPhone())
-
                 .hospitalName(data.get("hospitalName"))
                 .reservationTime(LocalDateTime.parse(data.get("reservationTime")))
                 .category(data.get("category"))
@@ -300,7 +310,6 @@ public class ReservationService {
                 .requirements(data.get("requirements"))
                 .detailedContent(data.get("detailedContent"))
                 .doctorInquiry(data.get("doctorInquiry"))
-
                 // 재방문 회차 저장 및 메모 조합
                 .revisitCount(data.get("revisitCount"))
                 .memo("[매니저 대리 신청 - " + data.get("revisitCount") + "] " + data.get("memo"))
@@ -308,6 +317,15 @@ public class ReservationService {
                 .build();
 
         reservationRepository.save(newRes);
+
+        // 대리 신청 저장 직후 알림톡 발송 트리거!
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+        kakaoAlimtalkService.sendProxyReservationComplete(
+                old.getMember().getPhoneNumber(),
+                old.getMember().getName(),
+                newRes.getReservationTime().format(formatter),
+                newRes.getHospitalName()
+        );
     }
 
     @Transactional
