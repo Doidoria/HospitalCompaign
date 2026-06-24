@@ -4,9 +4,9 @@ import { apiClient } from './client';
 // ==========================================
 // 1. Auth & Users (인증/회원)
 // ==========================================
-export const authApi = {  
+export const authApi = {
   // 1. 로그인 (성공 시 토큰 발급)
-  login: (data: any) => apiClient.post('/api/members/login', data),  
+  login: (data: any) => apiClient.post('/api/members/login', data),
   
   // 카카오 로그인 처리
   loginWithKakao: (code: string) => apiClient.post('/api/members/auth/kakao', { code }),

@@ -2,6 +2,7 @@ package com.yescare.api.dto;
 
 import lombok.Getter;
 import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -21,4 +22,8 @@ public class ReservationRequest {
     private String meetingPoint;
     private String transportation;
     private String mobility;
+    private String bloodType;
+    private String underlyingDisease;
+    private String medication;
+    private String preparedDocuments;
 }

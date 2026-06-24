@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ArrowLeft, Save, MapPin, Calendar, FileText, Search, MessageSquare, HelpCircle, 
-  Car, Accessibility, Building2, X, Stethoscope
+  Car, Accessibility, Building2, X, Stethoscope, Heart, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import { reservationApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
@@ -47,6 +47,14 @@ export default function ReservationEditPage() {
     symptoms: '', 
     testType: '', 
     isFasting: '해당 없음', 
+  });
+
+  const [isHealthInfoOpen, setIsHealthInfoOpen] = useState(false);
+  const [healthData, setHealthData] = useState({
+    bloodType: '',
+    underlyingDisease: '',
+    medication: '',
+    preparedDocuments: ''
   });
 
   useEffect(() => {
@@ -108,6 +116,12 @@ export default function ReservationEditPage() {
           mobility: data.mobility || '독립 보행 가능'
         });
 
+        setHealthData({
+          bloodType: data.bloodType || '',
+          underlyingDisease: data.underlyingDisease || '',
+          medication: data.medication || '',
+          preparedDocuments: data.preparedDocuments || ''
+        });
       })
       .catch(err => {
         console.error(err);
@@ -215,7 +229,11 @@ export default function ReservationEditPage() {
         doctorInquiry: formData.doctorInquiry,
         meetingPoint: finalMeetingPoint,
         transportation: basicExtraData.transportation,
-        mobility: basicExtraData.mobility
+        mobility: basicExtraData.mobility,
+        bloodType: healthData.bloodType || undefined,
+        underlyingDisease: healthData.underlyingDisease || undefined,
+        medication: healthData.medication || undefined,
+        preparedDocuments: healthData.preparedDocuments || undefined
       };
       
       await reservationApi.update(id as string, requestData); 
@@ -460,6 +478,71 @@ export default function ReservationEditPage() {
               </div>
               
             </div>
+          </div>
+
+          {/* 4. 환자 사전 건강 정보 수정 (아코디언 UI) */}
+          <div className="bg-white p-6 md:p-8 rounded-[24px] shadow-sm border border-gray-100">
+            <div className="flex justify-between items-center cursor-pointer group" onClick={() => setIsHealthInfoOpen(!isHealthInfoOpen)}>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-pink-50 rounded-xl group-hover:bg-pink-100 transition-colors">
+                  <Heart className="w-6 h-6 text-pink-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 transition-colors group-hover:text-pink-600">
+                  4. 환자 사전 건강 정보 <span className="text-sm font-normal text-gray-400 ml-1">(선택 입력)</span>
+                </h3>
+              </div>
+              <div className="p-2 bg-gray-50 rounded-full text-gray-500 group-hover:bg-gray-100 transition-colors">
+                {isHealthInfoOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </div>
+            </div>
+
+            {isHealthInfoOpen && (
+              <div className="space-y-6 pt-6 mt-6 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">혈액형</label>
+                    <div className="relative">
+                      <select value={healthData.bloodType} 
+                        onChange={(e) => setHealthData({...healthData, bloodType: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800 appearance-none cursor-pointer"
+                      >
+                        <option value="">혈액형 선택 (선택 안 함)</option>
+                        <option value="A형 (Rh+)">A형 (Rh+)</option>
+                        <option value="B형 (Rh+)">B형 (Rh+)</option>
+                        <option value="O형 (Rh+)">O형 (Rh+)</option>
+                        <option value="AB형 (Rh+)">AB형 (Rh+)</option>
+                        <option value="A형 (Rh-)">A형 (Rh-)</option>
+                        <option value="B형 (Rh-)">B형 (Rh-)</option>
+                        <option value="O형 (Rh-)">O형 (Rh-)</option>
+                        <option value="AB형 (Rh-)">AB형 (Rh-)</option>
+                        <option value="모름">모름</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">기저 질환</label>
+                    <input type="text" placeholder="예: 당뇨, 고혈압, 고지혈증" 
+                      value={healthData.underlyingDisease} onChange={(e) => setHealthData({...healthData, underlyingDisease: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">현재 복용 약</label>
+                    <input type="text" placeholder="예: 혈압약 아침 식후 복용 중" 
+                      value={healthData.medication} onChange={(e) => setHealthData({...healthData, medication: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">지참 준비 서류</label>
+                    <input type="text" placeholder="예: 타 병원 소견서, 영상 CD" 
+                      value={healthData.preparedDocuments} onChange={(e) => setHealthData({...healthData, preparedDocuments: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 하단 버튼 영역 */}

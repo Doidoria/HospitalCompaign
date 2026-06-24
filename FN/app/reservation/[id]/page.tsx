@@ -1,46 +1,16 @@
+// app/reservation/[id]/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, FileText, MessageSquare, HelpCircle, ChevronRight, Navigation } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, User, CreditCard, AlertCircle, XCircle, ShieldCheck, FileText, MessageSquare, HelpCircle, 
+  ChevronRight, Navigation, Heart 
+} from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
+import { ReservationDetailState } from '@/src/types/reservation';
 import Link from 'next/link';
-
-// TypeScript 인터페이스
-interface Manager {
-  id: string;
-  name: string;
-  license: string;
-  rating: string;
-}
-
-interface Payment {
-  baseFee: number;
-  extraFee: number;
-  totalFee: number;
-}
-
-interface Reservation {
-  id: string;
-  status: string;
-  date: string;
-  time: string;
-  hospital: string;
-  patientName: string;
-  patientPhone: string;
-  memo: string;
-  manager: Manager | null;
-  payment: Payment;
-  category: string;
-  detailedContent: string;
-  doctorInquiry: string;
-  meetingPoint: string;
-  patientAddress: string;
-  transportation: string;
-  mobility: string;
-}
 
 export default function ReservationDetailPage() {
   const params = useParams();
@@ -48,12 +18,14 @@ export default function ReservationDetailPage() {
   
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState("");
-  const [reservation, setReservation] = useState<Reservation>({
+
+  const [reservation, setReservation] = useState<ReservationDetailState>({
     id: '', status: '', date: '', time: '', hospital: '',
     patientName: '', patientPhone: '', memo: '',
     manager: null, payment: { baseFee: 0, extraFee: 0, totalFee: 0 },
     category: '', detailedContent: '', doctorInquiry: '', meetingPoint: '', patientAddress: '',
-    transportation: '', mobility: ''
+    transportation: '', mobility: '',
+    bloodType: '', underlyingDisease: '', medication: '', preparedDocuments: '' // 건강 정보 초기화
   });
   // 로그인 제공자(provider) 저장용 상태
   const [authProvider, setAuthProvider] = useState("LOCAL");
@@ -93,7 +65,7 @@ export default function ReservationDetailPage() {
         const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
         setReservation({
-          id: apiData.id,
+          id: String(apiData.id),
           status: apiData.status === 'WAITING' ? '매칭 대기' : apiData.status,
           date: dateStr,
           time: timeStr,
@@ -102,7 +74,7 @@ export default function ReservationDetailPage() {
           patientPhone: apiData.patientPhone || '연락처 없음', 
           memo: apiData.requirements || '',
           manager: (apiData.managerName && apiData.managerName !== '-' && apiData.managerName !== '배정완료')
-            ? { id: apiData.managerId || '', name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
+            ? { id: String(apiData.managerId) || '', name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
             : null,
           payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 },
           category: apiData.category || '진료',
@@ -111,7 +83,11 @@ export default function ReservationDetailPage() {
           meetingPoint: apiData.meetingPoint || '자택',
           patientAddress: apiData.patientAddress || '',
           transportation: apiData.transportation || '택시 이용',
-          mobility: apiData.mobility || '독립 보행 가능'
+          mobility: apiData.mobility || '독립 보행 가능',
+          bloodType: apiData.bloodType || '',
+          underlyingDisease: apiData.underlyingDisease || '',
+          medication: apiData.medication || '',
+          preparedDocuments: apiData.preparedDocuments || ''
         });
 
       } catch (error) {
@@ -154,7 +130,7 @@ export default function ReservationDetailPage() {
 
       if (confirmResult.isConfirmed) {
         try {
-          await reservationApi.cancel(reservation.id); 
+          await reservationApi.cancel(reservation.id as any);
           Toast.fire({ icon: 'success', title: '예약이 정상적으로 취소되었습니다.' });
           router.push('/mypage');
         } catch (error) {
@@ -183,7 +159,7 @@ export default function ReservationDetailPage() {
     if (password) {
       try {
         await authApi.login({ email: userEmail, password });
-        await reservationApi.cancel(reservation.id); 
+        await reservationApi.cancel(reservation.id as any);
 
         Toast.fire({ icon: 'success', title: '예약이 정상적으로 취소되었습니다.' });
         router.push('/mypage');
@@ -348,7 +324,6 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
               )}
-
               {reservation.detailedContent && (
                 <div className="p-4 bg-indigo-50/50 rounded-2xl flex gap-3 border border-indigo-100/50">
                   <MessageSquare className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
@@ -364,7 +339,6 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
               )}
-
               {reservation.doctorInquiry && (
                 <div className="p-4 bg-amber-50/50 rounded-2xl flex gap-3 border border-amber-100/50">
                   <HelpCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -374,6 +348,22 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 환자 사전 건강 정보 표시 영역 */}
+          {(reservation.bloodType || reservation.underlyingDisease || reservation.medication || reservation.preparedDocuments) && (
+            <div className="p-5 bg-pink-50/50 rounded-2xl flex flex-col gap-3 border border-pink-100 mt-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Heart className="w-5 h-5 text-pink-500 shrink-0" />
+                <span className="text-sm font-bold text-pink-600">환자 사전 건강 정보</span>
+              </div>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-3 text-sm">
+                {reservation.bloodType && <div><span className="block text-xs text-pink-400 mb-1 font-semibold">혈액형</span><span className="font-bold text-slate-700">{reservation.bloodType}</span></div>}
+                {reservation.underlyingDisease && <div><span className="block text-xs text-pink-400 mb-1 font-semibold">기저 질환</span><span className="font-bold text-slate-700">{reservation.underlyingDisease}</span></div>}
+                {reservation.medication && <div><span className="block text-xs text-pink-400 mb-1 font-semibold">현재 복용 약</span><span className="font-bold text-slate-700">{reservation.medication}</span></div>}
+                {reservation.preparedDocuments && <div><span className="block text-xs text-pink-400 mb-1 font-semibold">지참 준비 서류</span><span className="font-bold text-slate-700">{reservation.preparedDocuments}</span></div>}
+              </div>
             </div>
           )}
         </motion.section>

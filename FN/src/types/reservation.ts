@@ -19,6 +19,10 @@ export interface ReservationRequest {
   meetingPoint?: string;
   transportation?: string;
   mobility?: string;
+  bloodType?: string;
+  underlyingDisease?: string;
+  medication?: string;
+  preparedDocuments?: string;
 }
 
 // 3. 예약 응답 DTO 매칭 (ReservationResponse.java)
@@ -47,4 +51,47 @@ export interface ReservationResponse {
   reviewRating?: number;
   reviewComment?: string;
   managerId?: number; // 매니저가 없을 수 있으므로 Optional(?) 처리
+  bloodType?: string;
+  underlyingDisease?: string;
+  medication?: string;
+  preparedDocuments?: string;
+}
+
+// 예약 상세 페이지 UI 상태 관리를 위한 타입
+export interface ManagerInfo {
+  id: string | number;
+  name: string;
+  license: string;
+  rating: string;
+}
+
+export interface PaymentInfo {
+  baseFee: number;
+  extraFee: number;
+  totalFee: number;
+}
+
+export interface ReservationDetailState {
+  id: string | number; // API 연동 시 number로 올 수도 있으므로 유연하게 처리
+  status: string;
+  date: string;
+  time: string;
+  hospital: string;
+  patientName: string;
+  patientPhone: string;
+  memo: string;
+  manager: ManagerInfo | null;
+  payment: PaymentInfo;
+  category: string;
+  detailedContent: string;
+  doctorInquiry: string;
+  meetingPoint: string;
+  patientAddress: string;
+  transportation: string;
+  mobility: string;
+  // 건강 정보 4종
+  bloodType: string;
+  underlyingDisease: string;
+  medication: string;
+  preparedDocuments: string;
 }

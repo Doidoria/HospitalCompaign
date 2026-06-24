@@ -59,6 +59,18 @@ public class Reservation {
     @Column(columnDefinition = "TEXT")
     private String doctorInquiry;
 
+    @Column(length = 20)
+    private String bloodType; // 혈액형
+
+    @Column(length = 200)
+    private String underlyingDisease; // 기저질환
+
+    @Column(length = 200)
+    private String medication; // 복용 약
+
+    @Column(length = 200)
+    private String preparedDocuments; // 준비 서류
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ReservationStatus status;
@@ -99,7 +111,8 @@ public class Reservation {
     public Reservation(Member member, String patientName, String patientPhone, String hospitalName, LocalDateTime reservationTime,
                        String guardianName, String guardianPhone, String memo, ReservationStatus status, String requirements,
                        String detailedContent, String doctorInquiry, String category, String meetingPoint,
-                       String transportation, String mobility, String revisitCount, boolean hasProxy) {
+                       String transportation, String mobility, String revisitCount, boolean hasProxy,
+                       String bloodType, String underlyingDisease, String medication, String preparedDocuments) {
         this.member = member;
         this.patientName = patientName;
         this.patientPhone = patientPhone;
@@ -114,7 +127,10 @@ public class Reservation {
         this.memo = memo;
         this.detailedContent = detailedContent;
         this.doctorInquiry = doctorInquiry;
-        this.status = status;
+        this.bloodType = bloodType;
+        this.underlyingDisease = underlyingDisease;
+        this.medication = medication;
+        this.preparedDocuments = preparedDocuments;
         this.requirements = requirements;
         this.revisitCount = revisitCount;
         this.status = status != null ? status : ReservationStatus.WAITING;
@@ -132,12 +148,17 @@ public class Reservation {
 
     public void updateDetails(String hospitalName, LocalDateTime reservationTime, String requirements,
                               String detailedContent, String doctorInquiry,
-                              String meetingPoint, String transportation, String mobility) {
+                              String meetingPoint, String transportation, String mobility,
+                              String bloodType, String underlyingDisease, String medication, String preparedDocuments) {
         this.hospitalName = hospitalName;
         this.reservationTime = reservationTime;
         this.requirements = requirements;
         this.detailedContent = detailedContent;
         this.doctorInquiry = doctorInquiry;
+        this.bloodType = bloodType;
+        this.underlyingDisease = underlyingDisease;
+        this.medication = medication;
+        this.preparedDocuments = preparedDocuments;
 
         // 프론트에서 동행 기본 정보가 넘어오면 업데이트!
         if (meetingPoint != null) this.meetingPoint = meetingPoint;

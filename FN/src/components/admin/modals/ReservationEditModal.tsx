@@ -4,7 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DaumPostcodeEmbed from 'react-daum-postcode';
-import { X, Loader2, CalendarDays, MapPin, Stethoscope, HelpCircle, FileText, Navigation, Car, Accessibility, Search, Building2 } from 'lucide-react';
+import { X, Loader2, CalendarDays, MapPin, Stethoscope, HelpCircle, FileText, Navigation, Car, Accessibility, Search,
+  Building2, Heart, ChevronDown, ChevronUp
+} from 'lucide-react';
 import { adminApi } from '@/src/api/index';
 import { Toast } from '@/src/utils/alert';
 
@@ -35,6 +37,11 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
   });
 
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
+
+  const [isHealthInfoOpen, setIsHealthInfoOpen] = useState(false);
+  const [healthData, setHealthData] = useState({
+    bloodType: '', underlyingDisease: '', medication: '', preparedDocuments: ''
+  });
 
   const handleCompletePost = (data: any) => {
     let fullAddress = data.address;
@@ -70,6 +77,13 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
         requirements: selectedRequest.requirements || '',
         detailedContent: selectedRequest.detailedContent || '',
         doctorInquiry: selectedRequest.doctorInquiry || ''
+      });
+
+      setHealthData({
+        bloodType: selectedRequest.bloodType || '',
+        underlyingDisease: selectedRequest.underlyingDisease || '',
+        medication: selectedRequest.medication || '',
+        preparedDocuments: selectedRequest.preparedDocuments || ''
       });
 
       setCategory(selectedRequest.category || '일반 진료');
@@ -126,7 +140,11 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
         ...formData,
         category: category,
         detailedContent: combinedDetail,
-        meetingPoint: finalMeetingPoint
+        meetingPoint: finalMeetingPoint,
+        bloodType: healthData.bloodType || undefined,
+        underlyingDisease: healthData.underlyingDisease || undefined,
+        medication: healthData.medication || undefined,
+        preparedDocuments: healthData.preparedDocuments || undefined
       };
 
       await adminApi.updateReservation(selectedRequest.id, requestData);
@@ -353,6 +371,64 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
               </div>
             </div>
 
+            {/* 4. 환자 사전 건강 정보 수정 (아코디언 UI) */}
+            <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm">
+              <div className="flex justify-between items-center cursor-pointer group" onClick={() => setIsHealthInfoOpen(!isHealthInfoOpen)}>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-pink-50 rounded-lg group-hover:bg-pink-100 transition-colors">
+                    <Heart className="w-4 h-4 text-pink-600" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-800 transition-colors group-hover:text-pink-600">
+                    환자 사전 건강 정보 수정 <span className="text-xs font-normal text-slate-400 ml-1">(선택 입력)</span>
+                  </h3>
+                </div>
+                <div className="p-1.5 bg-slate-50 rounded-full text-slate-500 group-hover:bg-slate-100 transition-colors">
+                  {isHealthInfoOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </div>
+
+              {isHealthInfoOpen && (
+                <div className="space-y-4 pt-4 mt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1">혈액형</span>
+                      <div className="relative">
+                        <select value={healthData.bloodType} 
+                          onChange={(e) => setHealthData({...healthData, bloodType: e.target.value})}
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-pink-500 focus:bg-white transition-colors appearance-none cursor-pointer"
+                        >
+                          <option value="">혈액형 선택 (선택 안 함)</option>
+                          <option value="A형 (Rh+)">A형 (Rh+)</option>
+                          <option value="B형 (Rh+)">B형 (Rh+)</option>
+                          <option value="O형 (Rh+)">O형 (Rh+)</option>
+                          <option value="AB형 (Rh+)">AB형 (Rh+)</option>
+                          <option value="A형 (Rh-)">A형 (Rh-)</option>
+                          <option value="B형 (Rh-)">B형 (Rh-)</option>
+                          <option value="O형 (Rh-)">O형 (Rh-)</option>
+                          <option value="AB형 (Rh-)">AB형 (Rh-)</option>
+                          <option value="모름">모름</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1">기저 질환</span>
+                      <input type="text" placeholder="예: 당뇨, 고혈압" value={healthData.underlyingDisease} onChange={(e) => setHealthData({...healthData, underlyingDisease: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-pink-500 focus:bg-white transition-colors" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1">현재 복용 약</span>
+                      <input type="text" placeholder="예: 혈압약 아침 식후" value={healthData.medication} onChange={(e) => setHealthData({...healthData, medication: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-pink-500 focus:bg-white transition-colors" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1">지참 준비 서류</span>
+                      <input type="text" placeholder="예: 타 병원 소견서" value={healthData.preparedDocuments} onChange={(e) => setHealthData({...healthData, preparedDocuments: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-pink-500 focus:bg-white transition-colors" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 푸터 액션 버튼 */}

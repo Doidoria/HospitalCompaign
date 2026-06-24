@@ -45,6 +45,12 @@ public class ReservationResponse {
     private Integer extraChargeAmount;
     private String extraChargeReason;
 
+    // 환자 사전 건강 정보
+    private String bloodType;
+    private String underlyingDisease;
+    private String medication;
+    private String preparedDocuments;
+
     public ReservationResponse(Reservation entity) {
         this.id = entity.getId();
         this.patientName = entity.getPatientName();
@@ -86,6 +92,11 @@ public class ReservationResponse {
         this.hasReport = (entity.getReport() != null); // 리포트가 DB에 존재하면 true, 없으면 false 반환
         this.extraChargeAmount = entity.getExtraChargeAmount();
         this.extraChargeReason = entity.getExtraChargeReason();
+
+        this.bloodType = entity.getBloodType();
+        this.underlyingDisease = entity.getUnderlyingDisease();
+        this.medication = entity.getMedication();
+        this.preparedDocuments = entity.getPreparedDocuments();
 
         // 매니저 처리 로직 강화
         if (entity.getManager() != null) {

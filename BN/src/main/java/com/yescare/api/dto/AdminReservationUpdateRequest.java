@@ -16,4 +16,8 @@ public class AdminReservationUpdateRequest {
     private String requirements;
     private String detailedContent;
     private String doctorInquiry;
+    private String bloodType;
+    private String underlyingDisease;
+    private String medication;
+    private String preparedDocuments;
 }

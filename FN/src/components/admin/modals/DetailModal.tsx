@@ -3,7 +3,9 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, X, Loader2, Users, MapPin, CalendarDays, Navigation, Stethoscope, AlertCircle, HelpCircle, ShieldCheck } from 'lucide-react';
+import { FileText, X, Loader2, Users, MapPin, CalendarDays, Navigation, Stethoscope, AlertCircle, HelpCircle, 
+  ShieldCheck, Heart 
+} from 'lucide-react';
 import { Toast } from '@/src/utils/alert';
 
 interface DetailModalProps {
@@ -184,6 +186,23 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                   </div>
                 </div>
               </div>
+              
+              {/* 5. 환자 사전 건강 정보 영역 추가 */}
+              {(selectedRequest.bloodType || selectedRequest.underlyingDisease || selectedRequest.medication || selectedRequest.preparedDocuments) && (
+                <div className="bg-white p-5 rounded-[20px] border border-pink-50 shadow-[0_2px_10px_rgb(236,72,153,0.04)] relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-400"></div>
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-pink-50 rounded-lg"><Heart className="w-4 h-4 text-pink-600"/></div>
+                    환자 사전 건강 정보
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-4 bg-pink-50/30 p-4 rounded-xl border border-pink-100/50">
+                    {selectedRequest.bloodType && <div><span className="block text-[11px] font-bold text-pink-400 mb-1">혈액형</span><span className="text-sm font-bold text-slate-700">{selectedRequest.bloodType}</span></div>}
+                    {selectedRequest.underlyingDisease && <div><span className="block text-[11px] font-bold text-pink-400 mb-1">기저 질환</span><span className="text-sm font-bold text-slate-700">{selectedRequest.underlyingDisease}</span></div>}
+                    {selectedRequest.medication && <div><span className="block text-[11px] font-bold text-pink-400 mb-1">현재 복용 약</span><span className="text-sm font-bold text-slate-700">{selectedRequest.medication}</span></div>}
+                    {selectedRequest.preparedDocuments && <div><span className="block text-[11px] font-bold text-pink-400 mb-1">지참 준비 서류</span><span className="text-sm font-bold text-slate-700">{selectedRequest.preparedDocuments}</span></div>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </motion.div>

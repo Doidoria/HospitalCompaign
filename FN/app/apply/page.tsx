@@ -3,7 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle, 
+  RefreshCcw, ChevronDown, ChevronUp, Heart
+ } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { reservationApi, authApi } from '@/src/api/index';
 import { ReservationRequest } from '@/src/types/reservation';
@@ -52,6 +54,14 @@ export default function ApplyPage() {
     symptoms: '', 
     testType: '', 
     isFasting: '금식 완료'
+  });
+
+  const [isHealthInfoOpen, setIsHealthInfoOpen] = useState(false);
+  const [healthData, setHealthData] = useState({
+    bloodType: '',
+    underlyingDisease: '',
+    medication: '',
+    preparedDocuments: ''
   });
 
   const [isPolicyAgreed, setIsPolicyAgreed] = useState(false); // 규정 동의 상태 관리
@@ -249,7 +259,12 @@ export default function ApplyPage() {
         memo: formData.memo || undefined,             // 보호자 특별 요청사항
         requirements: formData.requirements || undefined, // 만약 따로 쓰는 요구사항이 없다면 생략 가능
         detailedContent: combinedDetailedContent,
-        doctorInquiry: formData.doctorInquiry || undefined
+        doctorInquiry: formData.doctorInquiry || undefined,
+        // 건강 정보 4종 추가 (값이 있을 때만 전송)
+        bloodType: healthData.bloodType || undefined,
+        underlyingDisease: healthData.underlyingDisease || undefined,
+        medication: healthData.medication || undefined,
+        preparedDocuments: healthData.preparedDocuments || undefined
       };
 
       await reservationApi.create(requestBody);
@@ -412,17 +427,15 @@ export default function ApplyPage() {
 
           {/* 2. 기본 정보 입력 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between border-b border-gray-50 pb-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-50 pb-5 mb-6 gap-4">
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-50 rounded-xl"><User className="w-6 h-6 text-emerald-600" /></div>
                 2. 기본 정보 입력
               </h3>
-              <button 
-                type="button" 
-                onClick={handleSwapPatientGuardian}
-                className="flex items-center gap-1.5 text-sm font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <RefreshCcw className="w-4 h-4" />
+              <button type="button" onClick={handleSwapPatientGuardian}
+                className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 
+                rounded-xl transition-colors shrink-0 self-start sm:self-auto">
+                <RefreshCcw className="w-4 h-4 shrink-0" />
                 환자/보호자 바꾸기
               </button>
             </div>
@@ -621,6 +634,78 @@ export default function ApplyPage() {
                 ></textarea>
               </div>
             </div>
+          </motion.div>
+
+          {/* 5. 환자 사전 건강 정보 (아코디언 UI) */}
+          <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+            <div className="flex justify-between items-center cursor-pointer group gap-4"
+              onClick={() => setIsHealthInfoOpen(!isHealthInfoOpen)}>
+              <h3 className="text-[17px] sm:text-xl font-extrabold text-gray-800 flex items-center gap-3 transition-colors group-hover:text-pink-600 break-keep flex-1 min-w-0">
+                <div className="p-2.5 bg-pink-50 rounded-xl group-hover:bg-pink-100 transition-colors shrink-0">
+                  <Heart className="w-6 h-6 text-pink-600 shrink-0" />
+                </div>
+                <span className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+                  <span className="truncate">5. 환자 사전 건강 정보</span>
+                  <span className="text-[12px] sm:text-sm font-normal text-gray-400 shrink-0">(선택 입력)</span>
+                </span>
+              </h3>
+              <div className="p-2 bg-gray-50 rounded-full text-gray-500 group-hover:bg-gray-100 transition-colors shrink-0">
+                {isHealthInfoOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </div>
+            </div>
+
+            {isHealthInfoOpen && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginTop: 0 }} 
+                animate={{ opacity: 1, height: 'auto', marginTop: 24 }} 
+                className="space-y-6 pt-6 border-t border-gray-50 overflow-hidden px-2 -mx-2 pb-2"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">혈액형</label>
+                    <div className="relative">
+                      <select 
+                        value={healthData.bloodType} 
+                        onChange={(e) => setHealthData({...healthData, bloodType: e.target.value})}
+                        className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800 appearance-none cursor-pointer"
+                      >
+                        <option value="">혈액형 선택 (선택 안 함)</option>
+                        <option value="A형 (Rh+)">A형 (Rh+)</option>
+                        <option value="B형 (Rh+)">B형 (Rh+)</option>
+                        <option value="O형 (Rh+)">O형 (Rh+)</option>
+                        <option value="AB형 (Rh+)">AB형 (Rh+)</option>
+                        <option value="A형 (Rh-)">A형 (Rh-)</option>
+                        <option value="B형 (Rh-)">B형 (Rh-)</option>
+                        <option value="O형 (Rh-)">O형 (Rh-)</option>
+                        <option value="AB형 (Rh-)">AB형 (Rh-)</option>
+                        <option value="모름">모름</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">기저 질환</label>
+                    <input type="text" placeholder="예: 당뇨, 고혈압, 고지혈증" 
+                      value={healthData.underlyingDisease} onChange={(e) => setHealthData({...healthData, underlyingDisease: e.target.value})}
+                      className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">현재 복용 약</label>
+                    <input type="text" placeholder="예: 혈압약 아침 식후 복용 중" 
+                      value={healthData.medication} onChange={(e) => setHealthData({...healthData, medication: e.target.value})}
+                      className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">지참 준비 서류</label>
+                    <input type="text" placeholder="예: 타 병원 소견서, 영상 CD" 
+                      value={healthData.preparedDocuments} onChange={(e) => setHealthData({...healthData, preparedDocuments: e.target.value})}
+                      className="w-full px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all outline-none font-medium text-gray-800" />
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           <motion.div variants={itemVariants} className="pt-0">

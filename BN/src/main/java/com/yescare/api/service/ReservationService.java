@@ -76,6 +76,10 @@ public class ReservationService {
                 .meetingPoint(request.getMeetingPoint())
                 .transportation(request.getTransportation())
                 .mobility(request.getMobility())
+                .bloodType(request.getBloodType())
+                .underlyingDisease(request.getUnderlyingDisease())
+                .medication(request.getMedication())
+                .preparedDocuments(request.getPreparedDocuments())
                 .status(ReservationStatus.WAITING)
                 .build();
 
@@ -239,7 +243,11 @@ public class ReservationService {
                 request.getDoctorInquiry(),
                 request.getMeetingPoint(),
                 request.getTransportation(),
-                request.getMobility()
+                request.getMobility(),
+                request.getBloodType(),
+                request.getUnderlyingDisease(),
+                request.getMedication(),
+                request.getPreparedDocuments()
         );
 
         // 수정 사항이 DB에 반영된 직후 변경 안내 알림톡 발송!
@@ -310,6 +318,10 @@ public class ReservationService {
                 .requirements(data.get("requirements"))
                 .detailedContent(data.get("detailedContent"))
                 .doctorInquiry(data.get("doctorInquiry"))
+                .bloodType(old.getBloodType())
+                .underlyingDisease(old.getUnderlyingDisease())
+                .medication(old.getMedication())
+                .preparedDocuments(old.getPreparedDocuments())
                 // 재방문 회차 저장 및 메모 조합
                 .revisitCount(data.get("revisitCount"))
                 .memo("[매니저 대리 신청 - " + data.get("revisitCount") + "] " + data.get("memo"))
@@ -499,7 +511,11 @@ public class ReservationService {
                 request.getDoctorInquiry(),
                 request.getMeetingPoint(),
                 request.getTransportation(),
-                request.getMobility()
+                request.getMobility(),
+                request.getBloodType(),
+                request.getUnderlyingDisease(),
+                request.getMedication(),
+                request.getPreparedDocuments()
         );
 
         // 관리자가 고객 정보를 변경해 주었을 때 변경 안내 알림톡 발송!

@@ -62,11 +62,9 @@ public class TestDataInit implements CommandLineRunner {
                 .build();
         memberRepository.save(yoonUser);
 
-
         // ==========================================
         // 2. 매니저 계정 생성 (풍부한 프로필)
         // ==========================================
-
         Manager m1 = createManager("manager1@yescare.com", defaultPw, "이매니저", "01033334444",
                 "베테랑 간호조무사 출신입니다.", "대학병원 5년 경력", "요양보호사 1급, 간호조무사", "월, 수, 금", "09:00 - 18:00");
 
@@ -75,7 +73,6 @@ public class TestDataInit implements CommandLineRunner {
 
         Manager m3 = createManager("manager3@yescare.com", defaultPw, "김케어", "01077778888",
                 "행정 업무 완벽 지원!", "병원 원무과 7년", "병원행정사, 사회복지사", "월, 화, 수, 목, 금", "10:00 - 19:00");
-
 
         // ==========================================
         // 3. 예약 데이터 시뮬레이션 (3단 UI 연동 상세 기본정보 추가)
