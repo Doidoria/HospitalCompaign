@@ -3,10 +3,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2, ArrowLeft, FileText } from 'lucide-react';
+import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2, ArrowLeft, FileText, Trash2, X, Plus, Camera } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
+import { ReportRequest } from '@/src/types/report';
 import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
+import imageCompression from 'browser-image-compression';
 
 export default function ReportWritePage() {
   const params = useParams();
@@ -16,6 +18,7 @@ export default function ReportWritePage() {
   const [targetReservation, setTargetReservation] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  
   const [noNextSchedule, setNoNextSchedule] = useState(false); 
   const [existingReportId, setExistingReportId] = useState<number | null>(null);
   const [isModified, setIsModified] = useState(false);
@@ -27,6 +30,9 @@ export default function ReportWritePage() {
     department: '',
     doctorOpinion: '',
     prescription: '',
+    medicationType: '기존 약 유지', 
+    medicationTime: '식후 30분',
+    medicationDays: '',
     nextSchedule: '',
     nextDate: '',
     nextTime: '',
@@ -34,46 +40,63 @@ export default function ReportWritePage() {
     managerComment: ''
   });
 
-  // 작성할 예약 원본 데이터 불러오기
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // 백엔드 원본 데이터 불러오기
   useEffect(() => {
     const fetchReservationAndReport = async () => {
       try {
-        // 1) 예약 정보 불러오기
         const res = await reservationApi.getDetail(params.id as string);
         setTargetReservation(res.data);
 
         try {
-          // 백엔드에 만들어둔 리포트 조회 API 호출 (예: reportApi.getReportByReservationId)
           const reportRes = await reportApi.getReportByReservationId(params.id as string);
           
           if (reportRes.data) {
-            setExistingReportId(reportRes.data.id); // 기존 리포트 번호 저장
+            setExistingReportId(reportRes.data.id);
             setIsModified(reportRes.data.isModified);
 
             const fetchedNextSchedule = reportRes.data.nextSchedule || '';
             const [splitDate, splitTime] = fetchedNextSchedule ? fetchedNextSchedule.split('T') : ['', ''];
             
-            // 3) 기존 데이터로 폼 덮어쓰기
             setFormData({
               department: reportRes.data.department || '',
               doctorOpinion: reportRes.data.doctorOpinion || '',
               prescription: reportRes.data.prescription || '',
+              medicationType: reportRes.data.medicationType || '기존 약 유지',
+              medicationTime: reportRes.data.medicationTime || '식후 30분',
+              medicationDays: reportRes.data.medicationDays ? String(reportRes.data.medicationDays) : '',
               nextSchedule: fetchedNextSchedule,
               nextDate: splitDate,
-              nextTime: splitTime ? splitTime.substring(0, 5) : '', // '14:30' 형태로 자르기
+              nextTime: splitTime ? splitTime.substring(0, 5) : '',
               patientCondition: reportRes.data.patientCondition || 'good',
               managerComment: reportRes.data.managerComment || ''
             });
 
-            // 다음 일정 없음 체크박스 연동
-            if (reportRes.data.noNextSchedule || reportRes.data.nextSchedule === '') {
+            // 사진 미리보기 띄워주기
+            if (reportRes.data.imageUrls && reportRes.data.imageUrls.length > 0) {
+              const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+              
+              const formattedUrls = reportRes.data.imageUrls.map((url: string) => {
+                // 1. 이미 http가 붙어있는 외부 링크(S3 등)면 그대로 사용
+                if (url.startsWith('http')) return url;
+                
+                // 2. 앞에 슬래시(/)가 없으면 붙여서 백엔드 주소와 결합
+                const imgPath = url.startsWith('/') ? url : `/uploads/${url}`; // 백엔드 저장 경로 정책에 맞게 조절
+                return `${backendBaseUrl}${imgPath}`;
+              });
+              
+              setImagePreviews(formattedUrls);
+            }
+
+            if (reportRes.data.noNextSchedule || fetchedNextSchedule === '') {
               setNoNextSchedule(true);
             }
           }
         } catch (e) {
           console.log("기존 리포트 없음 (신규 작성 모드)");
         }
-
       } catch (error) {
         MySwal.fire({ icon: 'error', title: '오류', text: '예약 정보를 불러올 수 없습니다.' });
         router.push('/manager/dashboard');
@@ -84,7 +107,7 @@ export default function ReportWritePage() {
     fetchReservationAndReport();
   }, [params.id, router]);
 
-  // 컴포넌트 마운트 시 임시 저장된 리포트 데이터 불러오기
+  // 임시 저장된 데이터 불러오기 (단일 데이터용으로 복구)
   useEffect(() => {
     const savedDraft = localStorage.getItem(`draft_care_report_${params.id}`);
     if (savedDraft) {
@@ -102,13 +125,11 @@ export default function ReportWritePage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, tagName } = e.target;
-
     if (tagName.toLowerCase() === 'textarea') {
       const target = e.target as HTMLTextAreaElement;
       target.style.height = 'auto';
       target.style.height = `${target.scrollHeight}px`;
     }
-
     setFormData(prev => {
       const updatedData = { ...prev, [name]: value };
       localStorage.setItem(`draft_care_report_${params.id}`, JSON.stringify(updatedData));
@@ -116,7 +137,7 @@ export default function ReportWritePage() {
     });
   };
 
-  // 시간 선택 핸들러
+  // 시간 선택 핸들러 복구
   const handleTimeSelect = (type: 'hour' | 'minute', value: string) => {
     const currentHour = formData.nextTime ? formData.nextTime.split(':')[0] : '09';
     const currentMinute = formData.nextTime ? formData.nextTime.split(':')[1] : '00';
@@ -124,7 +145,7 @@ export default function ReportWritePage() {
     let newHour = type === 'hour' ? value : currentHour;
     let newMinute = type === 'minute' ? value : currentMinute;
 
-    if (newHour === '18') newMinute = '00'; // 18시 이후 분 선택 방지
+    if (newHour === '18') newMinute = '00';
 
     setFormData(prev => {
       const updatedData = { ...prev, nextTime: `${newHour}:${newMinute}` };
@@ -144,63 +165,122 @@ export default function ReportWritePage() {
     });
   };
 
+  // 사진 업로드 핸들러
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      
+      // 압축 옵션 설정 (최대 1MB, 최대 해상도 1024x1024)
+      const options = {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      };
+
+      try {
+        // 모든 파일을 순회하며 압축 진행
+        const compressedFiles = await Promise.all(
+          filesArray.map(async (file) => {
+            const compressedBlob = await imageCompression(file, options);
+            // 압축된 Blob을 다시 File 객체로 변환
+            return new File([compressedBlob], file.name, {
+              type: file.type,
+              lastModified: Date.now(),
+            });
+          })
+        );
+
+        // 압축된 파일들을 상태에 저장
+        setImages(prev => [...prev, ...compressedFiles]);
+        const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
+        setImagePreviews(prev => [...prev, ...newPreviews]);
+        
+      } catch (error) {
+        console.error("이미지 압축 실패:", error);
+        YesAlert.fire({ icon: 'error', title: '오류', html: '이미지 처리 중 문제가 발생했습니다.' });
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reportRef.current) return;
-    if (!formData.department || !formData.doctorOpinion || !formData.prescription || !formData.managerComment) {
-      MySwal.fire({ icon: 'warning', title: '입력 확인', text: '필수 항목을 모두 입력해 주세요.' });
+    
+    // 처방약 메모(prescription)를 무조건 필수에서 제외하고 분리
+    if (!formData.department || !formData.doctorOpinion || !formData.managerComment) {
+      MySwal.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
       return;
     }
+    
+    // '처방약 없음'이 아닌데 메모를 비워둔 경우에만 경고
+    if (formData.medicationType !== '처방약 없음' && !formData.prescription) {
+      MySwal.fire({ icon: 'warning', title: '입력 확인', text: '처방 및 복약 안내 메모를 입력해 주세요.' });
+      return;
+    }
+
+    // 전송 전 확인 팝업 (취소 시 방어)
+    const confirmResult = await YesAlert.fire({
+      title: existingReportId ? '리포트를 수정하시겠습니까?' : '리포트를 전송하시겠습니까?',
+      html: '보호자에게 알림톡과 리포트가 발송됩니다.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      confirmButtonText: '네, 전송합니다',
+      cancelButtonText: '취소'
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
     setIsSubmitting(true);
 
     try {
-      const { toPng } = await import('html-to-image');
-      const { default: jsPDF } = await import('jspdf');
-
-      const imgData = await toPng(reportRef.current, { cacheBust: true, style: { transform: 'scale(1)' } });
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (reportRef.current.offsetHeight * pdfWidth) / reportRef.current.offsetWidth;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      const pdfBlob = pdf.output('blob');
-
-      const payload = new FormData();
-
       const finalNextSchedule = noNextSchedule || !formData.nextDate || !formData.nextTime 
         ? '' 
         : `${formData.nextDate}T${formData.nextTime}:00`;
 
-      const requestData = {
+      const requestData: ReportRequest = {
         reservationId: Number(params.id),
         department: formData.department,
         doctorOpinion: formData.doctorOpinion,
         prescription: formData.prescription,
+        medicationType: formData.medicationType,
+        medicationTime: formData.medicationTime,
+        medicationDays: formData.medicationDays ? Number(formData.medicationDays) : null,
         nextSchedule: finalNextSchedule,
         managerComment: formData.managerComment,
         patientCondition: formData.patientCondition,
         noNextSchedule: noNextSchedule
       };
       
+      const payload = new FormData();
       payload.append('request', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
-      payload.append('pdfFile', pdfBlob, `케어리포트_${params.id}.pdf`);
+
+      images.forEach(file => {
+        payload.append('images', file);
+      });
 
       let res;
       if (existingReportId) {
-        // 기존 리포트가 있으면 수정(Update) API 호출
         res = await reportApi.updateWithPdf(existingReportId, payload);
       } else {
-        // 기존 리포트가 없으면 신규 생성(Create) API 호출
         res = await reportApi.createWithPdf(payload);
       }
 
       if (res.status === 200 || res.status === 201) {
         localStorage.removeItem(`draft_care_report_${params.id}`);
 
-        await MySwal.fire({ 
+        // 성공 팝업에 명시적으로 취소 버튼 숨김 및 버튼 텍스트 초기화 설정 추가
+        await YesAlert.fire({ 
           icon: 'success', 
           title: existingReportId ? '리포트 수정 완료' : '리포트 작성 완료', 
-          text: '보호자에게 알림이 전송되었습니다.' 
+          text: '보호자에게 알림톡이 전송되었습니다.',
+          showCancelButton: false,
+          confirmButtonText: '확인',
+          confirmButtonColor: '#3b82f6'
         });
         
         router.push('/manager/dashboard');
@@ -208,7 +288,7 @@ export default function ReportWritePage() {
 
     } catch (error) {
       console.error('리포트 제출 에러:', error);
-      MySwal.fire({ icon: 'error', title: '제출 실패', text: '서버 오류가 발생했습니다. 다시 시도해 주세요.' });
+      await YesAlert.fire({ icon: 'error', title: '제출 실패', text: '서버 오류가 발생했습니다. 다시 시도해 주세요.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -226,7 +306,6 @@ export default function ReportWritePage() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
       <motion.main className="max-w-2xl mx-auto px-4 pt-6" initial="hidden" animate="visible" variants={pageVariants}>
 
-        {/* 상단 헤더 */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3 mb-8">
           <button onClick={() => router.back()} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-700" />
@@ -236,7 +315,6 @@ export default function ReportWritePage() {
           </h2>
         </motion.div>
 
-        {/* 상단 대상자 정보 요약 */}
         <motion.div variants={itemVariants} className="bg-white rounded-2xl p-5 mb-6 border border-emerald-100 shadow-sm">
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2">
@@ -263,7 +341,6 @@ export default function ReportWritePage() {
         <form onSubmit={handleSubmit} className="space-y-6 pb-8">
           <div ref={reportRef} className="space-y-5 bg-gray-50 pb-4">
             
-            {/* 1. 당일 환자 컨디션 */}
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
               <label className="block text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <div className="p-1.5 bg-blue-50 rounded-lg"><User className="w-4 h-4 text-blue-500" /></div>
@@ -293,8 +370,11 @@ export default function ReportWritePage() {
               </div>
             </motion.div>
 
-            {/* 2. 진료 요약 및 처방 */}
+            {/* 진료 요약 및 다음 예약 일정 */}
+            {/* 진료 요약 및 다음 예약 일정 */}
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-6">
+              
+              {/* 1. 진료 요약 섹션 */}
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
                   <div className="p-1.5 bg-emerald-50 rounded-lg"><Stethoscope className="w-4 h-4 text-emerald-500" /></div>
@@ -307,34 +387,88 @@ export default function ReportWritePage() {
                   text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none" required></textarea>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-gray-100">
+              {/* 2. 처방 안내 & 예약 일정 섹션 (Grid 제거, 위아래 수직 배치 적용) */}
+              <div className="space-y-6 pt-6 border-t border-gray-100">
+                
+                {/* 처방 및 복약 안내 */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2">처방 및 복약 안내</label>
-                  <textarea name="prescription" rows={2} value={formData.prescription} onChange={handleChange} placeholder="예) 기존 약 유지, 위장약 1주분 추가" 
-                    className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all 
-                    text-base text-gray-800 placeholder:text-gray-400 outline-none resize-none"></textarea>
+                  <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-50 rounded-lg"><FileText className="w-4 h-4 text-blue-500" /></div>
+                    처방 및 복약 안내
+                  </label>
+                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 mt-4">
+                    {/* 전체 너비를 차지하므로, 좁은 화면에선 세로, 넓은 화면에선 가로로 배치되게 처리 */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select name="medicationType" value={formData.medicationType} onChange={handleChange}
+                        className="w-full sm:flex-1 px-3 py-3 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-gray-700"
+                      >
+                        <option value="기존 약 유지">기존 약 유지</option>
+                        <option value="신규 처방 (내복약)">신규 처방 (내복약)</option>
+                        <option value="외용약 추가">외용약 추가</option>
+                        <option value="처방약 없음">처방약 없음</option>
+                      </select>
+                      <select name="medicationTime" 
+                        value={formData.medicationTime} 
+                        onChange={handleChange}
+                        disabled={formData.medicationType === '처방약 없음'}
+                        className="w-full sm:flex-1 px-3 py-3 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-gray-700 disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        <option value="식후 30분">식후 30분</option>
+                        <option value="식전 30분">식전 30분</option>
+                        <option value="취침 전">취침 전</option>
+                        <option value="필요 시(PRN)">필요 시(아플 때)</option>
+                      </select>
+                      
+                      <div className="w-full sm:flex-1 relative">
+                        <input 
+                          type="number" 
+                          name="medicationDays" 
+                          value={formData.medicationDays} 
+                          onChange={handleChange} 
+                          disabled={formData.medicationType === '처방약 없음'}
+                          placeholder="처방 일수" 
+                          className="w-full px-3 py-3 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-gray-700 pr-9 disabled:bg-gray-100 disabled:text-gray-400"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">일분</span>
+                      </div>
+                    </div>
+
+                    <textarea 
+                      name="prescription" 
+                      rows={2} 
+                      value={formData.prescription} 
+                      onChange={handleChange} 
+                      placeholder="복약 관련 추가 메모 사항 (예: 위장약이 추가되었습니다)" 
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-sm text-gray-800 placeholder:text-gray-400 outline-none resize-none"
+                    ></textarea>
+                  </div>
                 </div>
+
+                {/* 다음 예약 일정 */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> 다음 예약 일정</label>
                   <div className={`space-y-3 ${noNextSchedule ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <input type="date" name="nextDate" value={formData.nextDate} onChange={handleChange} 
-                      className="w-full px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 outline-none" />
-                    
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all outline-none font-bold text-gray-800 appearance-none text-center">
-                          <option value="" disabled>시</option>
-                          {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-center font-bold text-gray-400">:</div>
-                      <div className="relative flex-1">
-                        <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'}
-                          className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all outline-none font-bold text-gray-800 appearance-none text-center disabled:opacity-50">
-                          <option value="" disabled>분</option>
-                          {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
-                        </select>
+                    {/* 날짜와 시간도 넓어진 공간을 활용해 한 줄(넓은 화면) 혹은 두 줄(모바일)로 반응형 배치 */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input type="date" name="nextDate" value={formData.nextDate} onChange={handleChange} 
+                        className="w-full sm:flex-1 px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 outline-none" />
+                      
+                      <div className="flex gap-2 sm:flex-1">
+                        <div className="relative flex-1">
+                          <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)}
+                            className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all outline-none font-bold text-gray-800 appearance-none text-center">
+                            <option value="" disabled>시</option>
+                            {HOURS.map(h => <option key={h} value={h}>{h}시</option>)}
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-center font-bold text-gray-400">:</div>
+                        <div className="relative flex-1">
+                          <select value={selectedMinute} onChange={(e) => handleTimeSelect('minute', e.target.value)} disabled={selectedHour === '18'}
+                            className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border-0 ring-1 ring-gray-200 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all outline-none font-bold text-gray-800 appearance-none text-center disabled:opacity-50">
+                            <option value="" disabled>분</option>
+                            {MINUTES.map(m => <option key={m} value={m}>{m}분</option>)}
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -348,7 +482,7 @@ export default function ReportWritePage() {
               </div>
             </motion.div>
 
-            {/* 3. 매니저 코멘트 */}
+            {/* 매니저 단일 코멘트 폼 */}
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
               <label className="block text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
                 <div className="p-1.5 bg-purple-50 rounded-lg"><FileEdit className="w-4 h-4 text-purple-500" /></div>
@@ -361,7 +495,29 @@ export default function ReportWritePage() {
             </motion.div>
           </div>
 
-          {/* 4. 전송 버튼 (하단 고정 풀고 매니저 코멘트 바로 밑에 자연스럽게 배치) */}
+          {/* 진료 및 처방 관련 사진 */}
+          <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
+              <label className="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <div className="p-1.5 bg-blue-50 rounded-lg"><Camera className="w-4 h-4 text-blue-500" /></div>
+                진료 및 처방 관련 사진 첨부하기
+              </label>
+              <div className="flex flex-wrap gap-3 mt-4">
+                {imagePreviews.map((src, idx) => (
+                  <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
+                    <img src={src} alt="preview" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-black/60 p-1.5 rounded-full text-white hover:bg-black/80 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <label className="w-24 h-24 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-all">
+                  <Plus className="w-6 h-6 text-gray-400 mb-1" />
+                  <span className="text-[11px] text-gray-400 font-bold">사진 등록</span>
+                  <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                </label>
+              </div>
+          </motion.div>
+
           <motion.div variants={itemVariants} className="pt-2">
             <button type="submit" disabled={isSubmitting} 
               className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
@@ -375,7 +531,6 @@ export default function ReportWritePage() {
               }
             </button>
           </motion.div>
-          
         </form>
       </motion.main>
     </div>

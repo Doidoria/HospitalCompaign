@@ -636,7 +636,7 @@ export default function ApplyPage() {
             </div>
           </motion.div>
 
-          {/* 5. 환자 사전 건강 정보 (아코디언 UI) */}
+          {/* 5. 환자 사전 건강 정보 */}
           <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
             <div className="flex justify-between items-center cursor-pointer group gap-4"
               onClick={() => setIsHealthInfoOpen(!isHealthInfoOpen)}>

@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "reports")
 @Getter
@@ -16,53 +19,78 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 어떤 예약에 대한 리포트인지 연결 (1:1 관계)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id")
     private Reservation reservation;
 
     @Column(length = 50)
-    private String department;    // 진료 과목 (예: 내과, 정형외과)
+    private String department;
 
     @Column(columnDefinition = "TEXT")
-    private String doctorOpinion; // 의사 소견
+    private String doctorOpinion;
 
     @Column(columnDefinition = "TEXT")
-    private String prescription;  // 처방 및 복약 안내
+    private String prescription;
+
+    @Column(length = 50)
+    private String medicationType;
+
+    @Column(length = 50)
+    private String medicationTime;
+
+    private Integer medicationDays; // 일수는 숫자로 저장
 
     @Column(columnDefinition = "TEXT")
-    private String managerComment; // 매니저 동행 코멘트
+    private String managerComment;
 
-    private String nextSchedule;   // 다음 내원 일정
+    private String nextSchedule;
+
+    @ElementCollection
+    @CollectionTable(name = "report_images", joinColumns = @JoinColumn(name = "report_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls = new ArrayList<>();
 
     @Column(length = 20)
-    private String patientCondition; // 당일 환자 컨디션
+    private String patientCondition;
 
-    // 리포트가 수정(재전송)되었는지 여부를 추적하는 꼬리표
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean isModified = false;
 
+    // Builder 파라미터에 복약 3종 추가
     @Builder
     public Report(Reservation reservation, String department, String doctorOpinion, String prescription,
-                  String managerComment, String nextSchedule, String patientCondition) {
+                  String medicationType, String medicationTime, Integer medicationDays,
+                  String managerComment, String nextSchedule, List<String> imageUrls, String patientCondition) {
         this.reservation = reservation;
         this.department = department;
         this.doctorOpinion = doctorOpinion;
         this.prescription = prescription;
+        this.medicationType = medicationType;
+        this.medicationTime = medicationTime;
+        this.medicationDays = medicationDays;
         this.managerComment = managerComment;
         this.nextSchedule = nextSchedule;
+        this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
         this.patientCondition = patientCondition;
     }
 
-    // 이미 존재하는 리포트의 내용을 덮어쓰는 메서드
+    // updateReport 파라미터 및 로직에 복약 3종 추가
     public void updateReport(String department, String doctorOpinion, String prescription,
-                             String managerComment, String nextSchedule, String patientCondition) {
+                             String medicationType, String medicationTime, Integer medicationDays,
+                             String managerComment, String nextSchedule, List<String> imageUrls, String patientCondition) {
         this.department = department;
         this.doctorOpinion = doctorOpinion;
         this.prescription = prescription;
+        this.medicationType = medicationType;
+        this.medicationTime = medicationTime;
+        this.medicationDays = medicationDays;
         this.managerComment = managerComment;
         this.nextSchedule = nextSchedule;
         this.patientCondition = patientCondition;
+
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            this.imageUrls.addAll(imageUrls);
+        }
     }
 
     public boolean isModified() {

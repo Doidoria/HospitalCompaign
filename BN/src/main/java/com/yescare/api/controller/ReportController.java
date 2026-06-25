@@ -1,7 +1,7 @@
 package com.yescare.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yescare.api.dto.ApiResponse; // 💡 ApiResponse 추가
+import com.yescare.api.dto.ApiResponse;
 import com.yescare.api.dto.ReportRequest;
 import com.yescare.api.dto.ReportResponse;
 import com.yescare.api.service.ReportService;
@@ -10,6 +10,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -23,9 +25,9 @@ public class ReportController {
     @PreAuthorize("hasAuthority('MANAGER') || hasAuthority('ROLE_MANAGER')")
     public ApiResponse<Long> create(
             @RequestPart("request") ReportRequest request,
-            @RequestPart(value = "pdfFile", required = false) MultipartFile pdfFile
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        return ApiResponse.success(reportService.createReport(request, pdfFile));
+        return ApiResponse.success(reportService.createReport(request, images));
     }
 
     @GetMapping("/reservation/{reservationId}")
@@ -39,10 +41,10 @@ public class ReportController {
     public ApiResponse<Long> update(
             @PathVariable Long id,
             @RequestPart("request") ReportRequest request,
-            @RequestPart(value = "pdfFile", required = false) MultipartFile pdfFile
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        // 기존 리포트를 찾아서 내용을 덮어씌우고 ID를 반환합니다.
-        Long updatedId = reportService.updateReport(id, request, pdfFile);
+        Long updatedId = reportService.updateReport(id, request, images);
+
         return ApiResponse.success(updatedId);
     }
 }

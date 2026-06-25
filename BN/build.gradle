@@ -41,6 +41,12 @@ dependencies {
 
     // SMS 발송을 위한 Solapi SDK
     implementation 'net.nurigo:sdk:4.3.0'
+
+    // HTML 템플릿 생성을 위한 Thymeleaf
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    // HTML을 PDF로 변환해주는 Flying Saucer (OpenPDF 기반)
+    implementation 'org.xhtmlrenderer:flying-saucer-pdf-openpdf:9.1.22'
 }
 
 tasks.named('test') {

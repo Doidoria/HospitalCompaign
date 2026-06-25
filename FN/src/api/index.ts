@@ -1,5 +1,6 @@
 // src/api/index.ts
 import { apiClient } from './client';
+import { ReportResponse } from '../types/report';
 
 // ==========================================
 // 1. Auth & Users (인증/회원)
@@ -73,10 +74,14 @@ export const reservationApi = {
 // ==========================================
 export const reportApi = {
   create: (data: any) => apiClient.post('/api/reports', data),
-  getReportByReservationId: (reservationId: string) => apiClient.get(`/api/reports/reservation/${reservationId}`),
+  
+  getReportByReservationId: (reservationId: string) => 
+    apiClient.get<ReportResponse>(`/api/reports/reservation/${reservationId}`),
+    
   createWithPdf: (formData: FormData) => apiClient.post('/api/reports', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  
   updateWithPdf: (reportId: number, formData: FormData) => 
     apiClient.put(`/api/reports/${reportId}`, formData, {
       headers: {

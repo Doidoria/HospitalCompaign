@@ -6,8 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { motion, Variants } from 'framer-motion';
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import { 
-  CalendarPlus, ArrowLeft, Loader2, CheckCircle2, Calendar, X,
-  MapPin, User, Stethoscope, Car, Accessibility, Info, Search, Building2, HelpCircle
+  CalendarPlus, ArrowLeft, Loader2, CheckCircle2, Calendar, X, MapPin, User,
+  Stethoscope, Car, Accessibility, Info, Search, Building2, HelpCircle, Activity
 } from 'lucide-react';
 import { reservationApi, reportApi } from '@/src/api/index';
 import { useSearchParams } from 'next/navigation';
@@ -41,7 +41,11 @@ export default function ProxyReservationPage() {
     guardianName: '',
     guardianPhone: '',
     requirements: '',
-    doctorInquiry: ''
+    doctorInquiry: '',
+    bloodType: '',
+    underlyingDisease: '',
+    medication: '',
+    preparedDocuments: ''
   });
 
   const [category, setCategory] = useState('일반 진료');
@@ -75,7 +79,11 @@ export default function ProxyReservationPage() {
           guardianName: data.guardianName || '',
           guardianPhone: data.guardianPhone || '',
           requirements: data.requirements || data.memo || '',
-          doctorInquiry: data.doctorInquiry || ''
+          doctorInquiry: data.doctorInquiry || '',
+          bloodType: data.bloodType || '',
+          underlyingDisease: data.underlyingDisease || '',
+          medication: data.medication || '',
+          preparedDocuments: data.preparedDocuments || ''
         }));
 
         try {
@@ -226,6 +234,10 @@ export default function ProxyReservationPage() {
         requirements: formData.requirements,
         detailedContent: combinedDetail,
         doctorInquiry: formData.doctorInquiry,
+        bloodType: formData.bloodType,
+        underlyingDisease: formData.underlyingDisease,
+        medication: formData.medication,
+        preparedDocuments: formData.preparedDocuments,
         memo: "재방문 대리 신청"
       };
 
@@ -486,7 +498,40 @@ export default function ProxyReservationPage() {
             </div>
           </motion.div>
 
-          {/* Sticky Submit Button for Mobile */}
+          {/* 4. 환자 사전 건강 정보 */}
+          <motion.div variants={itemVariants} className="bg-white p-7 rounded-[32px] shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2 border-b border-gray-50 pb-4">
+              <div className="p-2 bg-rose-50 rounded-xl"><Activity className="w-5 h-5 text-rose-600" /></div>
+              4. 환자 사전 건강 정보
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">혈액형</label>
+                  <input type="text" name="bloodType" value={formData.bloodType} onChange={handleChange} placeholder="예) A형 (Rh+)" 
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-400 transition-all text-gray-800 font-medium" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">필요 지참 서류</label>
+                  <input type="text" name="preparedDocuments" value={formData.preparedDocuments} onChange={handleChange} placeholder="예) 신분증, 기존 처방전" 
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-400 transition-all text-gray-800 font-medium" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">주요 기저질환</label>
+                <textarea name="underlyingDisease" rows={2} value={formData.underlyingDisease} onChange={handleChange} placeholder="환자분이 앓고 계신 만성 질환이나 주의 성분을 적어주세요." 
+                  className="w-full px-5 py-3.5 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-400 transition-all outline-none font-medium text-gray-800 resize-none text-sm"></textarea>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">현재 복용 중인 약</label>
+                <textarea name="medication" rows={2} value={formData.medication} onChange={handleChange} placeholder="정기적으로 복용 중인 약품명이나 복약 특이사항이 있다면 명시해 주세요." 
+                  className="w-full px-5 py-3.5 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-rose-400 transition-all outline-none font-medium text-gray-800 resize-none text-sm"></textarea>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 대리 신청 완료 버튼 */}
           <motion.div variants={itemVariants} className="pt-2">
             <div className="max-w-2xl mx-auto">
               <button type="submit" disabled={isSubmitting} className="w-full bg-orange-500 text-white text-lg font-bold py-4 rounded-2xl shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">

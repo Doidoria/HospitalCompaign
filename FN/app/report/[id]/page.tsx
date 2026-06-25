@@ -1,8 +1,11 @@
+// app/report/[id]/page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2, 
+  CheckCircle2, Camera
+ } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reportApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
@@ -177,21 +180,8 @@ export default function ReportDetailPage() {
               </p>
             </motion.section>
 
-            {/* 4. 다음 일정 및 안내 */}
-            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="bg-orange-50 p-2.5 rounded-xl text-orange-500"><CalendarClock className="w-5 h-5" /></div>
-                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">다음 진료 일정</h3>
-              </div>
-              <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] px-1 font-medium">
-                {reportData.nextSchedule ? (
-                  <span className="text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded-md">{reportData.nextSchedule}</span>
-                ) : '다음 일정 없음'}
-              </p>
-            </motion.section>
-
-            {/* 5. 매니저 동행 코멘트 */}
-            <motion.section variants={itemVariants} className="bg-emerald-50/80 rounded-[24px] p-6 shadow-sm border border-emerald-100/80">
+            {/* 4. 매니저 동행 코멘트 */}
+            <motion.section variants={itemVariants} className="bg-emerald-50/80 rounded-[24px] p-6 shadow-sm border border-emerald-100/80 mt-4">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="bg-white p-2.5 rounded-xl text-emerald-600 shadow-sm"><User className="w-5 h-5" /></div>
                 <h3 className="font-extrabold text-lg text-emerald-900 tracking-tight">매니저 동행 코멘트</h3>
@@ -200,6 +190,36 @@ export default function ReportDetailPage() {
                 {reportData.managerComment}
               </p>
             </motion.section>
+
+            {/* 5. 다음 진료 일정 */}
+            <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="bg-orange-50 p-2.5 rounded-xl text-orange-500"><CalendarClock className="w-5 h-5" /></div>
+                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">다음 진료 일정</h3>
+              </div>
+              <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] px-1 font-medium">
+                {reportData.nextSchedule ? (
+                  <span className="text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded-md">{reportData.nextSchedule.replace('T', ' ')}</span>
+                ) : '다음 일정 없음'}
+              </p>
+            </motion.section>
+            
+            {/* 6. 첨부된 현장 실제 사진 갤러리 출력 영역 */}
+            {reportData.imageUrls && reportData.imageUrls.length > 0 && (
+              <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="bg-blue-50 p-2.5 rounded-xl text-blue-500"><Camera className="w-5 h-5" /></div>
+                  <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">동행 현장 사진</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {reportData.imageUrls.map((url: string, idx: number) => (
+                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm hover:scale-[1.02] transition-transform duration-200">
+                      <img src={url} alt={`현장 동행 기록 사진 ${idx + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
           </div>
         </div> 
 

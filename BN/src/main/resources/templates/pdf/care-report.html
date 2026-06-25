@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        /* PDF 페이지 규격 및 하단 페이지 번호 매기기 */
+        @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-center {
+                content: "- " counter(page) " -";
+                font-family: 'Malgun Gothic', sans-serif;
+                font-size: 11px;
+                color: #94a3b8;
+            }
+        }
+
+        body {
+            font-family: 'Malgun Gothic', Arial, sans-serif;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        /* 헤더 디자인 */
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .logo-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #059669;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+        }
+
+        .sub-title {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .divider {
+            border-bottom: 3px solid #059669;
+            margin-top: 15px;
+            margin-bottom: 30px;
+        }
+
+        /* 섹션별 디자인 */
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0f172a;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #cbd5e1;
+            margin-bottom: 12px;
+        }
+
+        .section-title span {
+            color: #059669;
+            margin-right: 5px;
+        }
+
+        /* 기본 정보 테이블 디자인 (PDF 호환성 최적화) */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .info-table th {
+            width: 22%;
+            text-align: left;
+            padding: 12px;
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 13px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .info-table td {
+            width: 78%;
+            padding: 12px;
+            font-size: 14px;
+            border: 1px solid #e2e8f0;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        /* 내용 박스 디자인 */
+        .content-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            white-space: pre-wrap;
+            color: #334155;
+        }
+
+        /* 약 처방 전용 배지 디자인 */
+        .badge {
+            display: inline-block;
+            background-color: #d1fae5;
+            color: #047857;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        /* 💡 2페이지 강제 넘김 속성 */
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* 이미지 그리드 (테이블 기반) */
+        .img-grid {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .img-grid td {
+            padding: 10px;
+            text-align: center;
+            vertical-align: top;
+            width: 50%;
+        }
+
+        .report-img {
+            max-width: 250px;
+            max-height: 250px;
+            border: 1px solid #e2e8f0;
+            padding: 5px;
+            background: #fff;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo-title">YesCare 동행 케어 리포트</div>
+    <div class="sub-title">보호자님을 대신하여 정성을 다해 동행했습니다.</div>
+    <div class="divider"></div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span>■</span> 환자 및 방문 정보</div>
+    <table class="info-table">
+        <tr>
+            <th>환자 성함</th>
+            <td th:text="${patientName} + ' 님'"></td>
+        </tr>
+        <tr>
+            <th>방문 일시</th>
+            <td th:text="${date}"></td>
+        </tr>
+        <tr>
+            <th>방문 병원</th>
+            <td th:text="${hospitalName} + ' (' + ${department} + ')'"></td>
+        </tr>
+        <tr>
+            <th>당일 컨디션</th>
+            <td th:text="${patientCondition}"></td>
+        </tr>
+    </table>
+</div>
+
+<div class="section">
+    <div class="section-title"><span>■</span> 의사 소견 요약</div>
+    <div class="content-box" th:text="${doctorOpinion}"></div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span>■</span> 처방 및 복약 안내</div>
+    <div class="badge"
+         th:text="'[ ' + ${medicationType} + ' / ' + ${medicationTime} + ' / ' + ${medicationDays} + '일분 ]'"></div>
+    <div class="content-box" th:text="${prescription}"></div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span>■</span> 매니저 동행 코멘트</div>
+    <div class="content-box" th:text="${managerComment}"
+         style="background-color: #f1f5f9; border-color: #cbd5e1;"></div>
+</div>
+
+<div class="section" th:if="${not #strings.isEmpty(nextSchedule)}">
+    <div class="section-title"><span style="color: #f97316;">■</span> 다음 예약 일정</div>
+    <div class="content-box"
+         style="background-color: #fff7ed; border-color: #fed7aa; color: #c2410c; font-weight: bold;"
+         th:text="${nextSchedule}"></div>
+</div>
+
+
+<div th:if="${not #lists.isEmpty(imageUrls)}" class="page-break">
+    <div class="header" style="margin-bottom: 20px;">
+        <div class="logo-title" style="font-size: 22px;">YesCare 동행 케어 리포트</div>
+        <div class="sub-title">현장 첨부 사진</div>
+        <div class="divider"></div>
+    </div>
+
+    <table class="img-grid">
+        <tr th:each="url, iterStat : ${imageUrls}" th:if="${iterStat.index % 2 == 0}">
+            <td><img th:src="${url}" class="report-img"/></td>
+            <td><img th:if="${iterStat.index + 1 < imageUrls.size()}" th:src="${imageUrls[iterStat.index + 1]}"
+                     class="report-img"/></td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>
