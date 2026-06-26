@@ -114,30 +114,33 @@
             margin-bottom: 8px;
         }
 
-        /* 💡 2페이지 강제 넘김 속성 */
+        /* 2페이지 강제 넘김 속성 */
         .page-break {
             page-break-before: always;
         }
 
-        /* 이미지 그리드 (테이블 기반) */
+        /* 이미지 그리드 (테이블 고정 레이아웃) */
         .img-grid {
             width: 100%;
-            margin-top: 20px;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-top: 15px;
         }
 
         .img-grid td {
-            padding: 10px;
-            text-align: center;
-            vertical-align: top;
             width: 50%;
+            padding: 10px;
+            vertical-align: middle;
+            text-align: center;
         }
 
+        /* 사진 크기 강제 제어 (왼쪽/오른쪽 잘림 완벽 방지) */
         .report-img {
-            max-width: 250px;
-            max-height: 250px;
+            width: 260px; /* 너비를 260px로 고정하여 표 밖으로 나가는 것 방지 */
+            height: auto; /* 높이를 자동으로 두어 원본 비율 유지 (크롭 방지!) */
             border: 1px solid #e2e8f0;
-            padding: 5px;
             background: #fff;
+            padding: 4px;
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
         }
     </style>
@@ -179,8 +182,13 @@
 
 <div class="section">
     <div class="section-title"><span>■</span> 처방 및 복약 안내</div>
-    <div class="badge"
+
+    <div th:if="${medicationType != '처방약 없음'}" class="badge"
          th:text="'[ ' + ${medicationType} + ' / ' + ${medicationTime} + ' / ' + ${medicationDays} + '일분 ]'"></div>
+
+    <div th:if="${medicationType == '처방약 없음'}" class="badge" style="background-color: #f1f5f9; color: #64748b;"
+         th:text="'[ 처방약 없음 ]'"></div>
+
     <div class="content-box" th:text="${prescription}"></div>
 </div>
 
@@ -198,20 +206,23 @@
 </div>
 
 
-<div th:if="${not #lists.isEmpty(imageUrls)}" class="page-break">
-    <div class="header" style="margin-bottom: 20px;">
+<div th:each="url : ${imageUrls}" class="page-break" style="text-align: center;">
+    <div class="header" style="margin-bottom: 30px;">
         <div class="logo-title" style="font-size: 22px;">YesCare 동행 케어 리포트</div>
-        <div class="sub-title">현장 첨부 사진</div>
-        <div class="divider"></div>
+        <div class="sub-title">진료 및 처방 관련 사진</div>
+        <div class="divider" style="margin-bottom: 20px;"></div>
     </div>
 
-    <table class="img-grid">
-        <tr th:each="url, iterStat : ${imageUrls}" th:if="${iterStat.index % 2 == 0}">
-            <td><img th:src="${url}" class="report-img"/></td>
-            <td><img th:if="${iterStat.index + 1 < imageUrls.size()}" th:src="${imageUrls[iterStat.index + 1]}"
-                     class="report-img"/></td>
-        </tr>
-    </table>
+    <div style="text-align: center; margin-top: 40px;">
+        <img th:src="${url}"
+             style="width: 600px;
+                height: auto;
+                border: 2px solid #cbd5e1;
+                background: #fff;
+                padding: 8px;
+                box-shadow: 3px 3px 12px rgba(0,0,0,0.1);
+                border-radius: 8px;"/>
+    </div>
 </div>
 
 </body>

@@ -16,7 +16,11 @@ import org.thymeleaf.context.Context;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -105,12 +109,19 @@ public class ReportService {
 
         report.setModified(true);
 
-        List<String> uploadedImageUrls = new ArrayList<>();
+        List<String> finalImageUrls = new ArrayList<>();
+
+        // 프론트엔드에서 지우지 않고 남겨둔 기존 사진 URL 먼저 담기
+        if (request.getRetainedImages() != null) {
+            finalImageUrls.addAll(request.getRetainedImages());
+        }
+
+        // 새로 추가된 사진 업로드 후 담기
         if (images != null && !images.isEmpty()) {
             for (MultipartFile image : images) {
                 if (!image.isEmpty()) {
                     String url = fileStorageService.uploadFile(image);
-                    uploadedImageUrls.add(url);
+                    finalImageUrls.add(url);
                 }
             }
         }
@@ -118,7 +129,7 @@ public class ReportService {
         report.updateReport(
                 request.getDepartment(), request.getDoctorOpinion(), request.getPrescription(),
                 request.getMedicationType(), request.getMedicationTime(), request.getMedicationDays(),
-                request.getManagerComment(), request.getNextSchedule(), uploadedImageUrls, request.getPatientCondition()
+                request.getManagerComment(), request.getNextSchedule(), finalImageUrls, request.getPatientCondition()
         );
 
         // 수정본 PDF 내부 자동 재생성
@@ -175,21 +186,29 @@ public class ReportService {
             context.setVariable("prescription", report.getPrescription());
             context.setVariable("managerComment", report.getManagerComment());
 
-            // 이미지 절대 경로 변환 로직 유지
-            List<String> absoluteImageUrls = new ArrayList<>();
-            // 프로젝트 루트 디렉토리 절대 경로 가져오기
-            String projectRootPath = System.getProperty("user.dir").replace("\\", "/");
-
+            List<String> base64Images = new ArrayList<>();
             for (String img : images) {
-                if (img.startsWith("http")) {
-                    absoluteImageUrls.add(img);
-                } else {
-                    // 파일 시스템 절대 경로 (예: file:///C:/yescare/uploads/사진.jpg)
-                    String fileUri = "file:///" + projectRootPath + "/uploads/" + img;
-                    absoluteImageUrls.add(fileUri);
+                try {
+                    // 외부 S3 링크면 그대로 사용, 로컬이면 파일 읽어서 Base64 인코딩
+                    if (img.startsWith("http")) {
+                        base64Images.add(img);
+                    } else {
+                        String fileName = img.replace("/uploads/", "");
+                        Path imagePath = Paths.get("uploads", fileName);
+                        if (Files.exists(imagePath)) {
+                            byte[] fileBytes = Files.readAllBytes(imagePath);
+                            String base64Data = Base64.getEncoder().encodeToString(fileBytes);
+                            String mimeType = Files.probeContentType(imagePath);
+                            if (mimeType == null) mimeType = "image/jpeg";
+                            // 데이터 URI 스킴으로 조립
+                            base64Images.add("data:" + mimeType + ";base64," + base64Data);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("PDF 이미지 인코딩 실패: " + img);
                 }
             }
-            context.setVariable("imageUrls", absoluteImageUrls);
+            context.setVariable("imageUrls", base64Images);
 
             // Thymeleaf Engine으로 HTML 문자열 생성
             String htmlContent = templateEngine.process("pdf/care-report", context);

@@ -78,16 +78,11 @@ export const reportApi = {
   getReportByReservationId: (reservationId: string) => 
     apiClient.get<ReportResponse>(`/api/reports/reservation/${reservationId}`),
     
-  createWithPdf: (formData: FormData) => apiClient.post('/api/reports', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  createWithPdf: (formData: FormData) => 
+    apiClient.post('/api/reports', formData),
   
   updateWithPdf: (reportId: number, formData: FormData) => 
-    apiClient.put(`/api/reports/${reportId}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }),
+    apiClient.put(`/api/reports/${reportId}`, formData),
 };
 
 // ==========================================

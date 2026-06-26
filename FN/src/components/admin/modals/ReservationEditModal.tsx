@@ -216,7 +216,7 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
               </div>
             </div>
 
-            {/* 2. 동행 정보 (버튼 선택형 UI 적용 부분) */}
+            {/* 2. 동행 정보 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm">
               
               {/* 장소 선택 */}
@@ -302,17 +302,8 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
 
             {/* 3. 3단 분할 내용 편집 영역 */}
             <div className="space-y-4">
-              <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-slate-500" /> 보호자 전달 및 기본 요구사항
-                </label>
-                <textarea 
-                  name="requirements" value={formData.requirements} onChange={handleChange} rows={2}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
-                />
-              </div>
 
-              {/* 파란 박스: 어드민 모달용 UI (개선본) */}
+              {/* 파란 박스: 어드민 모달용 */}
               <div className="bg-white p-5 rounded-[20px] border border-blue-100 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
@@ -334,24 +325,28 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <span className="text-[11px] font-bold text-slate-500 block mb-1">진료 과목</span>
-                        <input type="text" value={detailData.department} onChange={e => setDetailData({...detailData, department: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 내과" />
+                        <input type="text" value={detailData.department} onChange={e => setDetailData({...detailData, department: e.target.value})} 
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 내과" />
                       </div>
                       <div>
                         <span className="text-[11px] font-bold text-slate-500 block mb-1">주요 증상</span>
-                        <input type="text" value={detailData.symptoms} onChange={e => setDetailData({...detailData, symptoms: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 기침, 발열" />
+                        <input type="text" value={detailData.symptoms} onChange={e => setDetailData({...detailData, symptoms: e.target.value})} 
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 기침, 발열" />
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <span className="text-[11px] font-bold text-slate-500 block mb-1">검사 종류</span>
-                        <input type="text" value={detailData.testType} onChange={e => setDetailData({...detailData, testType: e.target.value})} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 수면 내시경" />
+                        <input type="text" value={detailData.testType} onChange={e => setDetailData({...detailData, testType: e.target.value})} 
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors" placeholder="예: 수면 내시경" />
                       </div>
                       <div>
                         <span className="text-[11px] font-bold text-slate-500 block mb-1">금식 여부</span>
                         <div className="flex gap-2">
                           {['금식 완료', '해당 없음'].map(f => (
-                             <button key={f} type="button" onClick={() => setDetailData({...detailData, isFasting: f})} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border-2 ${detailData.isFasting === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{f}</button>
+                             <button key={f} type="button" onClick={() => setDetailData({...detailData, isFasting: f})} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border-2 
+                              ${detailData.isFasting === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{f}</button>
                           ))}
                         </div>
                       </div>
@@ -360,6 +355,15 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
                 </div>
               </div>
 
+              <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-slate-500" /> 보호자 전달 및 기본 요구사항
+                </label>
+                <textarea name="requirements" value={formData.requirements} onChange={handleChange} rows={2}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
+                />
+              </div>
+              
               <div className="bg-white p-4 rounded-[20px] border border-orange-50 shadow-sm">
                 <label className="block text-xs font-bold text-orange-800 mb-1.5 flex items-center gap-1">
                   <HelpCircle className="w-3.5 h-3.5 text-orange-500" /> 의사 선생님께 여쭤볼 질문
@@ -393,10 +397,9 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
                     <div>
                       <span className="text-[11px] font-bold text-slate-500 block mb-1">혈액형</span>
                       <div className="relative">
-                        <select value={healthData.bloodType} 
-                          onChange={(e) => setHealthData({...healthData, bloodType: e.target.value})}
-                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-pink-500 focus:bg-white transition-colors appearance-none cursor-pointer"
-                        >
+                        <select value={healthData.bloodType} onChange={(e) => setHealthData({...healthData, bloodType: e.target.value})}
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none 
+                          focus:border-pink-500 focus:bg-white transition-colors appearance-none cursor-pointer">
                           <option value="">혈액형 선택 (선택 안 함)</option>
                           <option value="A형 (Rh+)">A형 (Rh+)</option>
                           <option value="B형 (Rh+)">B형 (Rh+)</option>
@@ -433,16 +436,12 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
 
           {/* 푸터 액션 버튼 */}
           <div className="flex items-center gap-2 p-5 bg-white border-t border-slate-100 rounded-b-[28px]">
-            <button 
-              type="button" onClick={onClose} disabled={submitting}
-              className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors text-xs"
-            >
+            <button type="button" onClick={onClose} disabled={submitting}
+              className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors text-xs">
               취소
             </button>
-            <button 
-              type="submit" disabled={submitting}
-              className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10"
-            >
+            <button type="submit" disabled={submitting}
+              className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10">
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />

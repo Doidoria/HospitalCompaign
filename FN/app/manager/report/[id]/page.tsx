@@ -7,7 +7,7 @@ import { User, Stethoscope, Clock, CheckCircle2, FileEdit, Loader2, ArrowLeft, F
 import { useParams, useRouter } from 'next/navigation';
 import { reservationApi, reportApi } from '@/src/api/index';
 import { ReportRequest } from '@/src/types/report';
-import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
+import { Toast, YesAlert } from '@/src/utils/alert';
 import imageCompression from 'browser-image-compression';
 
 export default function ReportWritePage() {
@@ -41,7 +41,29 @@ export default function ReportWritePage() {
   });
 
   const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]); // 백엔드에서 온 기존 사진
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]); // 새 사진 미리보기
+
+  // 당일 및 과거 날짜 선택 방지 (내일 날짜 계산)
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  tomorrowDate.setHours(tomorrowDate.getHours() + 9); // 한국 시간(KST) 보정
+  const minDate = tomorrowDate.toISOString().split('T')[0];
+
+  // 백엔드 이미지 주소를 절대 깨지지 않게 조합하는 헬퍼 함수
+  const getImageUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    
+    // 대표님 API 주소 포트에 맞게 변경 (보통 8080 또는 8081)
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'; 
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    
+    if (cleanUrl.startsWith('/uploads')) {
+      return `${baseUrl}${cleanUrl}`;
+    } else {
+      return `${baseUrl}/uploads${cleanUrl}`;
+    }
+  };
 
   // 백엔드 원본 데이터 불러오기
   useEffect(() => {
@@ -87,7 +109,7 @@ export default function ReportWritePage() {
                 return `${backendBaseUrl}${imgPath}`;
               });
               
-              setImagePreviews(formattedUrls);
+              setExistingImages(reportRes.data.imageUrls);
             }
 
             if (reportRes.data.noNextSchedule || fetchedNextSchedule === '') {
@@ -98,7 +120,7 @@ export default function ReportWritePage() {
           console.log("기존 리포트 없음 (신규 작성 모드)");
         }
       } catch (error) {
-        MySwal.fire({ icon: 'error', title: '오류', text: '예약 정보를 불러올 수 없습니다.' });
+        YesAlert.fire({ icon: 'error', title: '오류', text: '예약 정보를 불러올 수 없습니다.' });
         router.push('/manager/dashboard');
       } finally {
         setLoading(false);
@@ -193,8 +215,8 @@ export default function ReportWritePage() {
         // 압축된 파일들을 상태에 저장
         setImages(prev => [...prev, ...compressedFiles]);
         const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
-        setImagePreviews(prev => [...prev, ...newPreviews]);
-        
+        setNewImagePreviews(prev => [...prev, ...newPreviews]);
+        e.target.value = '';
       } catch (error) {
         console.error("이미지 압축 실패:", error);
         YesAlert.fire({ icon: 'error', title: '오류', html: '이미지 처리 중 문제가 발생했습니다.' });
@@ -202,9 +224,13 @@ export default function ReportWritePage() {
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setNewImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -212,13 +238,13 @@ export default function ReportWritePage() {
     
     // 처방약 메모(prescription)를 무조건 필수에서 제외하고 분리
     if (!formData.department || !formData.doctorOpinion || !formData.managerComment) {
-      MySwal.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
+      YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
       return;
     }
     
     // '처방약 없음'이 아닌데 메모를 비워둔 경우에만 경고
     if (formData.medicationType !== '처방약 없음' && !formData.prescription) {
-      MySwal.fire({ icon: 'warning', title: '입력 확인', text: '처방 및 복약 안내 메모를 입력해 주세요.' });
+      YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '처방 및 복약 안내 메모를 입력해 주세요.' });
       return;
     }
 
@@ -253,7 +279,8 @@ export default function ReportWritePage() {
         nextSchedule: finalNextSchedule,
         managerComment: formData.managerComment,
         patientCondition: formData.patientCondition,
-        noNextSchedule: noNextSchedule
+        noNextSchedule: noNextSchedule,
+        retainedImages: existingImages
       };
       
       const payload = new FormData();
@@ -450,9 +477,9 @@ export default function ReportWritePage() {
                   <div className={`space-y-3 ${noNextSchedule ? 'opacity-50 pointer-events-none' : ''}`}>
                     {/* 날짜와 시간도 넓어진 공간을 활용해 한 줄(넓은 화면) 혹은 두 줄(모바일)로 반응형 배치 */}
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <input type="date" name="nextDate" value={formData.nextDate} onChange={handleChange} 
-                        className="w-full sm:flex-1 px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 outline-none" />
-                      
+                      <input type="date" name="nextDate" min={minDate} value={formData.nextDate} onChange={handleChange} 
+                        className="w-full sm:flex-1 px-4 py-3.5 rounded-2xl border-0 ring-1 ring-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-400 transition-all text-base text-gray-800 outline-none" 
+                      />
                       <div className="flex gap-2 sm:flex-1">
                         <div className="relative flex-1">
                           <select value={selectedHour} onChange={(e) => handleTimeSelect('hour', e.target.value)}
@@ -502,14 +529,22 @@ export default function ReportWritePage() {
                 진료 및 처방 관련 사진 첨부하기
               </label>
               <div className="flex flex-wrap gap-3 mt-4">
-                {imagePreviews.map((src, idx) => (
-                  <div key={idx} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
-                    <img src={src} alt="preview" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-black/60 p-1.5 rounded-full text-white hover:bg-black/80 transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                 {existingImages.map((src, idx) => (
+                   <div key={`exist-${idx}`} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-emerald-200 shadow-sm">
+                     <img src={getImageUrl(src)} alt="exist-preview" className="w-full h-full object-cover" />
+                     <button type="button" onClick={() => removeExistingImage(idx)} className="absolute top-1 right-1 bg-black/60 p-1.5 rounded-full text-white hover:bg-black/80">
+                       <X className="w-3 h-3" />
+                     </button>
+                   </div>
+                 ))}
+                 {newImagePreviews.map((src, idx) => (
+                   <div key={`new-${idx}`} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-blue-200 shadow-sm">
+                     <img src={src} alt="new-preview" className="w-full h-full object-cover" />
+                     <button type="button" onClick={() => removeNewImage(idx)} className="absolute top-1 right-1 bg-black/60 p-1.5 rounded-full text-white hover:bg-black/80">
+                       <X className="w-3 h-3" />
+                     </button>
+                   </div>
+                 ))}
                 <label className="w-24 h-24 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-all">
                   <Plus className="w-6 h-6 text-gray-400 mb-1" />
                   <span className="text-[11px] text-gray-400 font-bold">사진 등록</span>

@@ -7,7 +7,7 @@ import { BookOpen, ShieldCheck, HeartHandshake, CheckCircle2, GraduationCap, Loa
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/src/api/index';
 import { apiClient } from '@/src/api/client';
-import { Toast, MySwal } from '@/src/utils/alert';
+import { Toast, YesAlert } from '@/src/utils/alert';
 
 export default function ManagerApplyPage() {
   const router = useRouter();
@@ -90,7 +90,7 @@ export default function ManagerApplyPage() {
       await apiClient.post('/api/members/apply-manager', submitData);
       
       // 중요한 최종 완료 메시지만 모달 유지 (디자인 개선)
-      await MySwal.fire({
+      await YesAlert.fire({
         icon: 'success', 
         title: '신청이 완료되었습니다', 
         text: '관리자 심사 후 매니저 권한이 부여됩니다.',

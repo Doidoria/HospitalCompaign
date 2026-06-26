@@ -88,6 +88,7 @@ public class Report {
         this.nextSchedule = nextSchedule;
         this.patientCondition = patientCondition;
 
+        this.imageUrls.clear();
         if (imageUrls != null && !imageUrls.isEmpty()) {
             this.imageUrls.addAll(imageUrls);
         }

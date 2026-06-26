@@ -156,15 +156,6 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
 
               {/* 4. 진료 및 요청사항 상세 카드 영역 */}
               <div className="space-y-4">
-                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
-                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <div className="p-1.5 bg-slate-100 rounded-lg"><AlertCircle className="w-4 h-4 text-slate-600"/></div>
-                    보호자 특별 요청사항
-                  </h4>
-                  <div className="bg-slate-50/50 p-4 rounded-xl text-sm text-slate-700 whitespace-pre-wrap border border-slate-100 font-medium leading-relaxed">
-                    {selectedRequest.requirements || selectedRequest.memo || '요청사항이 없습니다.'}
-                  </div>
-                </div>
                 <div className="bg-white p-5 rounded-[20px] border border-blue-50 shadow-[0_2px_10px_rgb(59,130,246,0.04)] relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-400"></div>
                   <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -173,6 +164,15 @@ export default function DetailModal({ isOpen, onClose, selectedRequest }: Detail
                   </h4>
                   <div className="bg-blue-50/30 p-4 rounded-xl text-sm text-blue-900 whitespace-pre-wrap border border-blue-100/50 font-bold leading-relaxed">
                     {selectedRequest.detailedContent || '상세 내용이 없습니다.'}
+                  </div>
+                </div>
+                <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-100 rounded-lg"><AlertCircle className="w-4 h-4 text-slate-600"/></div>
+                    보호자 특별 요청사항
+                  </h4>
+                  <div className="bg-slate-50/50 p-4 rounded-xl text-sm text-slate-700 whitespace-pre-wrap border border-slate-100 font-medium leading-relaxed">
+                    {selectedRequest.requirements || selectedRequest.memo || '요청사항이 없습니다.'}
                   </div>
                 </div>
                 <div className="bg-white p-5 rounded-[20px] border border-orange-50 shadow-[0_2px_10px_rgb(249,115,22,0.04)] relative overflow-hidden">

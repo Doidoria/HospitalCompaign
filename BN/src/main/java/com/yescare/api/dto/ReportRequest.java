@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,4 +22,5 @@ public class ReportRequest {
     private String nextSchedule;
     private String patientCondition;
     private Boolean noNextSchedule;
+    private List<String> retainedImages = new ArrayList<>();
 }

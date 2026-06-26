@@ -16,6 +16,8 @@ export interface ReportRequest {
   nextSchedule: string;
   patientCondition: string;
   noNextSchedule: boolean;
+
+  retainedImages?: string[];
 }
 
 // 백엔드의 ReportResponse.java 와 매칭되는 인터페이스 (응답 데이터)

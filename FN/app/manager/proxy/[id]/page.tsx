@@ -28,10 +28,10 @@ export default function ProxyReservationPage() {
   const HOURS = Array.from({ length: 10 }, (_, i) => String(i + 9).padStart(2, '0'));
   const MINUTES = ['00', '10', '20', '30', '40', '50'];
 
-  const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  tomorrowDate.setHours(tomorrowDate.getHours() + 9);
-  const minDate = tomorrowDate.toISOString().split('T')[0];
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + 2); // 오늘(+0), 내일(+1) 제외 -> 모레(+2)
+  targetDate.setHours(targetDate.getHours() + 9); // 한국 시간(KST) 보정
+  const minDate = targetDate.toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
     revisitCount: '1차 재방문',
@@ -209,6 +209,19 @@ export default function ProxyReservationPage() {
       return MySwal.fire({ icon: 'warning', title: '입력 확인', text: '방문 일시와 병원명은 필수입니다.' });
     }
 
+    // 대리 신청 전 확인 팝업 (취소 시 전송 방어)
+    const confirmResult = await YesAlert.fire({
+      title: '대리 신청을 접수하시겠습니까?',
+      html: '고객님께 새로운 예약 접수 안내 알림톡이 발송됩니다.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ea580c',
+      confirmButtonText: '네, 신청합니다',
+      cancelButtonText: '취소'
+    });
+
+    if (!confirmResult.isConfirmed) return; // 취소 = 함수 종료
+
     setIsSubmitting(true);
     try {
       // 1. 만나는 장소 조합
@@ -242,7 +255,7 @@ export default function ProxyReservationPage() {
       };
 
       await reservationApi.createProxy(Number(params.id), payload);
-      await MySwal.fire({ 
+      await YesAlert.fire({ 
         icon: 'success', 
         title: '대리 신청 완료', 
         text: '다음 일정이 성공적으로 접수되었으며, 고객님께 접수 안내 알림톡이 발송되었습니다.', 
@@ -250,7 +263,7 @@ export default function ProxyReservationPage() {
       });
       router.push('/manager/dashboard');
     } catch (error) {
-      MySwal.fire({ icon: 'error', title: '신청 실패', text: '서버 오류가 발생했습니다.' });
+      await YesAlert.fire({ icon: 'error', title: '신청 실패', text: '서버 오류가 발생했습니다.' });
     } finally {
       setIsSubmitting(false);
     }
