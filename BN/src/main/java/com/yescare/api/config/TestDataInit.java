@@ -150,8 +150,10 @@ public class TestDataInit implements CommandLineRunner {
                 .category(cat)
                 .status(status)
 
-                // 💡 프론트엔드 3단 UI(회색, 파란색, 주황색) 및 카카오맵 연동을 위한 상세 데이터 픽스
-                .meetingPoint("자택 앞 /// " + user.getAddress())
+                // 프론트엔드 3단 UI(회색, 파란색, 주황색) 및 카카오맵 연동을 위한 상세 데이터 픽스
+                .meetingType("자택")
+                .meetingAddress(user.getAddress() != null ? user.getAddress() : "주소 없음")
+                .meetingDetailAddress("자택 앞") // 기존에 /// 앞에 있던 상세 설명을 여기에 배치
                 .transportation("일반 택시 결제 요청")
                 .mobility("독립 보행 가능 (약간의 부축 필요)")
                 .requirements("병원 원무과 접수 시 보호자 대리 사인 부탁드립니다. 낙상에 주의해 주세요.")

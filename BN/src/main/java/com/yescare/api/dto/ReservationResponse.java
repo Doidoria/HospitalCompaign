@@ -22,7 +22,9 @@ public class ReservationResponse {
     // 원본/상세 모달용 데이터
     private LocalDateTime reservationTime;
     private String hospitalName; // rawHospitalName 역할
-    private String meetingPoint; // 가공된 만나는 장소
+    private String meetingType;
+    private String meetingAddress;
+    private String meetingDetailAddress;
     private String rawMeetingPoint; // 모달 수정용 원본
 
     private String status;
@@ -71,11 +73,10 @@ public class ReservationResponse {
                 ? this.hospitalName.split("///")[0].trim()
                 : this.hospitalName;
 
-        // 3. 만나는 장소 가공
-        this.rawMeetingPoint = entity.getMeetingPoint();
-        this.meetingPoint = (this.rawMeetingPoint != null && !this.rawMeetingPoint.isBlank())
-                ? this.rawMeetingPoint.replace(" /// ", " ")
-                : "자택";
+        // 3. 만나는 장소
+        this.meetingType = entity.getMeetingType();
+        this.meetingAddress = entity.getMeetingAddress();
+        this.meetingDetailAddress = entity.getMeetingDetailAddress();
 
         this.status = entity.getStatus().name();
         this.requirements = entity.getRequirements();

@@ -236,10 +236,6 @@ export default function ApplyPage() {
     }
 
     try {
-      const finalMeetingPoint = basicExtraData.meetingType === '자택' 
-        ? '자택' 
-        : `${basicExtraData.meetingAddress} /// ${basicExtraData.meetingDetail}`.trim();
-
       const combinedDetailedContent = formData.category === '일반 진료'
         ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}`
         : `- 검사 종류: ${detailData.testType}\n- 금식 여부: ${detailData.isFasting}`;
@@ -252,7 +248,9 @@ export default function ApplyPage() {
         hospitalName: formData.hospitalName,
         reservationTime: `${formData.date}T${formData.time}:00`,
         category: formData.category,
-        meetingPoint: finalMeetingPoint,
+        meetingType: basicExtraData.meetingType,
+        meetingAddress: basicExtraData.meetingType === '자택' ? '자택' : basicExtraData.meetingAddress,
+        meetingDetailAddress: basicExtraData.meetingType === '자택' ? '' : basicExtraData.meetingDetail,
         transportation: basicExtraData.transportation,
         mobility: basicExtraData.mobility,
         // 수정된 부분: 백엔드 DTO에 맞게 분리

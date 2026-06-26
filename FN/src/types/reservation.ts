@@ -16,7 +16,9 @@ export interface ReservationRequest {
   detailedContent?: string;
   doctorInquiry?: string;
   category?: string;
-  meetingPoint?: string;
+  meetingType?: string; 
+  meetingAddress?: string; 
+  meetingDetailAddress?: string; 
   transportation?: string;
   mobility?: string;
   bloodType?: string;
@@ -38,7 +40,9 @@ export interface ReservationResponse {
   requirements?: string;
   managerName: string; // 매칭 안 됐을 땐 "-" 로 옴
   category?: string;
-  meetingPoint?: string;
+  meetingType?: string;
+  meetingAddress?: string;
+  meetingDetailAddress?: string;
   transportation?: string;
   memo?: string;
   mobility?: string;
@@ -50,14 +54,14 @@ export interface ReservationResponse {
   revisitCount?: string;
   reviewRating?: number;
   reviewComment?: string;
-  managerId?: number; // 매니저가 없을 수 있으므로 Optional(?) 처리
+  managerId?: number;
   bloodType?: string;
   underlyingDisease?: string;
   medication?: string;
   preparedDocuments?: string;
 }
 
-// 예약 상세 페이지 UI 상태 관리를 위한 타입
+// 4. 예약 상세 페이지 UI 상태 관리를 위한 타입
 export interface ManagerInfo {
   id: string | number;
   name: string;
@@ -72,7 +76,7 @@ export interface PaymentInfo {
 }
 
 export interface ReservationDetailState {
-  id: string | number; // API 연동 시 number로 올 수도 있으므로 유연하게 처리
+  id: string | number; 
   status: string;
   date: string;
   time: string;
@@ -85,7 +89,9 @@ export interface ReservationDetailState {
   category: string;
   detailedContent: string;
   doctorInquiry: string;
-  meetingPoint: string;
+  meetingType: string;
+  meetingAddress: string;
+  meetingDetailAddress: string;
   patientAddress: string;
   transportation: string;
   mobility: string;

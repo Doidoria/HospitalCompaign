@@ -44,8 +44,14 @@ public class Reservation {
     @Column(length = 50)
     private String category; // 일반 진료 / 정밀 검사
 
+    @Column(length = 50)
+    private String meetingType; // 자택 or 직접지정
+
     @Column(length = 200)
-    private String meetingPoint; // 만나는 장소
+    private String meetingAddress; // 주소
+
+    @Column(length = 100)
+    private String meetingDetailAddress; // 상세주소
 
     @Column(length = 50)
     private String transportation; // 이동 수단
@@ -110,8 +116,8 @@ public class Reservation {
     @Builder
     public Reservation(Member member, String patientName, String patientPhone, String hospitalName, LocalDateTime reservationTime,
                        String guardianName, String guardianPhone, String memo, ReservationStatus status, String requirements,
-                       String detailedContent, String doctorInquiry, String category, String meetingPoint,
-                       String transportation, String mobility, String revisitCount, boolean hasProxy,
+                       String detailedContent, String doctorInquiry, String category, String meetingType, String meetingAddress,
+                       String meetingDetailAddress, String transportation, String mobility, String revisitCount, boolean hasProxy,
                        String bloodType, String underlyingDisease, String medication, String preparedDocuments) {
         this.member = member;
         this.patientName = patientName;
@@ -121,7 +127,9 @@ public class Reservation {
         this.guardianName = guardianName;
         this.guardianPhone = guardianPhone;
         this.category = category;
-        this.meetingPoint = meetingPoint;
+        this.meetingType = meetingType;
+        this.meetingAddress = meetingAddress;
+        this.meetingDetailAddress = meetingDetailAddress;
         this.transportation = transportation;
         this.mobility = mobility;
         this.memo = memo;
@@ -148,7 +156,8 @@ public class Reservation {
 
     public void updateDetails(String hospitalName, LocalDateTime reservationTime, String requirements,
                               String detailedContent, String doctorInquiry,
-                              String meetingPoint, String transportation, String mobility,
+                              String meetingType, String meetingAddress, String meetingDetailAddress,
+                              String transportation, String mobility,
                               String bloodType, String underlyingDisease, String medication, String preparedDocuments) {
         this.hospitalName = hospitalName;
         this.reservationTime = reservationTime;
@@ -160,8 +169,9 @@ public class Reservation {
         this.medication = medication;
         this.preparedDocuments = preparedDocuments;
 
-        // 프론트에서 동행 기본 정보가 넘어오면 업데이트!
-        if (meetingPoint != null) this.meetingPoint = meetingPoint;
+        if (meetingType != null) this.meetingType = meetingType;
+        if (meetingAddress != null) this.meetingAddress = meetingAddress;
+        if (meetingDetailAddress != null) this.meetingDetailAddress = meetingDetailAddress;
         if (transportation != null) this.transportation = transportation;
         if (mobility != null) this.mobility = mobility;
     }

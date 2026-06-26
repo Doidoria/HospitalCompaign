@@ -73,7 +73,9 @@ public class ReservationService {
                 .member(member)
                 .requirements(request.getRequirements())
                 .category(request.getCategory())
-                .meetingPoint(request.getMeetingPoint())
+                .meetingType(request.getMeetingType())
+                .meetingAddress(request.getMeetingAddress())
+                .meetingDetailAddress(request.getMeetingDetailAddress())
                 .transportation(request.getTransportation())
                 .mobility(request.getMobility())
                 .bloodType(request.getBloodType())
@@ -193,8 +195,9 @@ public class ReservationService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
 
         // 1. 만나는 장소 '///' 기호 제거 및 깔끔하게 띄어쓰기 정제
-        String rawMeetingPoint = reservation.getMeetingPoint() != null ? reservation.getMeetingPoint() : "자택";
-        String cleanMeetingPoint = rawMeetingPoint.replace("///", " ").replaceAll("\\s+", " ").trim();
+        String cleanMeetingPoint = "자택".equals(reservation.getMeetingType())
+                ? "자택"
+                : reservation.getMeetingAddress() + " " + reservation.getMeetingDetailAddress();
 
         // 2. 파라미터 5개 전달 (환자명 대신 고객명 주입)
         kakaoAlimtalkService.sendManagerAssigned(
@@ -241,7 +244,9 @@ public class ReservationService {
                 request.getRequirements(),
                 request.getDetailedContent(),
                 request.getDoctorInquiry(),
-                request.getMeetingPoint(),
+                request.getMeetingType(),
+                request.getMeetingAddress(),
+                request.getMeetingDetailAddress(),
                 request.getTransportation(),
                 request.getMobility(),
                 request.getBloodType(),
@@ -312,7 +317,9 @@ public class ReservationService {
                 .category(data.get("category"))
                 .guardianName(data.get("guardianName"))
                 .guardianPhone(data.get("guardianPhone"))
-                .meetingPoint(data.get("meetingPoint"))
+                .meetingType(data.get("meetingType"))
+                .meetingAddress(data.get("meetingAddress"))
+                .meetingDetailAddress(data.get("meetingDetailAddress"))
                 .transportation(data.get("transportation"))
                 .mobility(data.get("mobility"))
                 .requirements(data.get("requirements"))
@@ -509,7 +516,9 @@ public class ReservationService {
                 request.getRequirements(),
                 request.getDetailedContent(),
                 request.getDoctorInquiry(),
-                request.getMeetingPoint(),
+                request.getMeetingType(),
+                request.getMeetingAddress(),
+                request.getMeetingDetailAddress(),
                 request.getTransportation(),
                 request.getMobility(),
                 request.getBloodType(),

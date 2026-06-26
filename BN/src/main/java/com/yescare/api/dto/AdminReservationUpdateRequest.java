@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
 public class AdminReservationUpdateRequest {
     private String hospitalName;
     private LocalDateTime reservationTime;
-    private String meetingPoint;
+    private String meetingType;
+    private String meetingAddress;
+    private String meetingDetailAddress;
     private String transportation;
     private String mobility;
     private String requirements;

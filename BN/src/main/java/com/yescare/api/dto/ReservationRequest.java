@@ -19,7 +19,9 @@ public class ReservationRequest {
     private String detailedContent; // 상세 내용
     private String doctorInquiry;
     private String category;
-    private String meetingPoint;
+    private String meetingType;           // 자택 또는 직접 지정
+    private String meetingAddress;        // 기본 주소
+    private String meetingDetailAddress;  // 상세 주소
     private String transportation;
     private String mobility;
     private String bloodType;

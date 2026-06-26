@@ -95,23 +95,11 @@ export default function ReservationEditPage() {
         }
         setDetailData(parsed);
 
-        // 백엔드에서 온 만나는 장소 파싱 (자택 vs 직접 지정)
-        let mType = '자택';
-        let mAddr = '';
-        let mDetail = '';
-        
-        if (data.meetingPoint && data.meetingPoint !== '자택') {
-          mType = '직접 지정';
-          const parts = data.meetingPoint.split('///');
-          mAddr = parts[0]?.trim() || '';
-          mDetail = parts[1]?.trim() || '';
-        }
-
         // 동행 기본 정보 세팅
         setBasicExtraData({
-          meetingType: mType,
-          meetingAddress: mAddr,
-          meetingDetail: mDetail,
+          meetingType: data.meetingType || '자택',
+          meetingAddress: data.meetingAddress || '',
+          meetingDetail: data.meetingDetailAddress || '',
           transportation: data.transportation || '택시 이용',
           mobility: data.mobility || '독립 보행 가능'
         });
@@ -233,7 +221,10 @@ export default function ReservationEditPage() {
         bloodType: healthData.bloodType || undefined,
         underlyingDisease: healthData.underlyingDisease || undefined,
         medication: healthData.medication || undefined,
-        preparedDocuments: healthData.preparedDocuments || undefined
+        preparedDocuments: healthData.preparedDocuments || undefined,
+        meetingType: basicExtraData.meetingType, // '자택' or '직접 지정'
+        meetingAddress: basicExtraData.meetingType === '자택' ? '자택' : basicExtraData.meetingAddress,
+        meetingDetailAddress: basicExtraData.meetingType === '자택' ? '' : basicExtraData.meetingDetail,
       };
       
       await reservationApi.update(id as string, requestData); 

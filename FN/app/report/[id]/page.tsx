@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Stethoscope, CalendarClock, Pill, User, Heart, Download, FileText, Loader2, 
-  CheckCircle2, Camera
+  CheckCircle2, Camera, X,
  } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { reportApi } from '@/src/api/index';
@@ -19,6 +19,26 @@ export default function ReportDetailPage() {
 
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // 백엔드 이미지 주소 조합 헬퍼 함수
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return cleanUrl.startsWith('/uploads') ? `${baseUrl}${cleanUrl}` : `${baseUrl}/uploads${cleanUrl}`;
+  };
+
+  // 날짜 한글 변환 헬퍼 함수
+  const formatKoreanDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [date, time] = dateStr.split('T');
+    if (!time) return dateStr;
+    const [year, month, day] = date.split('-');
+    const [hour, minute] = time.split(':');
+    return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분`;
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -169,15 +189,36 @@ export default function ReportDetailPage() {
               </p>
             </motion.section>
 
-            {/* 3. 처방 및 복약 안내 */}
+            {/* 3. 처방 및 복약 안내 (구조화된 데이터 렌더링) */}
             <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="bg-emerald-50 p-2.5 rounded-xl text-emerald-600"><Pill className="w-5 h-5" /></div>
                 <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">처방 및 복약 안내</h3>
               </div>
-              <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] whitespace-pre-wrap px-1">
-                {reportData.prescription || '특이사항 없음'}
-              </p>
+              <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-3">
+                {/* 세분화된 약 처방 정보 뱃지 */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-sm font-bold border border-emerald-200">
+                    {reportData.medicationType || '기존 약 유지'}
+                  </span>
+                  {reportData.medicationType !== '처방약 없음' && reportData.medicationDays && (
+                    <span className="bg-white text-slate-600 px-3 py-1 rounded-lg text-sm font-bold border border-slate-200">
+                      {reportData.medicationDays}일분
+                    </span>
+                  )}
+                  {reportData.medicationType !== '처방약 없음' && reportData.medicationTime && (
+                    <span className="bg-white text-slate-600 px-3 py-1 rounded-lg text-sm font-bold border border-slate-200">
+                      {reportData.medicationTime}
+                    </span>
+                  )}
+                </div>
+                {/* 추가 메모 (prescription) */}
+                {reportData.prescription && (
+                  <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] whitespace-pre-wrap font-medium border-t border-slate-100 pt-3">
+                    {reportData.prescription}
+                  </p>
+                )}
+              </div>
             </motion.section>
 
             {/* 4. 매니저 동행 코멘트 */}
@@ -199,22 +240,26 @@ export default function ReportDetailPage() {
               </div>
               <p className="text-slate-600 leading-relaxed break-keep text-sm md:text-[15px] px-1 font-medium">
                 {reportData.nextSchedule ? (
-                  <span className="text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded-md">{reportData.nextSchedule.replace('T', ' ')}</span>
+                  <span className="text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded-md">
+                    {formatKoreanDate(reportData.nextSchedule)}
+                  </span>
                 ) : '다음 일정 없음'}
               </p>
             </motion.section>
             
-            {/* 6. 첨부된 현장 실제 사진 갤러리 출력 영역 */}
+            {/* 6. 진료 및 처방 관련 사진 */}
             {reportData.imageUrls && reportData.imageUrls.length > 0 && (
               <motion.section variants={itemVariants} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
                 <div className="flex items-center gap-2.5 mb-4">
                   <div className="bg-blue-50 p-2.5 rounded-xl text-blue-500"><Camera className="w-5 h-5" /></div>
-                  <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">동행 현장 사진</h3>
+                  <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">진료 및 처방 관련 사진</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {reportData.imageUrls.map((url: string, idx: number) => (
-                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm hover:scale-[1.02] transition-transform duration-200">
-                      <img src={url} alt={`현장 동행 기록 사진 ${idx + 1}`} className="w-full h-full object-cover" />
+                    <div key={idx} onClick={() => setSelectedImage(getImageUrl(url))}
+                      className="aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm hover:scale-[1.02] transition-transform duration-200 cursor-zoom-in"
+                    >
+                      <img src={getImageUrl(url)} alt={`진료 및 처방 관련 사진 ${idx + 1}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -238,6 +283,17 @@ export default function ReportDetailPage() {
           </button>
         </motion.div>
       </motion.main>
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 cursor-zoom-out backdrop-blur-sm">
+            <img src={selectedImage} alt="확대된 사진" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" />
+            <button onClick={() => setSelectedImage(null)} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 bg-white/10 hover:bg-white/25 rounded-full text-white transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

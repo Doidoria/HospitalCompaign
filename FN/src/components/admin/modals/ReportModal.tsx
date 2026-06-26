@@ -1,10 +1,10 @@
+// src/components/admin/modals/ReportModal.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Loader2, FileCheck2, Building2, Activity, 
-  Stethoscope, Pill, MessageSquare, CalendarClock 
+  X, Loader2, FileCheck2, Building2, Activity, Stethoscope, Pill, MessageSquare, CalendarClock, Camera
 } from 'lucide-react';
 import { reportApi } from '@/src/api/index';
 
@@ -17,6 +17,25 @@ interface ReportModalProps {
 export default function ReportModal({ isOpen, onClose, reservationId }: ReportModalProps) {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return cleanUrl.startsWith('/uploads') ? `${baseUrl}${cleanUrl}` : `${baseUrl}/uploads${cleanUrl}`;
+  };
+
+  // 날짜 한글 변환 헬퍼 함수
+  const formatKoreanDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [date, time] = dateStr.split('T');
+    if (!time) return dateStr;
+    const [year, month, day] = date.split('-');
+    const [hour, minute] = time.split(':');
+    return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분`;
+  };
 
   useEffect(() => {
     if (isOpen && reservationId) {
@@ -128,13 +147,32 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
                     처방 및 다음 일정
                   </h4>
                   <div className="space-y-3">
-                    <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100 font-medium">
-                      {reportData.prescription}
+                    <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <span className="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-md text-xs font-bold">
+                          {reportData.medicationType || '기존 약 유지'}
+                        </span>
+                        {reportData.medicationType !== '처방약 없음' && reportData.medicationDays && (
+                          <span className="bg-white text-slate-600 border border-slate-200 px-2.5 py-1 rounded-md text-xs font-bold">
+                            {reportData.medicationDays}일분
+                          </span>
+                        )}
+                        {reportData.medicationType !== '처방약 없음' && reportData.medicationTime && (
+                          <span className="bg-white text-slate-600 border border-slate-200 px-2.5 py-1 rounded-md text-xs font-bold">
+                            {reportData.medicationTime}
+                          </span>
+                        )}
+                      </div>
+                      {reportData.prescription && (
+                        <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed font-medium mt-3 pt-3 border-t border-slate-200">
+                          {reportData.prescription}
+                        </div>
+                      )}
                     </div>
                     <div className={`flex items-center gap-2 p-3.5 rounded-xl border font-bold text-sm shadow-sm
                       ${reportData.noNextSchedule ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
                       <CalendarClock className="w-4 h-4" />
-                      {reportData.noNextSchedule ? '다음 진료 일정 없음' : `다음 방문일: ${reportData.nextSchedule}`}
+                      {reportData.noNextSchedule ? '다음 진료 일정 없음' : `다음 방문일: ${formatKoreanDate(reportData.nextSchedule)}`}
                     </div>
                   </div>
                 </div>
@@ -150,6 +188,25 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
                     {reportData.managerComment}
                   </div>
                 </div>
+
+                {/* 5. 진료 및 처방 관련 사진 (어드민 갤러리) */}
+                {reportData.imageUrls && reportData.imageUrls.length > 0 && (
+                  <div className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                    <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-50 rounded-lg"><Camera className="w-4 h-4 text-blue-600" /></div>
+                      진료 및 처방 관련 사진
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {reportData.imageUrls.map((url: string, idx: number) => (
+                        <div key={idx} onClick={() => setSelectedImage(getImageUrl(url))}
+                          className="aspect-square rounded-xl overflow-hidden border border-slate-100 bg-slate-50 relative group cursor-zoom-in"
+                        >
+                          <img src={getImageUrl(url)} alt={`현장 사진 ${idx+1}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-white p-12 rounded-[24px] border border-slate-100 shadow-sm text-center flex flex-col items-center justify-center mt-4">
@@ -163,6 +220,16 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
           </div>
         </motion.div>
       </motion.div>
+      {/* 어드민 이미지 확대 모달 (기존 모달 위에 띄움) */}
+      {selectedImage && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 cursor-zoom-out backdrop-blur-md">
+          <img src={selectedImage} alt="확대된 사진" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" />
+          <button onClick={() => setSelectedImage(null)} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 bg-white/10 hover:bg-white/25 rounded-full text-white transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }
