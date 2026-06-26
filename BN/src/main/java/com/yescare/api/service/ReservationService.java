@@ -143,7 +143,7 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다. (ID: " + id + ")"));
 
-        // 예약이 DB에서 지워지기 직전에 취소 알림톡 발송!
+        // 예약이 취소되기 직전에 알림톡 발송
         kakaoAlimtalkService.sendReservationChangedOrCanceled(
                 reservation.getMember().getPhoneNumber(),
                 reservation.getMember().getName(),
@@ -151,8 +151,8 @@ public class ReservationService {
                 "고객님의 요청에 의한 예약 취소"
         );
 
-        // 2. 찾아온 예약을 DB에서 완전히 삭제합니다.
-        reservationRepository.delete(reservation);
+        // 2. 찾아온 예약을 취소
+        reservation.cancel();
     }
 
     /**
@@ -601,7 +601,7 @@ public class ReservationService {
         );
     }
 
-    // 추가 요금 부과 (매니저 전용)
+    // 추가 요금 부과 (매니저 전용) - 운영 예외 케이스 방어
     @Transactional
     public void addExtraCharge(Long id, String email, Integer amount, String reason) {
         Reservation reservation = reservationRepository.findById(id)
@@ -611,21 +611,26 @@ public class ReservationService {
             throw new IllegalStateException("본인이 배정된 예약에 대해서만 요금을 추가할 수 있습니다.");
         }
 
-        // 🚀 [핵심 분기 점검] DB에 저장하기 전, 기존에 청구한 금액이 이미 있었는지 확인합니다.
+        // 동행 완료(COMPLETED) 상태에서도 추가 요금을 입력할 수 있도록 조건문을 유연하게 완화
+        if (reservation.getStatus() != ReservationStatus.IN_PROGRESS && reservation.getStatus() != ReservationStatus.COMPLETED) {
+            throw new IllegalStateException("동행이 진행 중이거나 완료된 상태에서만 추가 요금을 등록할 수 있습니다.");
+        }
+
+        // 기존에 청구한 금액이 이미 있었는지 확인 (알림톡 분기용)
         boolean isModification = (reservation.getExtraChargeAmount() != null && reservation.getExtraChargeAmount() > 0);
 
-        // 비즈니스 메서드 호출하여 값 덮어쓰기
+        // 비즈니스 메서드 호출하여 값 갱신
         reservation.addExtraCharge(amount, reason);
 
         String customerName = reservation.getMember().getName();
         String phoneNumber = reservation.getMember().getPhoneNumber();
 
         if (isModification) {
-            // 1️⃣ 이미 요금이 나가서 고치는 경우 ➡️ 정정 알림톡 발송
+            // 1️⃣ 이미 요금이 입력되었다가 고쳐지는 경우 -> 정정 알림톡 발송
             kakaoAlimtalkService.sendExtraChargeModified(phoneNumber, customerName, amount, reason);
             System.out.println("🔄 [알림톡 분기] 추가 요금 정정 메시지 트리거");
         } else {
-            // 2️⃣ 이번에 처음 요금을 매기는 경우 ➡️ 최초 안내 알림톡 발송
+            // 2️⃣ 이번에 처음 요금을 매기는 경우 -> 최초 안내 알림톡 발송
             kakaoAlimtalkService.sendExtraChargeNotification(phoneNumber, customerName, amount, reason);
             System.out.println("🆕 [알림톡 분기] 최초 추가 요금 청구 메시지 트리거");
         }

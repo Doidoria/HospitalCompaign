@@ -104,6 +104,7 @@ export default function InquiryCreatePage() {
       // 2. 성공 알림 (사용자가 토스트를 볼 수 있도록 await 처리)
       await Toast.fire({
         icon: 'success',
+        timer: 1000,
         title: '문의가 성공적으로 접수되었습니다.'
       });
       
@@ -113,6 +114,7 @@ export default function InquiryCreatePage() {
       console.error('문의 접수 에러:', error);
       Toast.fire({
         icon: 'error',
+        timer: 2000,
         title: '문의 접수 중 오류가 발생했습니다. 다시 시도해주세요.'
       });
     }

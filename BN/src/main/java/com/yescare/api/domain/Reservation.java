@@ -5,7 +5,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.SQLDelete; // 🌟 추가됨
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 
@@ -13,12 +14,16 @@ import java.time.LocalDateTime;
 @Table(name = "reservations")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLDelete(sql = "UPDATE reservations SET status = 'CANCELLED' WHERE id = ?")
+@SQLDelete(sql = "UPDATE reservations SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false") // 기본 조회 시 삭제된 내역만 안 보이게 처리
 public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, columnDefinition = "boolean default false") // 삭제 여부를 관리하는 필드
+    private boolean isDeleted = false;
 
     @Column(nullable = false, length = 50)
     private String patientName;
@@ -214,6 +219,11 @@ public class Reservation {
 
     public void setReport(Report report) {
         this.report = report;
+    }
+
+    // 예약 취소는 삭제가 아니라 단순 상태 업데이트 메서드로 처리
+    public void cancel() {
+        this.status = ReservationStatus.CANCELLED;
     }
 
 }

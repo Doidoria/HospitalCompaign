@@ -70,14 +70,10 @@ export default function NoticeDetailPage() {
 
           {/* 하단 목록으로 버튼 */}
           <div className="mt-12 flex justify-center pt-8 border-t border-dashed border-gray-200">
-            <button 
-              onClick={() => router.push('/support/faq?tab=notice')} 
-              className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-md"
-            >
+            <button onClick={() => router.back()} className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-md">
               목록으로 돌아가기
             </button>
           </div>
-
         </div>
       </div>
     </div>

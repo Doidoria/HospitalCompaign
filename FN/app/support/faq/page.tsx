@@ -126,7 +126,7 @@ export default function CustomerSupportPage() {
       }
     }
     return targetData;
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, notices]);
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
   const currentData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);

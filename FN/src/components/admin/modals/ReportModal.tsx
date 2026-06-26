@@ -222,7 +222,7 @@ export default function ReportModal({ isOpen, onClose, reservationId }: ReportMo
       </motion.div>
       {/* 어드민 이미지 확대 모달 (기존 모달 위에 띄움) */}
       {selectedImage && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)}
+        <motion.div key="zoom-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)}
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 cursor-zoom-out backdrop-blur-md">
           <img src={selectedImage} alt="확대된 사진" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" />
           <button onClick={() => setSelectedImage(null)} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 bg-white/10 hover:bg-white/25 rounded-full text-white transition-colors">
