@@ -1,0 +1,31 @@
+# application-prod.yml
+server:
+  port: 8081 # 또는 실서버 환경에 맞춰 80이나 8080으로 변경 가능
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # 🚨 실서버 안전장치 (테이블 자동 생성 금지)
+    properties:
+      hibernate:
+        show_sql: false # 실서버 로그 폭탄 및 성능 저하 방지
+        format_sql: false
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            redirect-uri: https://www.wellcommunity-yescare.co.kr/api/auth/callback/kakao
+            scope: account_email,name,phone_number,shipping_address,gender,birthday,birthyear,talk_message,plusfriends

@@ -193,19 +193,29 @@ public class ReservationService {
         reservation.updateStatus(ReservationStatus.CONFIRMED);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+        String formattedDateTime = reservation.getReservationTime().format(formatter);
 
         // 1. 만나는 장소 '///' 기호 제거 및 깔끔하게 띄어쓰기 정제
         String cleanMeetingPoint = "자택".equals(reservation.getMeetingType())
                 ? "자택"
                 : reservation.getMeetingAddress() + " " + reservation.getMeetingDetailAddress();
 
-        // 2. 파라미터 5개 전달 (환자명 대신 고객명 주입)
+        // 1. 신청한 고객(보호자)에게 매니저 배정 안내 알림톡 발송
         kakaoAlimtalkService.sendManagerAssigned(
                 reservation.getMember().getPhoneNumber(),
                 reservation.getMember().getName(),
                 manager.getName(),
-                reservation.getReservationTime().format(formatter),
+                formattedDateTime,
                 cleanMeetingPoint
+        );
+
+        // 2. 배정된 매니저에게 신규 일정 안내 알림톡 발송
+        kakaoAlimtalkService.sendManagerNewSchedule(
+                manager.getPhoneNumber(),          // 매니저 폰번호
+                manager.getName(),                 // 매니저 이름
+                reservation.getMember().getName(), // 고객(신청자) 이름
+                formattedDateTime,                 // 예약 일시
+                reservation.getHospitalName()      // 방문 병원명
         );
     }
 

@@ -51,6 +51,8 @@ public class KakaoAlimtalkService {
     private String tplReportCompleted;
     @Value("${coolsms.kakao.template.proxy-reservation-complete}")
     private String tplProxyReservationComplete;
+    @Value("${coolsms.kakao.template.manager-new-schedule}")
+    private String tplManagerNewSchedule;
 
     private DefaultMessageService messageService;
 
@@ -243,5 +245,25 @@ public class KakaoAlimtalkService {
 
         sendAlimtalk(phoneNumber, text, tplProxyReservationComplete, variables);
         log.info("🔔 [알림톡 발송] 대리 신청 완료 알림톡 전송 -> 수신처: {}", phoneNumber);
+    }
+
+    // 매니저 배정 안내
+    @Async
+    public void sendManagerNewSchedule(String managerPhoneNumber, String managerName, String customerName, String datetime, String hospitalName) {
+        HashMap<String, String> variables = new HashMap<>();
+        variables.put("#{매니저명}", managerName);
+        variables.put("#{고객명}", customerName);
+        variables.put("#{예약일시}", datetime);
+        variables.put("#{병원명}", hospitalName);
+
+        String text = "[예스케어] " + managerName + " 매니저님, 새로운 병원 동행 일정이 배정되었습니다.\n" +
+                "- 예약자(환자): " + customerName + "\n" +
+                "- 동행일시: " + datetime + "\n" +
+                "- 방문병원: " + hospitalName + "\n\n" +
+                "상세 요청사항은 매니저 대시보드에서 확인해 주세요.";
+
+        // 매니저 휴대폰 번호로 발송
+        sendAlimtalk(managerPhoneNumber, text, tplManagerNewSchedule, variables);
+        log.info("🔔 [알림톡 발송] 매니저 신규 배정 알림톡 전송 완료 -> 매니저: {}", managerName);
     }
 }
