@@ -1,7 +1,5 @@
 package com.yescare.api.service;
 
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -11,8 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-@Service
-@Profile("!local") // local 프로필이 "아닐 때만" 이 빈을 생성
+//@Service
+//@Profile("dev") // 개발 환경에서만 작동하도록 변경
 public class FileStorageServiceImpl implements FileStorageService {
 
     // 최상위 기본 업로드 폴더
