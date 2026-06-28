@@ -23,9 +23,10 @@ export default function ReservationDetailPage() {
     id: '', status: '', date: '', time: '', hospital: '',
     patientName: '', patientPhone: '', memo: '',
     manager: null, payment: { baseFee: 0, extraFee: 0, totalFee: 0 },
-    category: '', detailedContent: '', doctorInquiry: '', meetingPoint: '', patientAddress: '',
+    category: '', detailedContent: '', doctorInquiry: '', 
+    meetingType: '자택', meetingAddress: '', meetingDetailAddress: '', patientAddress: '',
     transportation: '', mobility: '',
-    bloodType: '', underlyingDisease: '', medication: '', preparedDocuments: '' // 건강 정보 초기화
+    bloodType: '', underlyingDisease: '', medication: '', preparedDocuments: ''
   });
   // 로그인 제공자(provider) 저장용 상태
   const [authProvider, setAuthProvider] = useState("LOCAL");
@@ -80,7 +81,9 @@ export default function ReservationDetailPage() {
           category: apiData.category || '진료',
           detailedContent: apiData.detailedContent || '',
           doctorInquiry: apiData.doctorInquiry || '',
-          meetingPoint: apiData.meetingPoint || '자택',
+          meetingType: apiData.meetingType || '자택',
+          meetingAddress: apiData.meetingAddress || '',
+          meetingDetailAddress: apiData.meetingDetailAddress || '',
           patientAddress: apiData.patientAddress || '',
           transportation: apiData.transportation || '택시 이용',
           mobility: apiData.mobility || '독립 보행 가능',
@@ -273,15 +276,19 @@ export default function ReservationDetailPage() {
                 <span className="text-sm font-semibold text-slate-500 w-20 shrink-0 mt-2">만나는 장소</span>
                 <div className="flex-1 flex items-center gap-3 text-left">
                   <span className="text-sm font-bold text-slate-800 break-keep mt-0.5">
-                    {reservation.meetingPoint.includes('///') 
-                      ? reservation.meetingPoint.split('///').map((line, i) => <React.Fragment key={i}>{line}<br/></React.Fragment>)
-                      : reservation.meetingPoint}
+                    {reservation.meetingType === '자택' 
+                      ? '자택' 
+                      : <>{reservation.meetingAddress} <br/><span className="text-slate-500 font-medium text-xs">{reservation.meetingDetailAddress}</span></>
+                    }
                   </span>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
-                      const searchTarget = reservation.meetingPoint === '자택' ? reservation.patientAddress : reservation.meetingPoint.split('///')[0];
-                      if (!searchTarget || searchTarget === '자택') {
+                      const searchTarget = reservation.meetingType === '자택' 
+                                            ? reservation.patientAddress 
+                                            : reservation.meetingAddress;
+                      
+                      if (!searchTarget) {
                         Toast.fire({ icon: 'warning', title: '정확한 주소 정보가 없습니다.' });
                         return;
                       }
