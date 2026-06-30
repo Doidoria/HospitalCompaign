@@ -1,8 +1,9 @@
+// app/privacy/page.tsx
 'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export default function PrivacyPage() {
   const router = useRouter();
@@ -11,24 +12,22 @@ export default function PrivacyPage() {
     {
       id: 1,
       title: "1. 수집하는 개인정보 항목",
-      content: "회사는 서비스 제공을 위해 아래와 같은 개인정보를 수집합니다.\n\n• 필수항목: 이름, 연락처, 이메일, 비밀번호, 서비스 이용지 주소\n• 민감정보 (선택): 기본 질환 정보, 복용 약물, 거동 상태"
+      content: "회사는 서비스 제공 및 카카오 로그인을 통한 간편 가입을 위해 아래와 같은 개인정보를 수집합니다.\n\n• 필수항목: 이름, 연락처(휴대전화번호), 이메일, 비밀번호, 서비스 이용지 주소\n• 민감정보(선택): 기본 질환 정보, 복용 약물, 거동 상태"
     },
     {
       id: 2,
       title: "2. 개인정보의 수집 및 이용 목적",
-      content: "수집된 개인정보는 병원 동행 매니저 매칭, 예약 및 결제 관리, 긴급 상황 발생 시 보호자 연락 등의 목적으로만 이용됩니다."
+      content: "수집된 개인정보는 다음의 목적을 위해서만 이용됩니다.\n\n• 회원 식별 및 본인 인증\n• 병원 동행 매니저 매칭, 예약 및 결제 관리\n• 알림톡/SMS 발송 및 긴급 상황 발생 시 보호자 연락"
     },
     {
-      id: 4,
-      title: "4. 개인정보의 보유 및 파기",
+      id: 3,
+      title: "3. 개인정보의 보유 및 파기",
       content: "원칙적으로 목적 달성 후 지체 없이 파기합니다. 단, 관계 법령에 의해 보존할 필요가 있는 경우 아래의 기간 동안 보관합니다.\n\n• 계약/청약철회 기록: 5년\n• 대금결제 및 서비스 공급 기록: 5년\n• 소비자 불만/분쟁처리 기록: 3년"
     }
   ];
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 font-sans">
-
-      {/* 본문 영역 */}
       <main className="max-w-3xl mx-auto px-4 pt-6">
         <div className="mb-6 px-2 flex flex-col items-center text-center sm:block sm:text-left">
           <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3 sm:hidden">
@@ -38,9 +37,7 @@ export default function PrivacyPage() {
             <ShieldCheck className="w-6 h-6 text-emerald-600 hidden sm:block" />
             개인정보처리방침
           </h2>
-          <p className="text-sm text-slate-500">
-            예스케어는 고객님의 소중한 개인정보를 안전하게 보호합니다.
-          </p>
+          <p className="text-sm text-slate-500">예스케어는 고객님의 소중한 개인정보를 안전하게 보호합니다.</p>
         </div>
 
         <div className="space-y-4">
@@ -53,9 +50,9 @@ export default function PrivacyPage() {
             </section>
           ))}
 
-          {/* 제 3자 제공 동의 (매우 중요하므로 강조 박스 처리) */}
+          {/* 제 3자 제공 동의 */}
           <section className="bg-emerald-50/50 p-5 sm:p-6 rounded-2xl border border-emerald-100">
-            <h3 className="text-base sm:text-lg font-bold text-emerald-900 mb-3">3. 개인정보의 제3자 제공</h3>
+            <h3 className="text-base sm:text-lg font-bold text-emerald-900 mb-3">4. 개인정보의 제3자 제공</h3>
             <p className="text-sm sm:text-base text-emerald-800/80 leading-relaxed mb-3">
               원활하고 안전한 병원 동행을 위해 매칭 시 '동행 매니저'에게 최소한의 정보를 제공합니다.
             </p>
@@ -87,8 +84,8 @@ export default function PrivacyPage() {
         </div>
 
         <div className="mt-8 px-2 text-xs text-slate-400 font-medium">
-          <p>공고일자: 2026년 4월 25일</p>
-          <p>시행일자: 2026년 5월 1일</p>
+          <p>공고일자: 2026년 6월 30일</p>
+          <p>시행일자: 2026년 7월 1일</p>
         </div>
       </main>
     </div>

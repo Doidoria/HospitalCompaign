@@ -8,7 +8,6 @@ import com.yescare.api.dto.ReportResponse;
 import com.yescare.api.repository.ReportRepository;
 import com.yescare.api.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,7 +16,6 @@ import org.thymeleaf.context.Context;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -219,23 +217,10 @@ public class ReportService {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             ITextRenderer renderer = new ITextRenderer();
 
-            ClassPathResource fontResource = new ClassPathResource("fonts/malgun.ttf"); // 폰트 파일명 확인!
-            // InputStream으로 폰트를 읽어옴 (JAR 환경에서 필수)
-            try (InputStream fontStream = fontResource.getInputStream()) {
-                // Flying Saucer (ITextRenderer)는 byte[] 배열로 폰트를 직접 로드하는 기능을 지원하지 않습니다.
-                // 따라서 임시 파일(Temp File)을 생성하여 해당 폰트 파일의 절대 경로를 전달하는 방식을 사용합니다.
-                Path tempFontPath = Files.createTempFile("tempFont", ".ttf");
-                Files.write(tempFontPath, fontStream.readAllBytes());
+            // EC2 서버에 업로드한 폰트의 절대 경로 지정
+            String fontPath = "/home/ubuntu/fonts/malgun.ttf";
+            renderer.getFontResolver().addFont(fontPath, com.lowagie.text.pdf.BaseFont.IDENTITY_H, com.lowagie.text.pdf.BaseFont.EMBEDDED);
 
-                renderer.getFontResolver().addFont(
-                        tempFontPath.toAbsolutePath().toString(),
-                        com.lowagie.text.pdf.BaseFont.IDENTITY_H,
-                        com.lowagie.text.pdf.BaseFont.EMBEDDED // 임베디드 설정
-                );
-
-                // PDF 생성 로직 종료 후 임시 폰트 파일 삭제 (클린업)
-                tempFontPath.toFile().deleteOnExit();
-            }
             renderer.setDocumentFromString(htmlContent);
             renderer.layout();
             renderer.createPDF(outputStream);
