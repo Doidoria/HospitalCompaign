@@ -16,7 +16,7 @@ export default function Footer() {
   }
 
   const handleCopyAccount = async () => {
-    const accountText = "00000000000000"; // 하이픈 제외 숫자만 넣고 싶다면 "0000000000000"
+    const accountText = "05398227780904"; // 하이픈 제외 숫자만 넣고 싶다면 "0000000000000"
     try {
       await navigator.clipboard.writeText(accountText);
       Toast.fire({ 
@@ -93,7 +93,7 @@ export default function Footer() {
               하나은행 053-982277-80904
               <Copy className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors" />
             </button>
-            <p className="text-slate-400 mt-1">예금주 : 예스케어</p>
+            <p className="text-slate-400 mt-1">예금주 : 주식회사 웰커뮤니티</p>
             <p className="text-[11px] text-red-400 mt-2 bg-red-950/30 inline-block px-2 py-1 rounded-md">
               * 입금 시 반드시 주문자명으로 기재해 주세요.
             </p>
