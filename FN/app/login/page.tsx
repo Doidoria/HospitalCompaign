@@ -136,11 +136,24 @@ export default function LoginPage() {
                 로그인
               </button>
 
-              {/* 카카오 로그인 버튼 */}
-              <button onClick={handleKakaoLogin}
-                className="w-full flex items-center justify-center py-3 px-4 mt-2 bg-[#FEE500] text-[#000000] font-bold rounded-lg hover:bg-[#FEE500]/90 transition-colors">
-                카카오 로그인 1초 만에 시작하기
-              </button>
+              {/* 공식 규격을 준수한 카카오 로그인 버튼 */}
+<button
+  type="button"
+  onClick={handleKakaoLogin}
+  className="w-full flex items-center justify-center py-3 px-4 mt-4 bg-[#FEE500] rounded-xl hover:bg-[#FEE500]/90 transition-colors relative"
+>
+  {/* 카카오 공식 심볼 (좌측 고정 혹은 텍스트 옆 위치) */}
+  <div className="absolute left-4">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3C6.477 3 2 6.53 2 10.887C2 13.737 3.738 16.236 6.368 17.653L5.433 21.096C5.352 21.395 5.688 21.636 5.962 21.464L10.024 18.91C10.662 19.014 11.321 19.07 12 19.07C17.523 19.07 22 15.54 22 11.183C22 6.827 17.523 3 12 3Z" fill="#000000"/>
+    </svg>
+  </div>
+  
+  {/* 공식 텍스트 가이드 (#000000 85%) */}
+  <span className="text-[16px] font-semibold text-black/85">
+    카카오 로그인
+  </span>
+</button>
             </form>
             
             <div className="mt-8 text-center text-sm text-gray-600">
