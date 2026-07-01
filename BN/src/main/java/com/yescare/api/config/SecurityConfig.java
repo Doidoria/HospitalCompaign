@@ -45,7 +45,8 @@ public class SecurityConfig {
                                 "/api/members/check-email", "/api/members/sms/**", "/api/members/auth/kakao",
                                 "/api/members/auth/kakao/confirm-link",
                                 "/api/notices/", "/error", "/uploads/**", "/api/members/email/send",
-                                "/api/members/email/verify", "/api/system/status").permitAll()
+                                "/api/members/email/verify", "/api/system/status", "/api/members/find-id",
+                                "/api/members/reset-password", "/api/members/reset-password/send-sms").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/notices/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/managers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()

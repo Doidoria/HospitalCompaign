@@ -14,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -144,5 +146,50 @@ public class MemberService {
 
         String cleanRoleName = roleName.replace("ROLE_", "");
         member.changeRole(Role.valueOf(cleanRoleName));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> findIdInfo(String name, String phoneNumber) {
+        Member member = memberRepository.findByNameAndPhoneNumber(name, phoneNumber)
+                .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
+
+        String email = member.getEmail();
+        int atIndex = email.indexOf("@");
+        String maskedEmail = email;
+
+        // 이메일 마스킹 처리
+        if (atIndex > 3) {
+            String prefix = email.substring(0, 3);
+            maskedEmail = prefix + "****" + email.substring(atIndex);
+        }
+
+        // 마스킹된 이메일과 가입 유형(KAKAO or LOCAL)을 함께 반환
+        return Map.of(
+                "maskedEmail", maskedEmail,
+                "provider", member.getProvider()
+        );
+    }
+
+    @Transactional
+    public void resetPassword(String email, String phoneNumber, String newPassword) {
+        Member member = memberRepository.findByEmailAndPhoneNumber(email, phoneNumber)
+                .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
+
+        // [핵심 방어 로직] 카카오 가입자인 경우 비밀번호 변경 불가
+        if ("KAKAO".equals(member.getProvider())) {
+            throw new IllegalArgumentException("카카오 연동으로 가입된 계정입니다. 비밀번호 찾기 대신 카카오 로그인을 이용해주세요.");
+        }
+
+        member.updatePassword(passwordEncoder.encode(newPassword));
+    }
+
+    @Transactional(readOnly = true)
+    public void checkEligibilityForPasswordReset(String email, String phoneNumber) {
+        Member member = memberRepository.findByEmailAndPhoneNumber(email, phoneNumber)
+                .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
+
+        if ("KAKAO".equals(member.getProvider())) {
+            throw new IllegalArgumentException("카카오 연동으로 가입된 계정입니다. 비밀번호 찾기 대신 카카오 로그인을 이용해주세요.");
+        }
     }
 }

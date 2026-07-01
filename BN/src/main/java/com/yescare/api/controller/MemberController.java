@@ -236,4 +236,66 @@ public class MemberController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "인증번호가 일치하지 않습니다."));
         }
     }
+
+    @PostMapping("/find-id")
+    public ResponseEntity<?> findId(@RequestBody Map<String, String> request) {
+        try {
+            String name = request.get("name");
+            String phoneNumber = request.get("phoneNumber");
+
+            // 정상 조회 시
+            Map<String, String> result = memberService.findIdInfo(name, phoneNumber);
+            return ResponseEntity.ok(result);
+
+        } catch (IllegalArgumentException e) {
+            // 카카오 계정이거나 정보가 없을 때 400 에러와 함께 메시지 전송
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password/send-sms")
+    public ResponseEntity<?> sendSmsForPasswordReset(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String phone = request.get("phone");
+
+            // 카카오 계정인지, 회원 정보가 맞는지 사전 검증
+            memberService.checkEligibilityForPasswordReset(email, phone);
+
+            // 통과하면 SMS 발송
+            smsService.sendVerificationCode(phone);
+            return ResponseEntity.ok(Map.of("message", "인증번호가 발송되었습니다."));
+
+        } catch (IllegalArgumentException e) {
+            // 에러 발생 시 프론트엔드로 메시지 전달
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 아이디/비밀번호 찾기 API
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String phone = request.get("phone");
+        String code = request.get("code");
+        String newPassword = request.get("newPassword");
+
+        // 1. 휴대폰 인증번호 검증 (기존 SmsService 재사용)
+        boolean isVerified = smsService.verifyCode(phone, code);
+        if (!isVerified) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "인증번호가 일치하지 않습니다."));
+        }
+
+        // 2. 비밀번호 재설정
+        try {
+            memberService.resetPassword(email, phone, newPassword);
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 재설정되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
 }

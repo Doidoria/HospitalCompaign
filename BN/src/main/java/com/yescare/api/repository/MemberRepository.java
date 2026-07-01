@@ -24,4 +24,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 전화번호로 회원 찾기 (동일한 회원 방지)
     Optional<Member> findByPhoneNumber(String phoneNumber);
+
+    // 아이디/비밀번호 찾기용 메서드
+    Optional<Member> findByNameAndPhoneNumber(String name, String phoneNumber);
+
+    Optional<Member> findByEmailAndPhoneNumber(String email, String phoneNumber);
 }

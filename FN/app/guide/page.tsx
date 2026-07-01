@@ -1,11 +1,10 @@
 // app/guide/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { 
-  Check, Clock, CreditCard, Sparkles, Copy, ChevronDown,
-  PenTool, Users, MapPin, Car, Building2, Stethoscope, Home, FileBadge,
+  Check, Clock, CreditCard, Sparkles, Copy, FileBadge,
+  PenTool, Users, MapPin, Car, Building2, Stethoscope, Home, 
   AlertCircle, ArrowRight
 } from 'lucide-react';
 import { Toast } from '@/src/utils/alert';
@@ -52,11 +51,6 @@ const FADE_UP: Variants = {
 };
 
 export default function GuidePage() {
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
-
-  const toggleFaq = (index: number) => {
-    setOpenFaqIndex(openFaqIndex === index ? null : index);
-  };
 
   const handleCopyAccount = async () => {
     const accountText = "05398227780904";
@@ -132,7 +126,7 @@ export default function GuidePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {['안전한 왕복 이동 지원', '진료 및 수납 전 과정 동행', '처방 약국 방문 동행', '사전 예약 100% 선입금제'].map((text, i) => (
+                {['안전한 왕복 이동 동행', '진료 및 수납 전 과정 동행', '처방 약국 방문 동행', '사전 예약 100% 선입금제'].map((text, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
                       <Check className="w-4 h-4 text-blue-400" />
@@ -148,14 +142,12 @@ export default function GuidePage() {
           <div className="lg:col-span-5 flex flex-col gap-6">
             <div className="bg-slate-800 rounded-[2.5rem] p-8 md:p-10 shadow-xl border border-slate-700 relative overflow-hidden flex-1">
               <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
-              
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-3 bg-amber-500/10 rounded-2xl">
                   <Clock className="w-6 h-6 text-amber-500" />
                 </div>
                 <h3 className="text-xl font-extrabold text-white">추가 및 할증 요금</h3>
               </div>
-              
               <ul className="space-y-6">
                 <li className="flex justify-between items-center pb-5 border-b border-slate-700/50">
                   <span className="text-slate-300 font-medium">시간 초과 (30분당)</span>
@@ -170,7 +162,6 @@ export default function GuidePage() {
                   <span className="text-lg font-bold text-white">+ 5,000원</span>
                 </li>
               </ul>
-              
               <div className="mt-8 flex items-start gap-3 bg-slate-900/60 p-5 rounded-2xl border border-slate-700/50">
                 <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-slate-400 leading-relaxed">
@@ -260,47 +251,23 @@ export default function GuidePage() {
           </div>
         </motion.div>
 
-        {/* 5. 자주 묻는 질문 (FAQ) */}
-        <motion.div variants={FADE_UP} className="mb-20 max-w-3xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-extrabold text-white">자주 묻는 질문</h2>
-          </div>
-
-          <div className="space-y-4">
-            {FAQS.map((faq, index) => {
-              const isOpen = openFaqIndex === index;
-              return (
-                <div key={index} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden transition-all duration-300 hover:border-blue-500/50">
-                  <button 
-                    onClick={() => toggleFaq(index)}
-                    className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none"
-                  >
-                    <span className="font-bold text-slate-200 text-base md:text-lg pr-4 flex items-start">
-                      <span className="text-blue-400 mr-3 mt-0.5">Q.</span>
-                      {faq.question}
-                    </span>
-                    <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeInOut" }}
-                        className="bg-slate-900/30"
-                      >
-                        <div className="px-6 pb-6 pt-3 text-slate-300 text-sm md:text-base leading-relaxed border-t border-slate-700/50 flex items-start mt-1">
-                          <span className="text-slate-500 font-bold mr-3 mt-0.5">A.</span>
-                          <p>{faq.answer}</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
+        {/* 5. (FAQ) 페이지 유도 배너 */}
+        <motion.div variants={FADE_UP} className="mb-20 max-w-4xl mx-auto">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-800/80 border border-slate-700 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+            <div className="text-center md:text-left relative z-10">
+              <h2 className="text-xl md:text-2xl font-extrabold text-white mb-2">더 궁금한 점이 있으신가요?</h2>
+              <p className="text-slate-400 text-sm md:text-base break-keep">
+                결제 및 환불 규정, 대리 신청 방법 등 자주 묻는 질문을 확인해 보세요.
+              </p>
+            </div>
+            <div className="relative z-10">
+              <Link href="/support/faq">
+                <button className="w-full sm:w-auto px-8 py-3.5 bg-slate-700 hover:bg-slate-600 text-white text-base font-bold rounded-2xl transition-all active:scale-95 whitespace-nowrap border border-slate-600 shadow-md">
+                  FAQ 바로가기
+                </button>
+              </Link>
+            </div>
           </div>
         </motion.div>
 

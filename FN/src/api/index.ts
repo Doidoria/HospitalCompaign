@@ -38,6 +38,18 @@ export const authApi = {
   // Capacitor 푸시 알림용 디바이스 토큰 등록
   registerDeviceToken: (fcmToken: string) => 
     apiClient.post('/api/members/device-token', { token: fcmToken }),
+  
+  // 아이디 찾기
+  findId: (data: { name: string; phoneNumber: string }) => 
+    apiClient.post<any>('/api/members/find-id', data),
+    
+  // 비밀번호 찾기 전용 SMS 발송 (카카오 사전 검증 포함)
+  requestPasswordResetSms: (data: { email: string; phone: string }) => 
+    apiClient.post<any>('/api/members/reset-password/send-sms', data),
+    
+  // 비밀번호 최종 재설정
+  resetPassword: (data: { email: string; phone: string; code: string; newPassword: string }) => 
+    apiClient.post<any>('/api/members/reset-password', data),
 };
 
 // ==========================================
