@@ -150,7 +150,18 @@ export default function GuidePage() {
               </div>
               <ul className="space-y-6">
                 <li className="flex justify-between items-center pb-5 border-b border-slate-700/50">
-                  <span className="text-slate-300 font-medium">시간 초과 (30분당)</span>
+                  <div className="flex flex-col">
+                    <span className="text-slate-300 font-medium">기본 시간 초과 (30분 미만)</span>
+                  </div>
+                  <span className="text-lg font-bold text-emerald-400">추가 비용 없음</span>
+                </li>
+                <li className="flex justify-between items-center pb-5 border-b border-slate-700/50">
+                  <div className="flex flex-col">
+                    <span className="text-slate-300 font-medium">시간 초과 (30분당)</span>
+                    <span className="text-xs text-slate-400 mt-1">
+                      * 30분 이상 지연 시부터 합산되어 청구됩니다.
+                    </span>
+                  </div>
                   <span className="text-lg font-bold text-white">+ 5,500원</span>
                 </li>
                 <li className="flex justify-between items-center pb-5 border-b border-slate-700/50">
