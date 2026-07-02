@@ -26,9 +26,7 @@ export default function PopupTab() {
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-    
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    
     return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
   };
 

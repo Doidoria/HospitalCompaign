@@ -29,3 +29,15 @@ spring:
             client-authentication-method: client_secret_post
             redirect-uri: https://www.wellcommunity-yescare.co.kr/api/auth/callback/kakao
             scope: account_email,name,phone_number,shipping_address,gender,birthday,birthyear,talk_message,plusfriends
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY} # 환경변수로 처리
+      secret-key: ${AWS_SECRET_KEY}
+    s3:
+      bucket: yescare-bucket-s3 # 실제 생성하신 버킷 이름
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false

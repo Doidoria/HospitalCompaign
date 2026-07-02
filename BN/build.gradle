@@ -47,6 +47,9 @@ dependencies {
 
     // HTML을 PDF로 변환해주는 Flying Saucer (OpenPDF 기반)
     implementation 'org.xhtmlrenderer:flying-saucer-pdf-openpdf:9.1.22'
+
+    // AWS S3 연동을 위한 라이브러리
+    implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 }
 
 tasks.named('test') {

@@ -5,12 +5,19 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 리눅스(EC2) 환경에서도 절대 길을 잃지 않도록 절대 경로로 변환하여 매핑합니다.
+        Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads");
+        String uploadPath = uploadDir.toFile().getAbsolutePath();
+
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:uploads/");
+                .addResourceLocations("file:" + uploadPath + "/");
     }
 
     @Override
