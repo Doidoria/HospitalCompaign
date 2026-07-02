@@ -22,9 +22,13 @@ export default function PopupTab() {
   // 이미지 URL 정제 함수
   const getFileUrl = (path: string) => {
     if (!path) return '';
-    if (path.startsWith('http')) return path;
+    // 이미 완전한 URL 형태(http/https)라면 그대로 반환 (S3 고도화 대비)
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-    const cleanPath = path.replace(/^\/?(uploads\/)?/, 'uploads/');
+    
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    
     return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
   };
 
@@ -34,7 +38,7 @@ export default function PopupTab() {
       const res = await popupApi.getPopupSettings();
       const dataList = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
       setPopups(dataList);
-      loadFormData(dataList, currentIndex); // 현재 탭 유지
+      loadFormData(dataList, currentIndex); 
     } catch (e) {
       console.log("등록된 팝업이 없습니다.");
       setPopups([]);

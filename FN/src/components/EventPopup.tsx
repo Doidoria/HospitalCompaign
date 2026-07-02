@@ -24,9 +24,11 @@ export default function EventPopup() {
       const formattedPopups = activePopups.map((p: any) => {
         const getFileUrl = (path: string) => {
           if (!path) return '';
-          if (path.startsWith('http')) return path;
+          if (path.startsWith('http://') || path.startsWith('https://')) return path;
+          
           const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-          const cleanPath = path.replace(/^\/?(uploads\/)?/, 'uploads/');
+          const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+          
           return `${baseUrl.replace(/\/$/, '')}/${cleanPath}`;
         };
         return { ...p, imageUrl: getFileUrl(p.imageUrl) };
