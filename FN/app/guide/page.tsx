@@ -163,7 +163,7 @@ export default function GuidePage() {
                       * 30분 이상 지연 시부터 합산되어 청구됩니다.
                     </span>
                   </div>
-                  <span className="text-lg font-bold text-white">+ 11,000원</span>
+                  <span className="text-lg font-bold text-white whitespace-nowrap">+ 11,000원</span>
                 </li>
                 <li className="flex justify-between items-center pb-5 border-b border-slate-700/50">
                   <span className="text-slate-300 font-medium">주말 및 공휴일 할증</span>
