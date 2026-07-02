@@ -59,6 +59,7 @@ export default function GuidePage() {
       Toast.fire({ icon: 'success', title: '계좌번호가 복사되었습니다.' });
     } catch (err) {
       console.error('클립보드 복사 실패:', err);
+      Toast.fire({ icon: 'error', title: '복사를 지원하지 않는 브라우저입니다. 직접 메모해 주세요.' });
     }
   };
 
@@ -162,7 +163,7 @@ export default function GuidePage() {
                       * 30분 이상 지연 시부터 합산되어 청구됩니다.
                     </span>
                   </div>
-                  <span className="text-lg font-bold text-white">+ 5,500원</span>
+                  <span className="text-lg font-bold text-white">+ 11,000원</span>
                 </li>
                 <li className="flex justify-between items-center pb-5 border-b border-slate-700/50">
                   <span className="text-slate-300 font-medium">주말 및 공휴일 할증</span>

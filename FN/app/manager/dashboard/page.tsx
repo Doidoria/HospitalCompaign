@@ -1,3 +1,4 @@
+// app/manager/dashboard/page.tsx
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -154,7 +155,7 @@ export default function ManagerDashboard() {
 
   // 중복 선택을 위한 상태 관리
   const [chargeState, setChargeState] = useState({
-    timeCount: 0, // 30분 단위 카운트
+    timeCount: 0, // 30분 단위 카운트 (1 = 30분, 2 = 60분)
     isWeekend: false, // 주말 할증
     isNight: false, // 야간 할증
     customAmount: '', // 기타 직접 입력 금액
@@ -162,15 +163,16 @@ export default function ManagerDashboard() {
   });
 
   const calculatedCharge = useMemo(() => {
-    let total = chargeState.timeCount * 8000;
+    let total = chargeState.timeCount * 11000;
     if (chargeState.isWeekend) total += 5000;
     if (chargeState.isNight) total += 5000;
     
-    const customNum = parseInt(chargeState.customAmount.replace(/,/g, ''), 10);
+    // 콤마 제거 후 숫자로 변환 (NaN 방지)
+    const customNum = parseInt(chargeState.customAmount.replace(/,/g, '') || '0', 10);
     if (!isNaN(customNum) && customNum > 0) total += customNum;
 
     const reasons = [];
-    if (chargeState.timeCount > 0) reasons.push(`시간 연장(${chargeState.timeCount * 30}분)`);
+    if (chargeState.timeCount > 0) reasons.push(`시간 연장(${chargeState.timeCount * 30}분 이상 초과)`);
     if (chargeState.isWeekend) reasons.push('주말/공휴일 할증');
     if (chargeState.isNight) reasons.push('야간 할증');
     if (chargeState.customReason.trim()) reasons.push(chargeState.customReason.trim());
@@ -485,13 +487,13 @@ export default function ManagerDashboard() {
               </button>
             </div>
             
-            <form onSubmit={submitExtraCharge} className="p-6 bg-white flex flex-col gap-5">
+            <form onSubmit={submitExtraCharge} className="p-6 bg-white flex flex-col gap-5 max-h-[80vh] overflow-y-auto">
               
               {/* 1. 시간 연장 카운터 */}
               <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div>
                   <span className="font-bold text-slate-700 block">시간 연장</span>
-                  <span className="text-[11px] text-slate-400 font-medium">30분당 8,000원</span>
+                  <span className="text-[11px] text-slate-400 font-medium">30분당 11,000원 (30분 미만 무료)</span>
                 </div>
                 <div className="flex items-center gap-3 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
                   <button type="button" onClick={() => setChargeState(prev => ({...prev, timeCount: Math.max(0, prev.timeCount - 1)}))} className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 rounded-lg font-bold text-slate-600">-</button>
@@ -509,7 +511,6 @@ export default function ManagerDashboard() {
                   </div>
                   <input type="checkbox" checked={chargeState.isWeekend} onChange={(e) => setChargeState(prev => ({...prev, isWeekend: e.target.checked}))} className="w-5 h-5 accent-orange-500 rounded" />
                 </label>
-
                 <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50 cursor-pointer hover:border-orange-200 transition-colors">
                   <div>
                     <span className="font-bold text-slate-700 block">야간 할증 (18시 이후)</span>
@@ -519,15 +520,41 @@ export default function ManagerDashboard() {
                 </label>
               </div>
 
-              {/* 3. 총 청구 금액 표시 (자동 계산) */}
+              {/* 3. 기타 직접 입력 */}
+              <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50 space-y-3">
+                <span className="font-bold text-slate-700 block text-sm">기타 요금 (주차비 등)</span>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="사유 (예: 주차비)" 
+                    value={chargeState.customReason}
+                    onChange={(e) => setChargeState(prev => ({...prev, customReason: e.target.value}))}
+                    className="w-1/2 px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-orange-400"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="금액 (원)" 
+                    value={chargeState.customAmount}
+                    onChange={(e) => {
+                      // 숫자만 입력 가능하도록 정규식 처리
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      const formatted = val ? Number(val).toLocaleString() : '';
+                      setChargeState(prev => ({...prev, customAmount: formatted}))
+                    }}
+                    className="w-1/2 px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-orange-400 text-right"
+                  />
+                </div>
+              </div>
+
+              {/* 4. 총 청구 금액 표시 */}
               <div className="mt-2 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-between">
                 <span className="font-extrabold text-orange-800">최종 청구 금액</span>
                 <span className="text-xl font-black text-orange-600">{calculatedCharge.amount.toLocaleString()}원</span>
               </div>
 
-              {/* 4. 자동 생성된 사유 내역 */}
+              {/* 5. 자동 생성된 사유 내역 */}
               {calculatedCharge.reason && (
-                <div className="text-[12px] text-slate-500 font-medium bg-slate-50 p-3 rounded-xl">
+                <div className="text-[12px] text-slate-500 font-medium bg-slate-50 p-3 rounded-xl break-keep">
                   <span className="font-bold text-slate-600">청구 내역: </span> {calculatedCharge.reason}
                 </div>
               )}
