@@ -54,4 +54,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
+
+    @Query("SELECT r FROM Reservation r " +
+            "LEFT JOIN FETCH r.manager " + // 매니저 이름 출력을 위해 Fetch Join
+            "WHERE r.status = 'COMPLETED' " +
+            "AND r.reservationTime >= :startDate AND r.reservationTime <= :endDate " +
+            "ORDER BY r.reservationTime ASC")
+    List<Reservation> findCompletedReservationsByPeriod(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }

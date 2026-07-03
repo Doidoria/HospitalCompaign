@@ -106,8 +106,11 @@ public class Reservation {
     @Column(length = 20)
     private String revisitCount; // 재방문 카운트
 
+    @Column(nullable = true) // 기존 데이터가 있으므로 당분간 nullable 허용
+    private Integer extraChargeAmount;
+
     @Column(nullable = true)
-    private Integer extraChargeAmount; // 추가 요금 (원)
+    private Integer baseFee; // 선입금(기본요금) 필드 추가
 
     @Column(length = 100)
     private String extraChargeReason;  // 추가 요금 발생 사유
@@ -123,7 +126,8 @@ public class Reservation {
                        String guardianName, String guardianPhone, String memo, ReservationStatus status, String requirements,
                        String detailedContent, String doctorInquiry, String category, String meetingType, String meetingAddress,
                        String meetingDetailAddress, String transportation, String mobility, String revisitCount, boolean hasProxy,
-                       String bloodType, String underlyingDisease, String medication, String preparedDocuments) {
+                       String bloodType, String underlyingDisease, String medication, String preparedDocuments,
+                       Integer baseFee, Integer extraChargeAmount, String extraChargeReason) {
         this.member = member;
         this.patientName = patientName;
         this.patientPhone = patientPhone;
@@ -148,22 +152,40 @@ public class Reservation {
         this.revisitCount = revisitCount;
         this.status = status != null ? status : ReservationStatus.WAITING;
         this.hasProxy = hasProxy;
+        this.baseFee = baseFee;
+        this.extraChargeAmount = extraChargeAmount;
+        this.extraChargeReason = extraChargeReason;
     }
 
     public void assignManager(Member manager) {
         this.manager = manager;
-        this.status = ReservationStatus.CONFIRMED;
+        // 현재 대기(WAITING) 상태일 때만 예약 확정(CONFIRMED)으로 전이되도록 보호
+        if (this.status == ReservationStatus.WAITING) {
+            this.status = ReservationStatus.CONFIRMED;
+        }
     }
 
-    public void updateStatus(ReservationStatus status) { // 🌟 Enum 사용
-        this.status = status;
+    // 1. 상태 변경 방어 로직 추가
+    public void updateStatus(ReservationStatus newStatus) {
+        // [비즈니스 규칙] 이미 이용 완료(COMPLETED)된 건을 취소(CANCELLED)로 변경 불가
+        if (this.status == ReservationStatus.COMPLETED && newStatus == ReservationStatus.CANCELLED) {
+            throw new IllegalStateException("이용 완료된 예약은 취소 상태로 변경할 수 없습니다.");
+        }
+        this.status = newStatus;
     }
 
+    // 2. 어드민 수정 방어 로직 추가
     public void updateDetails(String hospitalName, LocalDateTime reservationTime, String requirements,
                               String detailedContent, String doctorInquiry,
                               String meetingType, String meetingAddress, String meetingDetailAddress,
                               String transportation, String mobility,
                               String bloodType, String underlyingDisease, String medication, String preparedDocuments) {
+
+        // [비즈니스 규칙] 이용 완료되거나 취소된 예약은 정보 수정 불가
+        if (this.status == ReservationStatus.COMPLETED || this.status == ReservationStatus.CANCELLED) {
+            throw new IllegalStateException("이용 완료되었거나 취소된 예약의 상세 정보는 수정할 수 없습니다.");
+        }
+
         this.hospitalName = hospitalName;
         this.reservationTime = reservationTime;
         this.requirements = requirements;
@@ -179,6 +201,14 @@ public class Reservation {
         if (meetingDetailAddress != null) this.meetingDetailAddress = meetingDetailAddress;
         if (transportation != null) this.transportation = transportation;
         if (mobility != null) this.mobility = mobility;
+    }
+
+    // 3. 예약 취소 시에도 동일한 방어 로직 적용
+    public void cancel() {
+        if (this.status == ReservationStatus.COMPLETED) {
+            throw new IllegalStateException("이용 완료된 예약은 취소할 수 없습니다.");
+        }
+        this.status = ReservationStatus.CANCELLED;
     }
 
     public void setHasProxy(Boolean hasProxy) {
@@ -220,10 +250,4 @@ public class Reservation {
     public void setReport(Report report) {
         this.report = report;
     }
-
-    // 예약 취소는 삭제가 아니라 단순 상태 업데이트 메서드로 처리
-    public void cancel() {
-        this.status = ReservationStatus.CANCELLED;
-    }
-
 }

@@ -19,10 +19,13 @@ import MemberTab from '@/src/components/admin/tabs/MemberTab';
 import ReviewTab from '@/src/components/admin/tabs/ReviewTab';
 import NoticeTab from '@/src/components/admin/tabs/NoticeTab';
 import InquiryTab from '@/src/components/admin/tabs/InquiryTab';
-
 import PopupTab from '@/src/components/admin/tabs/PopupTab';
+import SalesTab from '@/src/components/admin/tabs/SalesTab';
 
-type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups';
+import AdminPinLock from '@/src/components/admin/ui/AdminPinLock';
+import { useAdminAuthStore } from '@/src/store/useAdminAuthStore';
+
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups' | 'sales';
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -49,6 +52,38 @@ export default function AdminDashboardPage() {
 
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+
+  const { lock } = useAdminAuthStore();
+
+  // 자동 잠금 타이머 (30분 = 1800000ms)
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        lock(); // 10분 미활동 시 화면 잠금 (30분 -> 10분으로 수정)
+      }, 10 * 60 * 1000); 
+    };
+
+    // 사용자 액션 감지 이벤트 리스너
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+
+    resetTimer(); // 초기 타이머 시작
+
+    // 클린업 함수: 컴포넌트가 언마운트될 때 (어드민 페이지를 벗어날 때) 실행
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      
+      // 어드민 페이지를 벗어나는 즉시 상태를 '잠금'으로 강제 변경
+      lock(); 
+    };
+  }, [lock]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -345,20 +380,20 @@ export default function AdminDashboardPage() {
       case 'notices': return '공지사항 관리';
       case 'inquiries': return '고객센터 관리';
       case 'popups': return '이벤트 팝업 관리';
+      case 'sales': return '매출 및 정산 통계';
       default: return '관리자 시스템';
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans text-gray-900 flex flex-col lg:flex-row relative">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      {/* PIN 인증 잠금 UI */}
+      <AdminPinLock />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} 
         pendingManagerCount={pendingManagerCount} 
         pendingReservationCount={pendingReservationCount}
         pendingInquiryCount={pendingInquiryCount}
       />
-
       <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden pb-24 lg:pb-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex flex-col gap-6">
@@ -417,6 +452,7 @@ export default function AdminDashboardPage() {
             {activeTab === 'notices' && <NoticeTab key="notices" />}
             {activeTab === 'inquiries' && <InquiryTab key="inquiries" refreshBadges={refreshBadges} />}
             {activeTab === 'popups' && <PopupTab key="popups" />}
+            {activeTab === 'sales' && <SalesTab key="sales" />}
           </AnimatePresence>
         </div>
       </main>

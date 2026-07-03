@@ -110,6 +110,10 @@ export const adminApi = {
     apiClient.patch(`/api/members/applications/${id}/reject`, data),
   getManagerStats: () => apiClient.get('/api/members/manager-applications/stats'),
 
+  // 매출 현황 통계 조회 API
+  getSalesStatistics: (period: string) => 
+    apiClient.get(`/api/admin/sales?period=${period}`),
+
   // 전체 회원 조회
   getAllMembers: (page: number = 0, role?: string) => 
     apiClient.get(`/api/members/all?page=${page}${role ? `&role=${role}` : ''}`),
@@ -180,6 +184,11 @@ export const adminApi = {
   // 특정 예약에 대해 알림톡 재전송 (디버깅/CS용)
   resendAlimtalk: (reservationId: number, type: 'RESERVATION' | 'ASSIGN' | 'REPORT') => 
     apiClient.post(`/api/admin/reservations/${reservationId}/alimtalk`, { type }),
+
+  // [PIN 보안 관련 API]
+  checkPinStatus: () => apiClient.get('/api/admin/pin/status'),
+  setupPin: (pin: string) => apiClient.post('/api/admin/pin/setup', { pin }),
+  verifyPin: (pin: string) => apiClient.post('/api/admin/pin/verify', { pin }),
 };
 
 export const systemApi = {

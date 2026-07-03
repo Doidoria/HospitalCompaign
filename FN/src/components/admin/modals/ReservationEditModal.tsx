@@ -112,7 +112,11 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
         mDetail = parts[1]?.trim() || '';
       }
 
-      setMeetingData({ type: mType, address: mAddr, detail: mDetail });
+      setMeetingData({ 
+        type: selectedRequest.meetingType || '자택', 
+        address: selectedRequest.meetingAddress || '', 
+        detail: selectedRequest.meetingDetailAddress || '' 
+      });
     }
   }, [selectedRequest, isOpen]);
 
@@ -140,7 +144,9 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
         ...formData,
         category: category,
         detailedContent: combinedDetail,
-        meetingPoint: finalMeetingPoint,
+        meetingType: meetingData.type,
+        meetingAddress: meetingData.type === '자택' ? '자택' : meetingData.address,
+        meetingDetailAddress: meetingData.type === '자택' ? '' : meetingData.detail,
         bloodType: healthData.bloodType || undefined,
         underlyingDisease: healthData.underlyingDisease || undefined,
         medication: healthData.medication || undefined,

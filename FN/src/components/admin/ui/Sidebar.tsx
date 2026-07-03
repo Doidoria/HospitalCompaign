@@ -5,10 +5,10 @@ import React from 'react';
 import Link from 'next/link';
 import { 
   LayoutDashboard, Users, CalendarDays, UserPlus, UserCog, Star, Megaphone, 
-  MessageCircleQuestion, ImageIcon, Home 
+  MessageCircleQuestion, ImageIcon, Home, TrendingUp
 } from 'lucide-react';
 
-type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups';
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups' | 'sales';
 
 interface SidebarProps {
   activeTab: AdminTab;
@@ -31,6 +31,7 @@ export default function Sidebar({
     { id: 'managers', icon: UserPlus, label: '승인 관리', badge: pendingManagerCount > 0 ? pendingManagerCount : undefined },
     { id: 'members', icon: UserCog, label: '회원 관리' },
     { id: 'reviews', icon: Star, label: '리뷰 관리' },
+    { id: 'sales', icon: TrendingUp, label: '매출 통계' },
     { id: 'notices', icon: Megaphone, label: '공지사항' },
     { id: 'inquiries', icon: MessageCircleQuestion, label: '고객센터', badge: pendingInquiryCount > 0 ? pendingInquiryCount : undefined },
     { id: 'popups', icon: ImageIcon, label: '팝업 관리' },

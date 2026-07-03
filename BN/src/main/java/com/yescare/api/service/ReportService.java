@@ -2,7 +2,6 @@ package com.yescare.api.service;
 
 import com.yescare.api.domain.Report;
 import com.yescare.api.domain.Reservation;
-import com.yescare.api.domain.ReservationStatus;
 import com.yescare.api.dto.ReportRequest;
 import com.yescare.api.dto.ReportResponse;
 import com.yescare.api.repository.ReportRepository;
@@ -74,7 +73,7 @@ public class ReportService {
                     .build();
         }
 
-        reservation.updateStatus(ReservationStatus.COMPLETED);
+        reservation.completeAccompany();
         reservation.setReport(report);
         reportRepository.save(report);
 
@@ -99,7 +98,7 @@ public class ReportService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 리포트를 찾을 수 없습니다."));
 
         Reservation reservation = report.getReservation();
-        reservation.updateStatus(ReservationStatus.COMPLETED);
+        reservation.completeAccompany();
 
         if (request.getNoNextSchedule() != null && request.getNoNextSchedule()) {
             reservation.setNoRevisit(true);

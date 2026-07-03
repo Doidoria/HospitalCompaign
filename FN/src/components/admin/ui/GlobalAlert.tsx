@@ -1,3 +1,4 @@
+// src/components/admin/ui/GlobalAlert.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';

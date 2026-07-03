@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { CalendarDays, Activity, Users, UserPlus, Search, Loader2, CheckCircle2, Send, UserMinus, FileText, Edit, Download } from 'lucide-react';
+import { CalendarDays, Clock, CheckCircle2, Flag, Search, Loader2, Send, UserMinus, FileText, Edit, Download } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import { adminApi, reservationApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
@@ -74,7 +74,7 @@ const exportToCsv = (data: Reservation[]) => {
     res.id,
     res.date.replace(/,/g, ''), // 날짜 안의 쉼표가 CSV 포맷을 깨트리지 않게 제거
     res.time,
-    `"${res.patient}"`, // 이름이나 병원명에 쉼표가 있을 수 있으므로 쌍따옴표 래핑
+    `"${res.patient}"`,
     `"${res.hospital.split('///')[0].trim()}"`, // 병원주소 가공 반영
     res.status === 'WAITING' ? '매칭 대기' : res.status === 'CONFIRMED' ? '예약 확정' : res.status === 'COMPLETED' ? '이용 완료' : '취소됨',
     res.manager
@@ -245,18 +245,20 @@ export default function ReservationTab({
     }
   };
 
-  const activeManagerCount = useMemo(() => {
-    if (!members || members.length === 0) return 0;
-    return members.filter(m => m.role.includes('MANAGER')).length;
-  }, [members]);
+  // 통계 카드 메모이제이션
+  const statsCards = useMemo(() => {
+    const total = reservations.length;
+    const waiting = reservations.filter(r => r.status === 'WAITING').length;
+    const confirmed = reservations.filter(r => r.status === 'CONFIRMED').length;
+    const completed = reservations.filter(r => r.status === 'COMPLETED').length;
 
-  // [최적화 3] 통계 카드 메모이제이션
-  const statsCards = useMemo(() => [
-    { title: '조회된 예약', value: `${reservations.length}건`, icon: <CalendarDays className="w-6 h-6 text-blue-500" /> },
-    { title: '매칭 대기', value: `${reservations.filter(r => r.status === 'WAITING').length}건`, icon: <Activity className="w-6 h-6 text-orange-500" /> },
-    { title: '활동 매니저', value: `${activeManagerCount}명`, icon: <Users className="w-6 h-6 text-emerald-500" /> },
-    { title: '신규 지원', value: `확인필요`, icon: <UserPlus className="w-6 h-6 text-purple-500" /> },
-  ], [reservations, activeManagerCount]);
+    return [
+      { title: '조회된 예약', value: `${total}건`, icon: <CalendarDays className="w-6 h-6 text-blue-500" /> },
+      { title: '매칭 대기', value: `${waiting}건`, icon: <Clock className="w-6 h-6 text-orange-500" /> },
+      { title: '예약 확정', value: `${confirmed}건`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+      { title: '이용 완료', value: `${completed}건`, icon: <Flag className="w-6 h-6 text-purple-500" /> },
+    ];
+  }, [reservations]);
 
   return (
     <>
@@ -337,7 +339,13 @@ export default function ReservationTab({
                   <td className="p-4 pr-6 text-center">
                     <div className="flex justify-center items-center gap-2">
                       <button onClick={() => handleOpenDetail(res.id)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">상세 보기</button>
-                      <button onClick={() => handleOpenEdit(res.raw)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1">
+                      <button onClick={() => handleOpenEdit(res.raw)} 
+                        disabled={res.status === 'COMPLETED' || res.status === 'CANCELLED'}
+                        className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all flex items-center gap-1
+                          ${res.status === 'COMPLETED' || res.status === 'CANCELLED'
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}
+                      >
                         <Edit className="w-3.5 h-3.5" /> 수정
                       </button>
                       {res.status === 'WAITING' ? (
@@ -353,13 +361,17 @@ export default function ReservationTab({
                           <FileText className="w-3.5 h-3.5" /> 리포트 확인
                         </button>
                       ) : null}
-                      
-                      <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
-                        <option value="WAITING">매칭 대기</option>
-                        <option value="CONFIRMED">예약 확정</option>
-                        <option value="COMPLETED">이용 완료</option>
-                        <option value="CANCELLED">취소됨</option>
-                      </select>
+                      {res.status === 'COMPLETED' || res.status === 'CANCELLED' ? (
+                        <div className="w-[100px] bg-slate-100 border border-slate-200 text-xs font-bold text-slate-400 py-1.5 px-2 rounded-lg text-center cursor-not-allowed shadow-inner">
+                          {res.status === 'COMPLETED' ? '변경불가(완료)' : '변경불가(취소)'}
+                        </div>
+                      ) : (
+                        <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} 
+                          className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                          <option value="WAITING">매칭 대기</option>
+                          <option value="CONFIRMED">예약 확정</option>
+                        </select>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -380,7 +392,6 @@ export default function ReservationTab({
                 <span className="text-slate-400 font-bold text-xs">#{res.id}</span>
                 <StatusBadge status={res.status} />
               </div>
-              
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500 text-xs font-bold">일시</span>
@@ -410,11 +421,13 @@ export default function ReservationTab({
                 <button onClick={() => handleOpenDetail(res.id)} className="flex-1 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
                   상세 보기
                 </button>
-                <button onClick={() => handleOpenEdit(res.raw)} disabled={res.status === 'COMPLETED'}
+                <button onClick={() => handleOpenEdit(res.raw)} 
+                  disabled={res.status === 'COMPLETED' || res.status === 'CANCELLED'}
                   className={`flex-1 py-2 border text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1
-                    ${res.status === 'COMPLETED' 
+                    ${res.status === 'COMPLETED' || res.status === 'CANCELLED'
                       ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}>
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}
+                >
                   <Edit className="w-3.5 h-3.5" /> 수정
                 </button>
                 {res.status === 'WAITING' ? (
@@ -430,12 +443,17 @@ export default function ReservationTab({
                     <FileText className="w-3.5 h-3.5" /> 리포트
                   </button>
                 ) : null}
-                <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} className="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="WAITING">매칭 대기</option>
-                  <option value="CONFIRMED">예약 확정</option>
-                  <option value="COMPLETED">이용 완료</option>
-                  <option value="CANCELLED">취소됨</option>
-                </select>
+                {res.status === 'COMPLETED' || res.status === 'CANCELLED' ? (
+                  <div className="w-full mt-1 bg-slate-100 border border-slate-200 text-xs font-bold text-slate-400 py-2 px-2 rounded-lg text-center cursor-not-allowed shadow-inner">
+                    {res.status === 'COMPLETED' ? '상태 변경 불가 (이용 완료)' : '상태 변경 불가 (취소됨)'}
+                  </div>
+                ) : (
+                  <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} 
+                    className="w-full mt-1 bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="WAITING">매칭 대기</option>
+                    <option value="CONFIRMED">예약 확정</option>
+                  </select>
+                )}
               </div>
             </div>
           )) : (
@@ -444,7 +462,6 @@ export default function ReservationTab({
             </div>
           )}
         </div>
-        
         {totalPages > 0 && !loading && (
           <div className="flex justify-center items-center gap-1.5 p-5 border-t border-slate-100 bg-white">
             <button disabled={currentPage === 0} onClick={() => setCurrentPage(prev => prev - 1)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-colors">이전</button>

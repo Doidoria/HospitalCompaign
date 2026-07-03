@@ -79,6 +79,13 @@ public class Member {
     @Column(length = 255)
     private String kakaoAccessToken; // 알림톡/메시지 발송용 임시 저장 토큰
 
+    @Column(length = 255)
+    private String pinCode; // 관리자 2차 보안 PIN (Null이면 미설정 상태)
+
+    public void setPinCode(String encodedPin) {
+        this.pinCode = encodedPin;
+    }
+
     @Builder
     public Member(String email, String password, String name, String phoneNumber, String address, String detailAddress,
                   String zipCode, String guardianName, String guardianPhone, Role role, String provider,
