@@ -7,6 +7,7 @@ import { adminApi } from '@/src/api';
 import { 
   TrendingUp, CreditCard, Banknote, CalendarCheck, Loader2, Download
 } from 'lucide-react';
+import { Toast } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
 
 const containerVariants: Variants = { 
@@ -65,6 +66,44 @@ export default function SalesTab() {
 
     fetchSalesData();
   }, [period]); // period(월/주/년)가 바뀔 때마다 API 다시 호출
+
+  const exportSalesToCsv = (data: any[]) => {
+    if (data.length === 0) {
+      Toast.fire({ icon: 'warning', title: '다운로드할 데이터가 없습니다.' });
+      return;
+    }
+
+    // 1. 엑셀 헤더 정의
+    const headers = ['예약번호', '서비스일자', '환자명', '매니저명', '선입금(기본요금)', '추가요금', '최종매출합계'];
+
+    // 2. 데이터 행 생성
+    const rows = data.map(item => [
+      item.id,
+      item.date,
+      `"${item.patientName}"`,
+      `"${item.managerName}"`,
+      item.baseFee,
+      item.extraFee,
+      item.totalFee
+    ]);
+
+    // 3. CSV 문자열 병합 및 한글 깨짐 방지(BOM)
+    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // 4. 강제 다운로드 트리거
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    
+    const today = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `예스케어_매출상세내역_${today}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // 상단 요약 카드 데이터
   const statsCards = useMemo(() => [
@@ -131,7 +170,8 @@ export default function SalesTab() {
       <motion.div variants={tabVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col">
         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <h2 className="text-lg font-bold text-slate-800">건별 매출 상세 내역 (완료 기준)</h2>
-          <button className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer">
+          <button onClick={() => exportSalesToCsv(salesDetails)} 
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors cursor-pointer">
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">엑셀 다운로드</span>
           </button>
