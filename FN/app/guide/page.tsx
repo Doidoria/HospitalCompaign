@@ -84,7 +84,7 @@ export default function GuidePage() {
             <span className="text-sm font-bold text-blue-400 tracking-tight">예스케어 이용 안내</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-6 tracking-tight leading-tight">
-            부모님을 향한 마음 그대로,<br />
+            가족과 같은 마음 그대로,<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">투명하고 합리적인 요금</span>
           </h1>
           <p className="text-base md:text-lg text-slate-400 max-w-xl mx-auto leading-relaxed">
