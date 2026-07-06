@@ -56,3 +56,5 @@ export-pages.js
 export-flat.js
 attached_flat_files
 attached_pages
+# Sentry Config File
+.env.sentry-build-plugin

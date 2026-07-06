@@ -50,6 +50,13 @@ dependencies {
 
     // AWS S3 연동을 위한 라이브러리
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+
+    // Logback Slack Appender (ERROR 로그를 슬랙으로 전송)
+    implementation 'com.github.maricn:logback-slack-appender:1.6.1'
+
+    // Spring Retry (Solapi 알림톡 발송 실패 시 재시도 로직용)
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects'
 }
 
 tasks.named('test') {
