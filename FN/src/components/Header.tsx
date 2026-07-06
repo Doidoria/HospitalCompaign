@@ -150,11 +150,6 @@ export default function Header() {
               )}
             </div>
 
-            <button onClick={() => { throw new Error("버튼 클릭 프로덕션 Sentry 라이브 검증!"); }}
-              style={{ padding: '3px', background: 'red', color: 'white', position: 'fixed', bottom: 0, left: 0, zIndex: 9999 }}>
-              🚨 Sentry 테스트
-            </button>
-
             {/* 햄버거 버튼 */}
             <button className="xl:hidden p-2 text-gray-800 focus:outline-none bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors" 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
