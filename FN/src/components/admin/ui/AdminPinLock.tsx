@@ -98,16 +98,16 @@ export default function AdminPinLock() {
     if (pendingAction) pendingAction();
   };
 
-  const handleKeypadClick = (num: string) => {
+  const handleKeypadClick = useCallback((num: string) => {
     if (pin.length < 6 && mode !== 'LOADING') {
       setIsError(false);
       setPin((prev) => prev + num);
     }
-  };
+  }, [pin.length, mode]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (mode !== 'LOADING') setPin((prev) => prev.slice(0, -1));
-  };
+  }, [mode]);
 
   const handleCancelAction = () => {
     unlock();
@@ -118,7 +118,7 @@ export default function AdminPinLock() {
   if (!isLocked) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/80 animate-fadeIn">
       <div className="bg-white rounded-[32px] shadow-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center relative overflow-hidden min-h-[380px] justify-center">
         
         {/* ⭐️ LOADING 모드일 때는 완벽하게 화면을 차단하고 스피너만 보여줍니다. */}

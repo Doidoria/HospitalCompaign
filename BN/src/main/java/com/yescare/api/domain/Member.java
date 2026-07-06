@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,7 +18,6 @@ import java.util.List;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLDelete(sql = "UPDATE members SET is_active = false WHERE id = ?")
-@Where(clause = "is_active = true")
 public class Member {
 
     @Id
@@ -64,7 +62,10 @@ public class Member {
     private Role role = Role.USER;
 
     @Column(nullable = false)
-    private boolean isActive = true; // 기본값은 활성(true)
+    private boolean isActive = true; // 계정 정지 여부 관리
+
+    @Column(nullable = false)
+    private boolean isDeleted = false; // 논리적 삭제(탈퇴)
 
     @OneToOne(mappedBy = "member", fetch = FetchType.LAZY)
     private Manager manager;
@@ -102,6 +103,8 @@ public class Member {
         this.createdAt = LocalDateTime.now(); // 객체 생성 시 현재 시간 자동 입력
         this.role = role != null ? role : Role.USER;
         this.provider = provider != null ? provider : "LOCAL";
+        this.isActive = true;
+        this.isDeleted = false; // 기본값 명시
 
         // 카카오 정보 매핑
         this.gender = gender;

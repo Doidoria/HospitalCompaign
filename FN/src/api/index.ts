@@ -109,6 +109,7 @@ export const adminApi = {
   rejectManagerApp: (id: number, data: { reason: string }) => 
     apiClient.patch(`/api/members/applications/${id}/reject`, data),
   getManagerStats: () => apiClient.get('/api/members/manager-applications/stats'),
+  getMemberStats: () => {return apiClient.get('/api/admin/members/stats');},
 
   // 매출 현황 통계 조회 API
   getSalesStatistics: (period: string) => 

@@ -50,20 +50,41 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
   const [memberRoleFilter, setMemberRoleFilter] = useState('');
   const [memberPage, setMemberPage] = useState(0);
   const [memberTotalPages, setMemberTotalPages] = useState(0);
-
+  
   // 페이지 변경 시 스크롤 최상단 이동
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [memberPage]);
 
-  // [최적화 3] 데이터 페치 및 페이지네이션 UX 자동 보정
+  // 서버 통계 데이터를 담을 상태
+  const [globalStats, setGlobalStats] = useState({
+    totalCount: 0,
+    userCount: 0,
+    managerCount: 0,
+    suspendedCount: 0
+  });
+
+  // 통계 데이터를 불러오는 함수
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await adminApi.getMemberStats();
+      
+      if (res.data && res.data) {
+        setGlobalStats(res.data);
+      }
+    } catch (error) {
+      console.error('회원 통계 조회 실패:', error);
+    }
+  }, []);
+
+  // 데이터 페치 및 페이지네이션 UX 자동 보정
   const fetchMembers = useCallback(async (page: number, role: string) => {
     setLoading(true);
     try {
+      // 회원 목록 조회
       const res = await adminApi.getAllMembers(page, role);
       const content = res.data?.content || [];
       
-      // 권한 변경 등으로 현재 페이지 데이터가 0개가 되었을 때 이전 페이지로 자동 이동
       if (content.length === 0 && page > 0) {
         setMemberPage(page - 1);
         return; 
@@ -71,12 +92,14 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
       
       setMembers(content); 
       setMemberTotalPages(res.data?.totalPages || 0);
+      fetchStats();
+      
     } catch (error) {
       console.error('회원 목록 조회 실패:', error);
     } finally { 
       setLoading(false); 
     }
-  }, []);
+  }, [fetchStats]);
 
   useEffect(() => {
     fetchMembers(memberPage, memberRoleFilter);
@@ -94,11 +117,11 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
 
   // [최적화 4] 상단 통계 카드 배열 메모이제이션
   const statsCards = useMemo(() => [
-    { title: '조회된 회원', value: `${members.length}명`, icon: <Users className="w-6 h-6 text-purple-500" /> },
-    { title: '일반 고객', value: `${members.filter(m => m.role.includes('USER')).length}명`, icon: <UserCog className="w-6 h-6 text-slate-500" /> },
-    { title: '매니저', value: `${members.filter(m => m.role.includes('MANAGER')).length}명`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
-    { title: '정지 계정', value: `${members.filter(m => m.active === false || m.isActive === false).length}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
-  ], [members]);
+    { title: '전체 회원', value: `${globalStats.totalCount}명`, icon: <Users className="w-6 h-6 text-purple-500" /> },
+    { title: '일반 고객', value: `${globalStats.userCount}명`, icon: <UserCog className="w-6 h-6 text-slate-500" /> },
+    { title: '매니저', value: `${globalStats.managerCount}명`, icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" /> },
+    { title: '정지 계정', value: `${globalStats.suspendedCount}명`, icon: <XCircle className="w-6 h-6 text-red-500" /> },
+  ], [globalStats]);
 
   const handleChangeRole = async (memberId: number, newRole: string) => {
     const result = await YesAlert.fire({

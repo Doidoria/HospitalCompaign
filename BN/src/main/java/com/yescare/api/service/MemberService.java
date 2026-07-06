@@ -170,6 +170,16 @@ public class MemberService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Long> getMemberStatistics() {
+        return Map.of(
+                "totalCount", memberRepository.count(),
+                "userCount", memberRepository.countByRole(Role.USER),
+                "managerCount", memberRepository.countByRole(Role.MANAGER),
+                "suspendedCount", memberRepository.countByIsActiveFalse()
+        );
+    }
+
     @Transactional
     public void resetPassword(String email, String phoneNumber, String newPassword) {
         Member member = memberRepository.findByEmailAndPhoneNumber(email, phoneNumber)

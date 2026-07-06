@@ -14,7 +14,12 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 마법의 문장: 이메일로 회원 정보를 찾는 전용 메서드
     Optional<Member> findByEmail(String email);
 
+    // 전체 DB 기준 통계를 위한 쿼리 메서드 선언
     long countByRole(Role role);
+
+    long countByIsActiveFalse(); // 정지 계정 수 집계
+
+    long countByIsActiveTrue();  // 활성 계정 수 집계
 
     // 전체 회원 조회 (페이징)
     Page<Member> findAll(Pageable pageable);

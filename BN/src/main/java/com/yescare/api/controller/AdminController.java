@@ -3,6 +3,7 @@ package com.yescare.api.controller;
 import com.yescare.api.domain.Member;
 import com.yescare.api.dto.ApiResponse;
 import com.yescare.api.repository.MemberRepository;
+import com.yescare.api.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,16 +18,17 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/admin/pin")
+@RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')") // 최고 관리자 전용
 public class AdminController {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MemberService memberService;
 
-    // 1. PIN 설정 여부 확인
-    @GetMapping("/status")
+    // 2. 기존 PIN API 주소 유지를 위해 하위 경로에 /pin/status 명시
+    @GetMapping("/pin/status")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Boolean>> checkPinStatus(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -43,8 +45,8 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(isSetup));
     }
 
-    // 2. PIN 초기 설정 (EntityManager 디스크 강제 동기화 추가)
-    @PostMapping("/setup")
+    // 3. 하위 경로에 /pin/setup 명시
+    @PostMapping("/pin/setup")
     @Transactional
     public ResponseEntity<ApiResponse<String>> setupPin(@RequestBody Map<String, String> request, Authentication authentication) {
         if (authentication == null) {
@@ -73,8 +75,8 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("PIN 설정이 완료되었습니다."));
     }
 
-    // 3. PIN 검증
-    @PostMapping("/verify")
+    // 4. 하위 경로에 /pin/verify 명시
+    @PostMapping("/pin/verify")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Boolean>> verifyPin(@RequestBody Map<String, String> request, Authentication authentication) {
         if (authentication == null) {
@@ -98,5 +100,16 @@ public class AdminController {
             log.warn("[PIN Verify] 관리자 {} 인증 실패 (PIN 불일치)", authentication.getName());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("PIN 번호가 일치하지 않습니다."));
         }
+    }
+
+    // 어드민 대시보드 및 회원 탭용 회원 통계 데이터 조회
+    @GetMapping("/members/stats")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getMemberStats() {
+        // 비즈니스 로직에서 데이터 수집
+        Map<String, Long> stats = memberService.getMemberStatistics();
+
+        // 6. 중요: 프론트엔드가 데이터 분해(Destructuring)를 안전하게 처리하도록
+        // 프로젝트 공통 규격인 ApiResponse.success()로 래핑하여 리턴합니다.
+        return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }
