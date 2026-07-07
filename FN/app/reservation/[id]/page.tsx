@@ -60,6 +60,9 @@ export default function ReservationDetailPage() {
         // 백엔드에서 주는 가입 경로 정보 저장 (없으면 기본값 LOCAL)
         setAuthProvider(userRes.data.provider || 'LOCAL');
         const apiData = resDetail.data;
+        // 기본요금 44,000원으로 세팅 및 추가요금 백엔드 데이터와 맵핑
+        const baseFee = apiData.baseFee || 44000;
+        const extraFee = apiData.extraChargeAmount || 0;
 
         const dateObj = new Date(apiData.reservationTime);
         const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
@@ -77,7 +80,12 @@ export default function ReservationDetailPage() {
           manager: (apiData.managerName && apiData.managerName !== '-' && apiData.managerName !== '배정완료')
             ? { id: String(apiData.managerId) || '', name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
             : null,
-          payment: { baseFee: 33000, extraFee: 0, totalFee: 33000 },
+          payment: { 
+            baseFee: 44000, 
+            extraFee: apiData.extraChargeAmount || 0, 
+            extraReason: apiData.extraChargeReason || '',
+            totalFee: 44000 + (apiData.extraChargeAmount || 0) 
+          },
           category: apiData.category || '진료',
           detailedContent: apiData.detailedContent || '',
           doctorInquiry: apiData.doctorInquiry || '',
@@ -416,18 +424,31 @@ export default function ReservationDetailPage() {
             <CreditCard className="w-5 h-5 text-slate-400" /> 결제 정보
           </h3>
           <div className="space-y-4 text-sm px-1">
-            <div className="flex justify-between text-slate-500">
+            {/* 기본 요금 */}
+            <div className="flex justify-between text-slate-500 items-center">
               <span>기본 동행 요금 (2시간)</span>
               <span className="font-medium text-slate-700">{reservation.payment.baseFee.toLocaleString()}원</span>
             </div>
+            
+            {/* 매니저 추가 요금 (조건부 렌더링) */}
             {reservation.payment.extraFee > 0 && (
-              <div className="flex justify-between text-slate-500">
-                <span>추가 요금 / 할증</span>
-                <span className="font-medium text-slate-700">{reservation.payment.extraFee.toLocaleString()}원</span>
+              <div className="flex justify-between text-slate-500 pt-2 border-t border-slate-50/50">
+                <div className="flex flex-col">
+                  <span className="text-orange-500 font-semibold">추가 요금 발생</span>
+                  {/* 추가 요금 사유 (예: 1시간 연장, 심야 할증 등) */}
+                  <span className="text-xs text-slate-400 mt-1">
+                    사유: {reservation.payment.extraReason || '추가 서비스 이용'}
+                  </span>
+                </div>
+                <span className="font-medium text-slate-700 mt-0.5">
+                  +{reservation.payment.extraFee.toLocaleString()}원
+                </span>
               </div>
             )}
-            <div className="border-t border-dashed border-slate-200 pt-4 mt-2 flex justify-between items-center">
-              <span className="font-extrabold text-slate-800">총 결제 금액</span>
+
+            {/* 총 결제 금액 */}
+            <div className="border-t border-dashed border-slate-200 pt-4 mt-2 flex justify-between items-center bg-indigo-50/30 p-3 rounded-xl">
+              <span className="font-extrabold text-slate-800">최종 결제 금액</span>
               <span className="text-2xl font-extrabold text-indigo-600">
                 {reservation.payment.totalFee.toLocaleString()}원
               </span>

@@ -59,6 +59,8 @@ export interface ReservationResponse {
   underlyingDisease?: string;
   medication?: string;
   preparedDocuments?: string;
+  extraChargeAmount?: number; 
+  extraChargeReason?: string;
 }
 
 // 4. 예약 상세 페이지 UI 상태 관리를 위한 타입
@@ -73,6 +75,7 @@ export interface PaymentInfo {
   baseFee: number;
   extraFee: number;
   totalFee: number;
+  extraReason?: string;
 }
 
 export interface ReservationDetailState {
