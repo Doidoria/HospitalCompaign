@@ -237,22 +237,25 @@ export default function ReportWritePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 1차 방어: 이미 처리 중이면 함수 즉시 종료 (버튼 연타 차단)
+    // 1차 방어: 진입하자마자 즉시 잠금
     if (submitLock.current) return;
+    submitLock.current = true;
 
-    // 처방약 메모(prescription)를 무조건 필수에서 제외하고 분리
+    // 처방약 메모(prescription) 검증
     if (!formData.department || !formData.doctorOpinion || !formData.managerComment) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
+      submitLock.current = false; // 검증 실패 시 다시 누를 수 있게 잠금 해제
       return;
     }
     
-    // '처방약 없음'이 아닌데 메모를 비워둔 경우에만 경고
+    // '처방약 없음'이 아닌데 메모를 비워둔 경우 검증
     if (formData.medicationType !== '처방약 없음' && !formData.prescription) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '처방 및 복약 안내 메모를 입력해 주세요.' });
+      submitLock.current = false; // 검증 실패 시 잠금 해제
       return;
     }
 
-    // 전송 전 확인 팝업 (취소 시 방어)
+    // 전송 전 확인 팝업 (이제 절대 두 번 뜨지 않습니다)
     const confirmResult = await YesAlert.fire({
       title: existingReportId ? '리포트를 수정하시겠습니까?' : '리포트를 전송하시겠습니까?',
       html: '보호자에게 알림톡과 리포트가 발송됩니다.',
@@ -263,11 +266,13 @@ export default function ReportWritePage() {
       cancelButtonText: '취소'
     });
 
-    if (!confirmResult.isConfirmed) return;
+    // 사용자가 팝업에서 '취소'를 누른 경우
+    if (!confirmResult.isConfirmed) {
+      submitLock.current = false; // 취소했으므로 다시 누를 수 있게 잠금 해제
+      return;
+    }
 
-    // 2차 방어: 팝업 확인 버튼을 연타했을 때의 찰나를 방어하고 Lock 잠금
-    if (submitLock.current) return;
-    submitLock.current = true;
+    // 2차 방어: API 전송 로딩 시작
     setIsSubmitting(true);
 
     try {
@@ -322,7 +327,7 @@ export default function ReportWritePage() {
     } catch (error: any) {
       console.error('리포트 제출 에러:', error);
       
-      // 3차 방어: 백엔드가 중복을 튕겨내어 409 상태 코드를 보냈을 때의 우아한 처리
+      // 백엔드가 중복을 튕겨내어 409 상태 코드를 보냈을 때의 처리
       if (error.response?.status === 409) {
         await YesAlert.fire({
           icon: 'info',
@@ -336,8 +341,8 @@ export default function ReportWritePage() {
         Toast.fire({ icon: 'error', title: '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.'});
       }
     } finally {
-      // 통신이 완전히 끝나면 Lock 해제
-      submitLock.current = false;
+      // 통신이 완전히 끝나거나 에러가 났을 때 최종적으로 Lock 해제 및 버튼 활성화
+      submitLock.current = false; // 최종 잠금 해제
       setIsSubmitting(false);
     }
   };
