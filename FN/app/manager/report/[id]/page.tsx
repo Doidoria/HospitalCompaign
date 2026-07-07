@@ -17,6 +17,7 @@ export default function ReportWritePage() {
   const [loading, setLoading] = useState(true);
   const [targetReservation, setTargetReservation] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLock = useRef(false); // 즉각적인 연타 차단을 위한 동기(Synchronous) 락 추가
   const reportRef = useRef<HTMLDivElement>(null);
   
   const [noNextSchedule, setNoNextSchedule] = useState(false); 
@@ -236,6 +237,9 @@ export default function ReportWritePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // 1차 방어: 이미 처리 중이면 함수 즉시 종료 (버튼 연타 차단)
+    if (submitLock.current) return;
+
     // 처방약 메모(prescription)를 무조건 필수에서 제외하고 분리
     if (!formData.department || !formData.doctorOpinion || !formData.managerComment) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
@@ -261,6 +265,9 @@ export default function ReportWritePage() {
 
     if (!confirmResult.isConfirmed) return;
 
+    // 2차 방어: 팝업 확인 버튼을 연타했을 때의 찰나를 방어하고 Lock 잠금
+    if (submitLock.current) return;
+    submitLock.current = true;
     setIsSubmitting(true);
 
     try {
@@ -300,7 +307,6 @@ export default function ReportWritePage() {
       if (res.status === 200 || res.status === 201) {
         localStorage.removeItem(`draft_care_report_${params.id}`);
 
-        // 성공 팝업에 명시적으로 취소 버튼 숨김 및 버튼 텍스트 초기화 설정 추가
         await YesAlert.fire({ 
           icon: 'success', 
           title: existingReportId ? '리포트 수정 완료' : '리포트 작성 완료', 
@@ -313,10 +319,25 @@ export default function ReportWritePage() {
         router.push('/manager/dashboard');
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('리포트 제출 에러:', error);
-      Toast.fire({ icon: 'error', title: '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.'});
+      
+      // 3차 방어: 백엔드가 중복을 튕겨내어 409 상태 코드를 보냈을 때의 우아한 처리
+      if (error.response?.status === 409) {
+        await YesAlert.fire({
+          icon: 'info',
+          title: '제출 완료',
+          text: '이미 제출이 완료된 리포트입니다.',
+          confirmButtonColor: '#3b82f6'
+        });
+        localStorage.removeItem(`draft_care_report_${params.id}`);
+        router.push('/manager/dashboard');
+      } else {
+        Toast.fire({ icon: 'error', title: '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.'});
+      }
     } finally {
+      // 통신이 완전히 끝나면 Lock 해제
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
