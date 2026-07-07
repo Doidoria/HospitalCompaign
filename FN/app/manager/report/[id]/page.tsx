@@ -17,7 +17,6 @@ export default function ReportWritePage() {
   const [loading, setLoading] = useState(true);
   const [targetReservation, setTargetReservation] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const submitLock = useRef(false); // 즉각적인 연타 차단을 위한 동기(Synchronous) 락 추가
   const reportRef = useRef<HTMLDivElement>(null);
   
   const [noNextSchedule, setNoNextSchedule] = useState(false); 
@@ -234,24 +233,22 @@ export default function ReportWritePage() {
     setNewImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => { 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // 1차 방어막
-    if (submitLock.current) return;
-    submitLock.current = true;
-
+    // 처방약 메모(prescription)를 무조건 필수에서 제외하고 분리
     if (!formData.department || !formData.doctorOpinion || !formData.managerComment) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
-      submitLock.current = false;
       return;
     }
     
+    // '처방약 없음'이 아닌데 메모를 비워둔 경우에만 경고
     if (formData.medicationType !== '처방약 없음' && !formData.prescription) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '처방 및 복약 안내 메모를 입력해 주세요.' });
-      submitLock.current = false;
       return;
     }
 
+    // 전송 전 확인 팝업 (취소 시 방어)
     const confirmResult = await YesAlert.fire({
       title: existingReportId ? '리포트를 수정하시겠습니까?' : '리포트를 전송하시겠습니까?',
       html: '보호자에게 알림톡과 리포트가 발송됩니다.',
@@ -262,10 +259,7 @@ export default function ReportWritePage() {
       cancelButtonText: '취소'
     });
 
-    if (!confirmResult.isConfirmed) {
-      submitLock.current = false;
-      return;
-    }
+    if (!confirmResult.isConfirmed) return;
 
     setIsSubmitting(true);
 
@@ -306,6 +300,7 @@ export default function ReportWritePage() {
       if (res.status === 200 || res.status === 201) {
         localStorage.removeItem(`draft_care_report_${params.id}`);
 
+        // 성공 팝업에 명시적으로 취소 버튼 숨김 및 버튼 텍스트 초기화 설정 추가
         await YesAlert.fire({ 
           icon: 'success', 
           title: existingReportId ? '리포트 수정 완료' : '리포트 작성 완료', 
@@ -318,19 +313,10 @@ export default function ReportWritePage() {
         router.push('/manager/dashboard');
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('리포트 제출 에러:', error);
-      
-      // 💡 409 에러를 덮어씌우지 않고, 백엔드 로직 충돌 에러로 명확히 경고를 띄웁니다!
-      let errorMessage = '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.';
-      if (error.response?.status === 409) {
-         errorMessage = '이미 취소되었거나 완료 처리된 예약 등, 상태 충돌이 발생했습니다. 백엔드 확인이 필요합니다.';
-      }
-      
-      await YesAlert.fire({ icon: 'error', title: '오류', text: errorMessage });
-      
+      Toast.fire({ icon: 'error', title: '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.'});
     } finally {
-      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
@@ -379,7 +365,7 @@ export default function ReportWritePage() {
           </p>
         </motion.div>
 
-        <form className="space-y-6 pb-8">
+        <form onSubmit={handleSubmit} className="space-y-6 pb-8">
           <div ref={reportRef} className="space-y-5 bg-gray-50 pb-4">
             
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
@@ -568,11 +554,16 @@ export default function ReportWritePage() {
           </motion.div>
 
           <motion.div variants={itemVariants} className="pt-2">
-            <button type="button" onClick={handleSubmit} disabled={isSubmitting} 
+            <button type="submit" disabled={isSubmitting} 
               className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
               active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
               {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
-              {isSubmitting ? '전송 중...' : existingReportId ? '수정 및 재전송하기' : '보호자에게 전송하기'}
+              {isSubmitting 
+                ? '전송 중...' 
+                : existingReportId 
+                  ? '수정 및 재전송하기' 
+                  : '보호자에게 전송하기'
+              }
             </button>
           </motion.div>
         </form>

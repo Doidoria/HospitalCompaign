@@ -75,37 +75,37 @@ export default function ReportDetailPage() {
   }, [params.id, router]);
 
   const handleDownloadPdf = useCallback(async () => {
-    if (!reportRef.current) return;
     setIsGeneratingPdf(true);
 
     try {
-      const { toPng } = await import('html-to-image');
-      const { default: jsPDF } = await import('jspdf');
+      Toast.fire({ icon: 'info', title: '고화질 PDF 파일을 불러오고 있습니다...' });
 
-      Toast.fire({ icon: 'info', title: 'PDF 파일을 생성하고 있습니다...' });
+      // 1. 백엔드에서 생성된 찐 PDF 파일(Blob)을 가져옵니다.
+      const response = await reportApi.downloadPdf(params.id as string);
 
-      const imgData = await toPng(reportRef.current, {
-        quality: 0.95,
-        backgroundColor: '#f8fafc', // 배경색을 명시적으로 주어 투명해지는 현상 방지 (slate-50)
-        cacheBust: true,
-      });
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (reportRef.current.offsetHeight * pdfWidth) / reportRef.current.offsetWidth;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`예스케어_케어리포트_${reportData.patientName}님.pdf`);
+      // 2. 받아온 Blob 데이터를 브라우저 임시 URL로 변환합니다.
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       
+      // 3. 가상의 a 태그를 만들어 클릭(다운로드) 이벤트를 발생시킵니다.
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `예스케어_케어리포트_${reportData.patientName}님.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      
+      // 4. 다운로드 후 메모리 정리
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
       Toast.fire({ icon: 'success', title: 'PDF 다운로드가 완료되었습니다.' });
 
     } catch (error) {
-      console.error('PDF 생성 에러:', error);
-      Toast.fire({ icon: 'error', title: 'PDF를 생성하는 중 문제가 발생했습니다.' });
+      console.error('PDF 다운로드 에러:', error);
+      Toast.fire({ icon: 'error', title: 'PDF를 불러오는 중 문제가 발생했습니다.' });
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [reportData]);
+  }, [params.id, reportData]);
 
   const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
   const itemVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } } };

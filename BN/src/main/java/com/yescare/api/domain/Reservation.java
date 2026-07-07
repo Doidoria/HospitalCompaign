@@ -229,12 +229,13 @@ public class Reservation {
 
     // 동행 완료 처리 (리포트 작성 전 임시 완료 상태)
     public void completeAccompany() {
+        if (this.status == ReservationStatus.COMPLETED) {
+            return;
+        }
+        // 그 외에 진행 중(IN_PROGRESS)이 아닐 때만 예외 발생
         if (this.status != ReservationStatus.IN_PROGRESS) {
             throw new IllegalStateException("동행이 진행 중인 상태에서만 완료 처리를 할 수 있습니다.");
         }
-        // (주의) 완전한 COMPLETED 상태는 리포트 작성이 끝나야 넘어갑니다.
-        // 프론트엔드의 화면 상태와 맞추려면 여기서 COMPLETED로 바꾸셔도 무방합니다.
-        // 현재 로직에서는 바로 COMPLETED로 보내겠습니다.
         this.status = ReservationStatus.COMPLETED;
     }
 

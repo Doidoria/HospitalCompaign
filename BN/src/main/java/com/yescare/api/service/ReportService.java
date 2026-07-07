@@ -216,8 +216,16 @@ public class ReportService {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             ITextRenderer renderer = new ITextRenderer();
 
-            // EC2 서버에 업로드한 폰트의 절대 경로 지정
-            String fontPath = "/home/ubuntu/fonts/malgun.ttf";
+            // OS 환경을 자동 감지하여 폰트 경로를 다르게 설정
+            String os = System.getProperty("os.name").toLowerCase();
+            String fontPath;
+
+            if (os.contains("win")) {
+                fontPath = "C:/Windows/Fonts/malgun.ttf"; // 로컬 테스트용 (Windows)
+            } else {
+                fontPath = "/home/ubuntu/fonts/malgun.ttf"; // 프로덕션 배포용 (Linux/Ubuntu)
+            }
+
             renderer.getFontResolver().addFont(fontPath, com.lowagie.text.pdf.BaseFont.IDENTITY_H, com.lowagie.text.pdf.BaseFont.EMBEDDED);
 
             renderer.setDocumentFromString(htmlContent);
@@ -242,5 +250,18 @@ public class ReportService {
         return reportRepository.findByReservationId(reservationId)
                 .map(ReportResponse::new)
                 .orElse(null);
+    }
+
+    // 마이페이지 PDF 다운로드용 메서드
+    @Transactional(readOnly = true)
+    public byte[] downloadPdf(Long reservationId) {
+        Report report = reportRepository.findByReservationId(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 예약에 대한 리포트가 없습니다."));
+
+        // 사진이 없을 경우를 대비한 안전한 null 체크
+        List<String> images = report.getImageUrls() != null ? report.getImageUrls() : new ArrayList<>();
+
+        // 기존에 만들어둔 고품질 PDF 생성 메서드 재활용!
+        return generatePdfBytes(report, images);
     }
 }

@@ -95,6 +95,10 @@ export const reportApi = {
   
   updateWithPdf: (reportId: number, formData: FormData) => 
     apiClient.put(`/api/reports/${reportId}`, formData),
+
+  // 백엔드 PDF 다운로드 API (반드시 blob 타입 지정)
+  downloadPdf: (reservationId: string) => 
+    apiClient.get(`/api/reports/pdf/${reservationId}`, { responseType: 'blob' }),
 };
 
 // ==========================================
