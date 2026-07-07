@@ -234,28 +234,24 @@ export default function ReportWritePage() {
     setNewImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => { 
     
-    // 1차 방어: 진입하자마자 즉시 잠금
+    // 1차 방어막
     if (submitLock.current) return;
     submitLock.current = true;
 
-    // 처방약 메모(prescription) 검증
     if (!formData.department || !formData.doctorOpinion || !formData.managerComment) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '진료 요약, 의사 소견, 매니저 코멘트는 필수입니다.' });
-      submitLock.current = false; // 검증 실패 시 다시 누를 수 있게 잠금 해제
+      submitLock.current = false;
       return;
     }
     
-    // '처방약 없음'이 아닌데 메모를 비워둔 경우 검증
     if (formData.medicationType !== '처방약 없음' && !formData.prescription) {
       YesAlert.fire({ icon: 'warning', title: '입력 확인', text: '처방 및 복약 안내 메모를 입력해 주세요.' });
-      submitLock.current = false; // 검증 실패 시 잠금 해제
+      submitLock.current = false;
       return;
     }
 
-    // 전송 전 확인 팝업 (이제 절대 두 번 뜨지 않습니다)
     const confirmResult = await YesAlert.fire({
       title: existingReportId ? '리포트를 수정하시겠습니까?' : '리포트를 전송하시겠습니까?',
       html: '보호자에게 알림톡과 리포트가 발송됩니다.',
@@ -266,13 +262,11 @@ export default function ReportWritePage() {
       cancelButtonText: '취소'
     });
 
-    // 사용자가 팝업에서 '취소'를 누른 경우
     if (!confirmResult.isConfirmed) {
-      submitLock.current = false; // 취소했으므로 다시 누를 수 있게 잠금 해제
+      submitLock.current = false;
       return;
     }
 
-    // 2차 방어: API 전송 로딩 시작
     setIsSubmitting(true);
 
     try {
@@ -327,22 +321,16 @@ export default function ReportWritePage() {
     } catch (error: any) {
       console.error('리포트 제출 에러:', error);
       
-      // 백엔드가 중복을 튕겨내어 409 상태 코드를 보냈을 때의 처리
+      // 💡 409 에러를 덮어씌우지 않고, 백엔드 로직 충돌 에러로 명확히 경고를 띄웁니다!
+      let errorMessage = '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.';
       if (error.response?.status === 409) {
-        await YesAlert.fire({
-          icon: 'info',
-          title: '제출 완료',
-          text: '이미 제출이 완료된 리포트입니다.',
-          confirmButtonColor: '#3b82f6'
-        });
-        localStorage.removeItem(`draft_care_report_${params.id}`);
-        router.push('/manager/dashboard');
-      } else {
-        Toast.fire({ icon: 'error', title: '제출에 실패했습니다.\n잠시 후 다시 시도해 주세요.'});
+         errorMessage = '이미 취소되었거나 완료 처리된 예약 등, 상태 충돌이 발생했습니다. 백엔드 확인이 필요합니다.';
       }
+      
+      await YesAlert.fire({ icon: 'error', title: '오류', text: errorMessage });
+      
     } finally {
-      // 통신이 완전히 끝나거나 에러가 났을 때 최종적으로 Lock 해제 및 버튼 활성화
-      submitLock.current = false; // 최종 잠금 해제
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
@@ -391,7 +379,7 @@ export default function ReportWritePage() {
           </p>
         </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pb-8">
+        <form className="space-y-6 pb-8">
           <div ref={reportRef} className="space-y-5 bg-gray-50 pb-4">
             
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
@@ -580,16 +568,11 @@ export default function ReportWritePage() {
           </motion.div>
 
           <motion.div variants={itemVariants} className="pt-2">
-            <button type="submit" disabled={isSubmitting} 
+            <button type="button" onClick={handleSubmit} disabled={isSubmitting} 
               className="w-full bg-emerald-600 text-white text-lg font-bold py-4 rounded-2xl shadow-emerald-600/20 shadow-lg hover:bg-emerald-700 transition-all 
               active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
               {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
-              {isSubmitting 
-                ? '전송 중...' 
-                : existingReportId 
-                  ? '수정 및 재전송하기' 
-                  : '보호자에게 전송하기'
-              }
+              {isSubmitting ? '전송 중...' : existingReportId ? '수정 및 재전송하기' : '보호자에게 전송하기'}
             </button>
           </motion.div>
         </form>
