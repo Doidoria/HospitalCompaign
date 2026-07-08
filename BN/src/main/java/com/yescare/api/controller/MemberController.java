@@ -78,6 +78,12 @@ public class MemberController {
         memberService.changePassword(email, request.getNewPassword());
         return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
     }
+    
+    @DeleteMapping("/me")
+    public ResponseEntity<String> withdraw(@AuthenticationPrincipal String email) {
+        memberService.withdraw(email);
+        return ResponseEntity.ok("회원 탈퇴가 성공적으로 완료되었습니다.");
+    }
 
     @GetMapping("/all")
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")

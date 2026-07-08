@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { adminApi } from '@/src/api';
 import { 
-  TrendingUp, CreditCard, Banknote, CalendarCheck, Loader2, Download
+  TrendingUp, CreditCard, Banknote, CalendarCheck, Loader2, Download, Search, User, CalendarDays, Edit, 
+  AlertCircle, CheckCircle2, RotateCcw
 } from 'lucide-react';
-import { Toast } from '@/src/utils/alert';
+import { SalesSummary, DailySalesData, SalesDetail, Member, SalesTabProps, ManagerSettlement } from '@/src/types/sales';
+import { Toast, YesAlert } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
+import Swal from 'sweetalert2';
 
 const containerVariants: Variants = { 
   hidden: { opacity: 0 }, 
@@ -23,107 +26,215 @@ const tabVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } 
 };
 
-// 숫자를 원 단위 콤마 포맷으로 변환하는 헬퍼 함수
-const formatCurrency = (value: number) => new Intl.NumberFormat('ko-KR').format(value) + '원';
+// 숫자를 원 단위 콤마 포맷으로 변환
+const formatCurrency = (value: number) => new Intl.NumberFormat('ko-KR').format(value || 0) + '원';
 
-export default function SalesTab() {
+// 메인 컴포넌트
+export default function SalesTab({ members, handleViewMemberProfile }: SalesTabProps) {
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('MONTH'); // MONTH, WEEK, YEAR
   
-  // 상태 모음 (실제로는 백엔드 API 연동 필요)
-  const [summary, setSummary] = useState({ totalSales: 0, totalBaseFee: 0, totalExtraFee: 0, totalCompletedCount: 0 });
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [salesDetails, setSalesDetails] = useState<any[]>([]);
+  // 검색 및 필터 상태
+  const [period, setPeriod] = useState('MONTH'); 
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 데이터 상태
+  const [summary, setSummary] = useState<SalesSummary>({ totalSales: 0, totalBaseFee: 0, totalExtraFee: 0, totalCompletedCount: 0 });
+  const [chartData, setChartData] = useState<DailySalesData[]>([]);
+  const [salesDetails, setSalesDetails] = useState<SalesDetail[]>([]);
+  const [customManagerSettlements, setCustomManagerSettlements] = useState<ManagerSettlement[]>([]);
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [customLoading, setCustomLoading] = useState(false);
 
-  // 1. 임시 데이터 로딩 로직 (백엔드 연동 전 UI 확인용)
-  // SalesTab.tsx 내부
-  
+  // 플랫폼 수수료율 (80% 매니저 정산)
+  const SETTLEMENT_RATE = 0.8; 
+
+  // API Fetching 로직
+  const fetchSalesData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getSalesStatistics(period, searchTerm, null, null);
+      const data = res.data; 
+
+      setSummary(data.summary);
+      setChartData(data.chartData);
+      setSalesDetails(data.salesDetails);
+    } catch (error) {
+      console.error('매출 데이터 로딩 에러:', error);
+      setSummary({ totalSales: 0, totalBaseFee: 0, totalExtraFee: 0, totalCompletedCount: 0 });
+      setChartData([]);
+      setSalesDetails([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [period, searchTerm]);
+
   useEffect(() => {
-    const fetchSalesData = async () => {
-      setLoading(true);
+    const delayDebounce = setTimeout(() => fetchSalesData(), 400);
+    return () => clearTimeout(delayDebounce);
+  }, [fetchSalesData]);
+
+  // 커스텀 기간 정산 조회
+  const fetchCustomSettlements = async () => {
+    if (!customStart || !customEnd) {
+      Toast.fire({ icon: 'warning', title: '시작일과 종료일을 모두 선택해주세요.' });
+      return;
+    }
+    setCustomLoading(true);
+    try {
+      const res = await adminApi.getSalesStatistics('CUSTOM', '', customStart, customEnd);
+      setCustomManagerSettlements(res.data.managerSettlements || []);
+    } catch (error) {
+      Toast.fire({ icon: 'error', title: '정산액 조회에 실패했습니다.' });
+    } finally {
+      setCustomLoading(false);
+    }
+  };
+
+  // 액션 핸들러
+  const onViewManager = (managerName: string) => {
+    const managerInfo = members?.find(m => m.name === managerName && m.role.includes('MANAGER'));
+    if (managerInfo) {
+      handleViewMemberProfile(managerInfo);
+    } else {
+      Toast.fire({ icon: 'warning', title: '매니저 상세 정보를 찾을 수 없습니다.' });
+    }
+  };
+
+  // 금액 수정
+  const handleEditAmount = async (reservationId: number, currentExtraFee: number) => {
+    const { isConfirmed, value: newAmount } = await YesAlert.fire({
+      title: '추가 요금 조정',
+      html: '수정할 추가 요금을 입력해 주세요.<br/>(음수 입력 시 환불/할인 처리)',
+      icon: 'question',
+      input: 'number',
+      inputValue: currentExtraFee,
+      showCancelButton: true,
+      confirmButtonText: '저장하기',
+      cancelButtonText: '닫기',
+    });
+
+    if (isConfirmed && newAmount !== undefined && newAmount !== null) {
       try {
-        // 1. 더미 데이터(setTimeout) 삭제 후 실제 API 호출
-        const res = await adminApi.getSalesStatistics(period);
-        
-        // 2. 백엔드(ApiResponse)에서 내려주는 data 추출
-        const data = res.data; 
-
-        // 3. State 업데이트
-        setSummary(data.summary);
-        setChartData(data.chartData);
-        setSalesDetails(data.salesDetails);
-        
+        await adminApi.updateExtraFee(reservationId, Number(newAmount));
+        Toast.fire({ icon: 'success', title: '금액이 성공적으로 수정되었습니다.' });
+        fetchSalesData();
       } catch (error) {
-        console.error('매출 데이터 로딩 에러:', error);
-        // 에러 발생 시 초기화 (옵션)
-        setSummary({ totalSales: 0, totalBaseFee: 0, totalExtraFee: 0, totalCompletedCount: 0 });
-        setChartData([]);
-        setSalesDetails([]);
-      } finally {
-        setLoading(false);
+        YesAlert.fire({ icon: 'error', title: '오류', text: '금액 수정에 실패했습니다.' });
       }
-    };
+    }
+  };
 
-    fetchSalesData();
-  }, [period]); // period(월/주/년)가 바뀔 때마다 API 다시 호출
+  // 전체 환불 처리 핸들러 (기본금 포함 전체 0원 처리)
+  const handleRefundAll = async (reservationId: number, patientName: string) => {
+    const confirm = await YesAlert.fire({
+      title: '전체 환불 처리',
+      html: `정말 <strong>[${patientName}]</strong> 환자의 예약을 전체 환불 처리하시겠습니까?<br/>확인 시 기본 요금과 추가 요금이 모두 <strong>0원</strong>으로 변경됩니다.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '네, 환불합니다',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#EF4444', // 위험 경고용 빨간색 버튼
+      cancelButtonColor: '#94A3B8'
+    });
 
-  const exportSalesToCsv = (data: any[]) => {
-    if (data.length === 0) {
+    if (confirm.isConfirmed) {
+      try {
+        await adminApi.refundAllSales(reservationId);
+        Toast.fire({ icon: 'success', title: '전체 환불 및 0원 처리가 완료되었습니다.' });
+        fetchSalesData(); // 테이블 리프레시
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '오류', text: '환불 처리에 실패했습니다.' });
+      }
+    }
+  };
+
+  const handleToggleSettlement = async (reservationId: number, currentStatus: string) => {
+    const nextStatus = currentStatus === 'READY' ? 'COMPLETED' : 'READY';
+    const confirmMsg = nextStatus === 'COMPLETED' ? '정산 완료 처리하시겠습니까?' : '정산 대기 상태로 변경하시겠습니까?';
+    
+    const confirm = await YesAlert.fire({
+      title: '정산 상태 변경',
+      text: confirmMsg,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '변경',
+      cancelButtonText: '취소'
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        await adminApi.updateSettlementStatus(reservationId, nextStatus);
+        
+        // 프론트엔드 화면 즉시 갱신 (DB 새로고침 없이 빠른 UI 반영)
+        setSalesDetails(prevDetails => 
+          prevDetails.map(item => 
+            item.id === reservationId ? { ...item, settlementStatus: nextStatus } : item
+          )
+        );
+
+        Toast.fire({ icon: 'success', title: '정산 상태가 변경되었습니다.' });
+      } catch (error) {
+        YesAlert.fire({ icon: 'error', title: '오류', text: '상태 변경에 실패했습니다.' });
+      }
+    }
+  };
+
+  const exportSalesToCsv = () => {
+    if (salesDetails.length === 0) {
       Toast.fire({ icon: 'warning', title: '다운로드할 데이터가 없습니다.' });
       return;
     }
 
-    // 1. 엑셀 헤더 정의
-    const headers = ['예약번호', '서비스일자', '환자명', '매니저명', '선입금(기본요금)', '추가요금', '최종매출합계'];
+    const headers = ['예약번호', '서비스일자', '환자명', '매니저명', '선입금(기본요금)', '추가요금', '최종매출합계', '매니저정산금(80%)', '정산상태'];
 
-    // 2. 데이터 행 생성
-    const rows = data.map(item => [
-      item.id,
-      item.date,
-      `"${item.patientName}"`,
-      `"${item.managerName}"`,
-      item.baseFee,
-      item.extraFee,
-      item.totalFee
+    const rows = salesDetails.map(item => [
+      item.id, item.date, `"${item.patientName}"`, `"${item.managerName}"`,
+      item.baseFee, item.extraFee, item.totalFee, item.totalFee * SETTLEMENT_RATE,
+      item.settlementStatus === 'COMPLETED' ? '정산완료' : '정산대기'
     ]);
 
-    // 3. CSV 문자열 병합 및 한글 깨짐 방지(BOM)
     const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     
-    // 4. 강제 다운로드 트리거
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    
-    const today = new Date().toISOString().split('T')[0];
-    link.setAttribute('download', `예스케어_매출상세내역_${today}.csv`);
-    
+    link.setAttribute('download', `예스케어_매출정산내역_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // 상단 요약 카드 데이터
+  const pendingSettlementTotal = useMemo(() => {
+    return salesDetails
+      .filter(item => item.settlementStatus !== 'COMPLETED')
+      .reduce((sum, item) => sum + (item.totalFee * SETTLEMENT_RATE), 0);
+  }, [salesDetails]);
+
   const statsCards = useMemo(() => [
     { title: '총 매출액', value: formatCurrency(summary.totalSales), icon: <TrendingUp className="w-6 h-6 text-blue-500" /> },
     { title: '선입금 (기본요금)', value: formatCurrency(summary.totalBaseFee), icon: <CreditCard className="w-6 h-6 text-indigo-500" /> },
-    { title: '추가 매출 (할증 등)', value: formatCurrency(summary.totalExtraFee), icon: <Banknote className="w-6 h-6 text-emerald-500" /> },
+    { 
+      title: '미지급 정산 대기액', 
+      value: formatCurrency(pendingSettlementTotal), 
+      icon: <Banknote className="w-6 h-6 text-rose-500" /> 
+    },
     { title: '이용 완료 건수', value: `${summary.totalCompletedCount}건`, icon: <CalendarCheck className="w-6 h-6 text-orange-500" /> },
-  ], [summary]);
+  ], [summary, pendingSettlementTotal]);
 
   return (
     <>
       {/* 1. 요약 통계 카드 */}
-      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
+      <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" variants={containerVariants} initial="hidden" animate="visible">
         {statsCards.map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} 
-            className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">{stat.icon}</div>
+            className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-3 lg:gap-4 hover:shadow-md transition-shadow">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 shrink-0">{stat.icon}</div>
             <div>
-              <p className="text-xs font-bold text-slate-400 mb-1">{stat.title}</p>
-              <p className="text-xl font-black text-slate-800">{stat.value}</p>
+              <p className="text-[11px] lg:text-xs font-bold text-slate-400 mb-0.5">{stat.title}</p>
+              <p className="text-lg lg:text-xl font-black text-slate-800 break-all">{stat.value}</p>
             </div>
           </motion.div>
         ))}
@@ -131,20 +242,8 @@ export default function SalesTab() {
 
       {/* 2. 매출 추이 차트 영역 */}
       <motion.div variants={tabVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 mb-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-slate-800">기간별 매출 추이</h2>
-          <select 
-            value={period} 
-            onChange={(e) => setPeriod(e.target.value)} 
-            className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="WEEK">최근 1주일</option>
-            <option value="MONTH">이번 달</option>
-            <option value="YEAR">올해</option>
-          </select>
-        </div>
-        
-        <div className="h-[300px] w-full">
+        <h2 className="text-lg font-bold text-slate-800 mb-6">기간별 매출 추이</h2>
+        <div className="h-[250px] lg:h-[300px] w-full">
           {loading ? (
             <div className="w-full h-full flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
           ) : (
@@ -153,12 +252,9 @@ export default function SalesTab() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} tickFormatter={(value) => `${value.toLocaleString()}`} />
-                <Tooltip cursor={{ fill: '#F1F5F9' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: any) => [formatCurrency(Number(value)), '']}
-                />
+                <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: any) => [formatCurrency(Number(value)), '']} />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '13px' }} />
-                <Bar dataKey="baseFee" name="선입금(기본요금)" stackId="a" fill="#3B82F6" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="baseFee" name="기본요금" stackId="a" fill="#3B82F6" radius={[0, 0, 4, 4]} />
                 <Bar dataKey="extraFee" name="추가요금" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -166,50 +262,207 @@ export default function SalesTab() {
         </div>
       </motion.div>
 
-      {/* 3. 매출 상세 내역 테이블 */}
+      {/* 3. 매출 정산 장부 */}
       <motion.div variants={tabVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col">
-        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-slate-800">건별 매출 상세 내역 (완료 기준)</h2>
-          <button onClick={() => exportSalesToCsv(salesDetails)} 
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors cursor-pointer">
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">엑셀 다운로드</span>
-          </button>
+        {/* 헤더 및 필터 */}
+        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <h2 className="text-lg font-bold text-slate-800 shrink-0">매출 및 매니저 정산 장부</h2>
+          
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center w-full lg:w-auto gap-2">
+            <select value={period} onChange={(e) => setPeriod(e.target.value)} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+              <option value="TODAY">오늘</option>
+              <option value="WEEK">최근 1주일</option>
+              <option value="MONTH">이번 달</option>
+              <option value="YEAR">올해</option>
+              <option value="ALL">전체 기간</option>
+            </select>
+            <div className="relative flex-1 sm:w-56">
+              <input type="text" placeholder="환자명/매니저명 검색" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 shadow-sm" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            </div>
+            <button onClick={exportSalesToCsv} className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-colors shadow-sm">
+              <Download className="w-4 h-4" /> <span className="sm:inline">엑셀 다운로드</span>
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead className="bg-slate-50/90 text-slate-500 text-xs uppercase border-b border-slate-200">
-              <tr>
-                <th className="p-4 font-bold pl-6">예약번호</th>
-                <th className="p-4 font-bold">서비스 일자</th>
-                <th className="p-4 font-bold">환자 / 매니저</th>
-                <th className="p-4 font-bold text-right">선입금(기본)</th>
-                <th className="p-4 font-bold text-right">추가 요금</th>
-                <th className="p-4 font-bold text-right pr-6">최종 매출 합계</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm bg-white">
-              {loading ? (
-                <tr><td colSpan={6} className="p-16 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></td></tr>
-              ) : salesDetails.length > 0 ? salesDetails.map((res) => (
-                <tr key={res.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 pl-6 text-slate-400 font-medium">#{res.id}</td>
-                  <td className="p-4 font-semibold text-slate-800">{res.date}</td>
-                  <td className="p-4">
-                    <p className="font-bold text-slate-800">{res.patientName}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">담당: {res.managerName}</p>
-                  </td>
-                  <td className="p-4 text-right font-medium text-slate-600">{formatCurrency(res.baseFee)}</td>
-                  <td className="p-4 text-right font-medium text-emerald-600">{res.extraFee > 0 ? `+ ${formatCurrency(res.extraFee)}` : '-'}</td>
-                  <td className="p-4 pr-6 text-right font-black text-blue-600">{formatCurrency(res.totalFee)}</td>
-                </tr>
-              )) : (
-                <EmptyState message="조회된 매출 내역이 없습니다." colSpan={6} isTable={true} />
-              )}
-            </tbody>
-          </table>
+        {loading ? (
+          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+        ) : salesDetails.length === 0 ? (
+          <EmptyState message="조회된 매출 내역이 없습니다." isTable={false} />
+        ) : (
+          <>
+            {/* 3-A. PC 뷰: 넙적한 테이블 */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
+                <thead className="bg-slate-50/90 text-slate-500 text-xs uppercase border-b border-slate-200">
+                  <tr>
+                    <th className="p-4 font-bold pl-6">예약 정보</th>
+                    <th className="p-4 font-bold">환자 / 매니저</th>
+                    <th className="p-4 font-bold text-right">총 결제금액 (기본+추가)</th>
+                    <th className="p-4 font-bold text-right text-indigo-600 bg-indigo-50/30">매니저 정산액 (80%)</th>
+                    <th className="p-4 font-bold text-center pr-6">정산 관리</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm bg-white">
+                  {salesDetails.map((res) => (
+                    <tr key={res.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-all ${
+                      res.settlementStatus === 'COMPLETED' ? 'opacity-40 bg-slate-200 grayscale-[30%] select-none' : ''}`}>
+                      <td className="p-4 pl-6">
+                        <span className="text-slate-400 font-medium text-xs block mb-1">#{res.id}</span>
+                        <span className="font-semibold text-slate-800">{res.date}</span>
+                      </td>
+                      <td className="p-4">
+                        <p className="font-bold text-slate-800">{res.patientName}</p>
+                        <button onClick={() => onViewManager(res.managerName)} className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1 hover:underline cursor-pointer">
+                          <User className="w-3.5 h-3.5" /> 담당: {res.managerName}
+                        </button>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-black text-slate-800 text-base">{formatCurrency(res.totalFee)}</span>
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <span>(기본 {formatCurrency(res.baseFee)}</span>
+                            <span className="text-emerald-600 font-medium">+추가 {formatCurrency(res.extraFee)})</span>
+                            <button onClick={() => handleEditAmount(res.id, res.extraFee)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500" title="금액 수정">
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button onClick={() => handleRefundAll(res.id, res.patientName)} className="p-1 bg-red-50 hover:bg-red-100 border border-red-200 rounded text-red-500 transition-colors" title="전체 환불(0원 처리)">
+                              <RotateCcw className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right font-black text-indigo-600 bg-indigo-50/20 text-base">
+                        {formatCurrency(res.totalFee * SETTLEMENT_RATE)}
+                      </td>
+                      <td className="p-4 pr-6 text-center">
+                        <button onClick={() => handleToggleSettlement(res.id, res.settlementStatus || 'READY')}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm border
+                            ${(!res.settlementStatus || res.settlementStatus === 'READY') ? 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'}`}
+                        >
+                          {(!res.settlementStatus || res.settlementStatus === 'READY') ? <><AlertCircle className="w-3.5 h-3.5" /> 정산 대기</> : <><CheckCircle2 className="w-3.5 h-3.5" /> 입금 완료</>}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 3-B. 모바일/태블릿 뷰: 카드형 리스트 */}
+            <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50/50 border-t border-slate-100">
+              {salesDetails.map((res) => (
+                <div key={res.id} className={`p-4 rounded-[20px] border shadow-sm flex flex-col gap-3 transition-all ${
+                  res.settlementStatus === 'COMPLETED' 
+                    ? 'bg-slate-200 border-slate-300 opacity-40 grayscale-[30%]' 
+                    : 'bg-white border-slate-200'
+                }`}>
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <span className="text-slate-400 font-bold text-xs">#{res.id}</span>
+                    <span className="font-bold text-slate-800 text-sm">{res.date}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="font-extrabold text-slate-800 text-base">{res.patientName}</p>
+                    <button onClick={() => onViewManager(res.managerName)} className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1.5 rounded-lg flex items-center gap-1">
+                      <User className="w-3 h-3" /> {res.managerName}
+                    </button>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl flex flex-col gap-2.5 text-sm border border-slate-100">
+                    <div className="flex justify-between text-slate-500">
+                      <span className="font-semibold text-xs">기본 요금</span> 
+                      <span className="font-medium">{formatCurrency(res.baseFee)}</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-600">
+                      <span className="font-semibold text-xs">추가 요금</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">+{formatCurrency(res.extraFee)}</span>
+                        <button onClick={() => handleEditAmount(res.id, res.extraFee)} className="p-1 bg-white border border-emerald-200 rounded text-emerald-600 shadow-sm">
+                          <Edit className="w-3 h-3"/>
+                        </button>
+                        <button onClick={() => handleRefundAll(res.id, res.patientName)} className="p-1 bg-white border border-red-200 rounded text-red-500 shadow-sm transition-colors">
+                          <RotateCcw className="w-3 h-3"/>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between font-black text-slate-800 border-t border-slate-200 pt-2.5 mt-0.5">
+                      <span>총 결제금액</span> <span className="text-base text-blue-600">{formatCurrency(res.totalFee)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 pt-1">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-indigo-400 mb-0.5">매니저 정산액 (80%)</span>
+                      <span className="text-sm font-black text-indigo-600">{formatCurrency(res.totalFee * SETTLEMENT_RATE)}</span>
+                    </div>
+                    <button onClick={() => handleToggleSettlement(res.id, res.settlementStatus || 'READY')}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border
+                        ${(!res.settlementStatus || res.settlementStatus === 'READY') ? 'bg-white text-slate-600 border-slate-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}
+                    >
+                      {(!res.settlementStatus || res.settlementStatus === 'READY') ? '정산 대기' : '입금 완료'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </motion.div>
+
+      {/* 4. 매니저별 커스텀 기간 정산 총합 조회 카드 */}
+      <motion.div variants={tabVariants} initial="hidden" animate="visible" className="bg-indigo-50/50 rounded-2xl shadow-sm border border-indigo-100 p-5 lg:p-6 mt-6">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 border-b border-indigo-100 pb-5 mb-5">
+          <div>
+            <h2 className="text-lg font-extrabold text-indigo-900 flex items-center gap-2">
+              <CalendarDays className="w-5 h-5 text-indigo-500" /> 커스텀 기간 정산액 산출
+            </h2>
+            <p className="text-xs text-indigo-600/80 mt-1.5 font-medium break-keep">
+              원하는 날짜를 지정하여 기간 내 매니저들의 총 정산액을 확인하세요.
+            </p>
+          </div>
+          
+          {/* 날짜 선택 및 조회 영역 */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} 
+              className="flex-1 lg:flex-none w-full lg:w-auto bg-white border border-indigo-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-indigo-400 shadow-sm" />
+            <span className="hidden sm:block text-indigo-300 font-bold text-center">~</span>
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} 
+              className="flex-1 lg:flex-none w-full lg:w-auto bg-white border border-indigo-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-indigo-400 shadow-sm" />
+            <button onClick={fetchCustomSettlements} 
+              className="w-full sm:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md shadow-indigo-200 transition-colors mt-2 sm:mt-0">
+              조회하기
+            </button>
+          </div>
         </div>
+
+        {customLoading ? (
+          <div className="py-10 flex justify-center"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin" /></div>
+        ) : customManagerSettlements.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {customManagerSettlements.map((manager, idx) => (
+              <div key={idx} className="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm flex justify-between items-center hover:border-indigo-300 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-extrabold text-lg border border-indigo-100">
+                    {(manager.managerName || '-').charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800">{manager.managerName}</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">{manager.matchCount}건 활동 완료</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-indigo-400 font-bold mb-0.5">지급 정산액</p>
+                  <p className="font-black text-indigo-600 text-lg">{formatCurrency(manager.totalSettlementAmount)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-dashed border-indigo-200 py-10 text-center text-indigo-400 text-sm font-bold flex flex-col items-center gap-2">
+            <CalendarDays className="w-8 h-8 text-indigo-200 mb-1" />
+            기간을 설정하고 조회 버튼을 누르시면 매니저별 정산액이 표시됩니다.
+          </div>
+        )}
       </motion.div>
     </>
   );

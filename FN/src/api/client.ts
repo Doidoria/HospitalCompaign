@@ -51,13 +51,28 @@ apiClient.interceptors.response.use(
       }
     }
     
-    return response; // 핵심: 알맹이가 아닌 response 전체를 리턴!
+    return response;
   },
   (error) => {
     const originalRequestUrl = error.config?.url;
 
+    // 백엔드가 내려준 JSON 에러 메시지를 가로채서 프론트엔드 기본 error.message로 강제 덮어쓰기
+    if (error.response?.data) {
+      const resData = error.response.data;
+      if (typeof resData === 'object' && resData.message) {
+        error.message = resData.message; // 예: {"message": "가입되지 않은 이메일입니다."} 
+      } else if (typeof resData === 'string') {
+        try {
+          const parsed = JSON.parse(resData);
+          if (parsed.message) error.message = parsed.message;
+        } catch (e) {
+          error.message = resData;
+        }
+      }
+    }
+
     // 만약 점검중 상태인데 일반 유저가 API를 호출해 에러가 났다면 점검 페이지로 리다이렉트
-    if (error.response?.status === 503 || error.response?.data?.message?.includes("점검")) {
+    if (error.response?.status === 503 || error.message?.includes("점검")) {
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin')) {
         window.location.href = '/maintenance';
       }

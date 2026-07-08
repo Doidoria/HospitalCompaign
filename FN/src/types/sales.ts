@@ -1,17 +1,19 @@
-// src/types/sales.ts (추가 제안)
+// src/types/sales.ts
 export interface SalesSummary {
-  totalSales: number;     // 총 매출액 (선입금 + 추가요금)
-  totalBaseFee: number;   // 선입금(기본요금) 총액
-  totalExtraFee: number;  // 추가요금 총액
-  totalCompletedCount: number; // 완료된 예약 건수
+  totalSales: number;
+  totalBaseFee: number;
+  totalExtraFee: number;
+  totalCompletedCount: number;
 }
 
 export interface DailySalesData {
-  date: string;       // "MM/DD" 형식
+  date: string;
   baseFee: number;
   extraFee: number;
   total: number;
 }
+
+export type SettlementStatus = 'READY' | 'COMPLETED';
 
 export interface SalesDetail {
   id: number;
@@ -21,4 +23,30 @@ export interface SalesDetail {
   baseFee: number;
   extraFee: number;
   totalFee: number;
+  settlementStatus?: SettlementStatus; // 추가됨
+}
+
+export interface ManagerSettlement {
+  managerName: string;
+  matchCount: number;
+  totalSettlementAmount: number;
+}
+
+export interface SalesStatisticsResponse {
+  summary: SalesSummary;
+  chartData: DailySalesData[];
+  salesDetails: SalesDetail[];
+  managerSettlements?: ManagerSettlement[]; // CUSTOM 기간 조회 시에만 옴
+}
+
+export interface Member {
+  id: number;
+  name: string;
+  role: string;
+  email?: string;
+}
+
+export interface SalesTabProps {
+  members: Member[];
+  handleViewMemberProfile: (member: Member) => void;
 }

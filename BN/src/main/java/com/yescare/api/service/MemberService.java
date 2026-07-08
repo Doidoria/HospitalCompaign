@@ -8,6 +8,7 @@ import com.yescare.api.dto.MemberUpdateRequest;
 import com.yescare.api.repository.MemberRepository;
 import com.yescare.api.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -23,6 +25,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
+    private final KakaoAuthService kakaoAuthService;
     private final KakaoAlimtalkService kakaoAlimtalkService;
 
     @Transactional
@@ -149,28 +152,6 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, String> findIdInfo(String name, String phoneNumber) {
-        Member member = memberRepository.findByNameAndPhoneNumber(name, phoneNumber)
-                .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
-
-        String email = member.getEmail();
-        int atIndex = email.indexOf("@");
-        String maskedEmail = email;
-
-        // 이메일 마스킹 처리
-        if (atIndex > 3) {
-            String prefix = email.substring(0, 3);
-            maskedEmail = prefix + "****" + email.substring(atIndex);
-        }
-
-        // 마스킹된 이메일과 가입 유형(KAKAO or LOCAL)을 함께 반환
-        return Map.of(
-                "maskedEmail", maskedEmail,
-                "provider", member.getProvider()
-        );
-    }
-
-    @Transactional(readOnly = true)
     public Map<String, Long> getMemberStatistics() {
         return Map.of(
                 "totalCount", memberRepository.count(),
@@ -180,12 +161,52 @@ public class MemberService {
         );
     }
 
-    @Transactional
-    public void resetPassword(String email, String phoneNumber, String newPassword) {
-        Member member = memberRepository.findByEmailAndPhoneNumber(email, phoneNumber)
+    // ✅ 프론트엔드 대시 기입 대응을 위해 연락처 정규화 처리 추가
+    @Transactional(readOnly = true)
+    public Map<String, String> findIdInfo(String name, String phoneNumber) {
+        String normalizedPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "";
+        Member member = memberRepository.findByNameAndPhoneNumber(name, normalizedPhone)
                 .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
 
-        // [핵심 방어 로직] 카카오 가입자인 경우 비밀번호 변경 불가
+        String email = member.getEmail();
+        int atIndex = email.indexOf("@");
+        String maskedEmail = email;
+
+        if (atIndex > 3) {
+            String prefix = email.substring(0, 3);
+            maskedEmail = prefix + "****" + email.substring(atIndex);
+        }
+
+        return Map.of(
+                "maskedEmail", maskedEmail,
+                "provider", member.getProvider()
+        );
+    }
+
+    // ✅ JPA 상위 스펙에 맞는 안전한 탈퇴 (더티 체킹만으로 깔끔하게 디태치 및 마스킹 반영)
+    @Transactional
+    public void withdraw(String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("이미 탈퇴 처리되었거나 존재하지 않는 회원입니다."));
+
+        if ("KAKAO".equals(member.getProvider())) {
+            try {
+                kakaoAuthService.unlinkKakao(member.getKakaoAccessToken());
+            } catch (Exception e) {
+                log.error("카카오 API 연동 해제 중 에러 발생했으나 로컬 탈퇴는 계속 진행합니다: {}", e.getMessage());
+            }
+        }
+
+        member.withdraw(); // 엔티티 상태 변경 및 내부 isDeleted = true 플래그 전환 완료
+        log.info("예스케어 회원 소프트 탈퇴(마스킹) 완료: {}", email);
+    }
+
+    @Transactional
+    public void resetPassword(String email, String phoneNumber, String newPassword) {
+        String normalizedPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "";
+        Member member = memberRepository.findByEmailAndPhoneNumber(email, normalizedPhone)
+                .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
+
         if ("KAKAO".equals(member.getProvider())) {
             throw new IllegalArgumentException("카카오 연동으로 가입된 계정입니다. 비밀번호 찾기 대신 카카오 로그인을 이용해주세요.");
         }
@@ -195,7 +216,8 @@ public class MemberService {
 
     @Transactional(readOnly = true)
     public void checkEligibilityForPasswordReset(String email, String phoneNumber) {
-        Member member = memberRepository.findByEmailAndPhoneNumber(email, phoneNumber)
+        String normalizedPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "";
+        Member member = memberRepository.findByEmailAndPhoneNumber(email, normalizedPhone)
                 .orElseThrow(() -> new IllegalArgumentException("입력하신 정보와 일치하는 계정이 없습니다."));
 
         if ("KAKAO".equals(member.getProvider())) {

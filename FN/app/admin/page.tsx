@@ -452,7 +452,8 @@ export default function AdminDashboardPage() {
             {activeTab === 'notices' && <NoticeTab key="notices" />}
             {activeTab === 'inquiries' && <InquiryTab key="inquiries" refreshBadges={refreshBadges} />}
             {activeTab === 'popups' && <PopupTab key="popups" />}
-            {activeTab === 'sales' && <SalesTab key="sales" />}
+            {activeTab === 'sales' && (<SalesTab members={members} handleViewMemberProfile={handleViewMemberProfile} />
+            )}
           </AnimatePresence>
         </div>
       </main>

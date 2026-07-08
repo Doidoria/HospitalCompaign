@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { systemApi } from '@/src/api/index';
+import GlobalAlert from '@/src/components/admin/ui/GlobalAlert';
 
 interface ClientProviderProps {
   children: React.ReactNode;
@@ -81,6 +82,9 @@ export default function ClientProvider({ children }: ClientProviderProps) {
   }
 
   return (
-    <>{children}</>
+    <>
+      {children}
+      <GlobalAlert />
+    </>
   );
 }

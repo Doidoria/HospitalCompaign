@@ -3,12 +3,14 @@ import { create } from 'zustand';
 
 interface AlertOptions {
   title?: string;
+  text?: string;
   html?: string;
   icon?: 'success' | 'error' | 'warning' | 'info' | 'question';
   showCancelButton?: boolean;
   confirmButtonText?: string;
   cancelButtonText?: string;
-  input?: 'textarea' | 'text';
+  input?: 'textarea' | 'text' | 'number' | 'email' | 'password';
+  inputValue?: string | number;
   inputValidator?: (value: string) => string | null;
 }
 
@@ -38,7 +40,12 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
       isOpen: false, 
       resolve: null, 
       title: '', 
-      html: '', 
+      text: '',
+      html: '',
+      icon: undefined,
+      showCancelButton: false,      // 이전 팝업의 취소 버튼 노출 여부 초기화
+      confirmButtonText: undefined, // 이전 팝업의 '탈퇴 진행' 텍스트 초기화
+      cancelButtonText: undefined,  // 이전 팝업의 취소 텍스트 초기화 
       input: undefined, 
       inputValidator: undefined 
     });

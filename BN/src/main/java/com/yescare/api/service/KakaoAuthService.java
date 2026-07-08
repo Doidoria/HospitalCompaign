@@ -66,7 +66,7 @@ public class KakaoAuthService {
         String phoneNumber = normalizePhoneNumber(kakaoPhone);
 
         if (phoneNumber == null || phoneNumber.isEmpty()) {
-            phoneNumber = "010-0000-0000"; // 필수 동의 거부 시 안심벨트
+            phoneNumber = "01000000000";
         }
 
         // 5. 성별 및 생년월일 추출
@@ -199,6 +199,12 @@ public class KakaoAuthService {
         String kakaoEmail = (String) kakaoAccount.get("email");
         String kakaoPhone = normalizePhoneNumber((String) kakaoAccount.get("phone_number"));
 
+        // 변경하려는 카카오 이메일을 이미 다른 계정이 점유하고 있는지 교차 검증
+        Optional<Member> emailConflictCheck = memberRepository.findByEmail(kakaoEmail);
+        if (emailConflictCheck.isPresent()) {
+            throw new IllegalArgumentException("통합하려는 카카오 이메일(" + kakaoEmail + ")로 가입된 다른 계정이 이미 존재합니다. 고객센터에 문의해 주세요.");
+        }
+
         // 2. 전화번호로 기존 LOCAL 회원 찾기
         Member member = memberRepository.findByPhoneNumber(kakaoPhone)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
@@ -212,6 +218,34 @@ public class KakaoAuthService {
 
         // 4. 연동 완료 후 정상적인 로그인 토큰 발급
         return jwtProvider.createToken(member.getId(), member.getEmail(), member.getRole().name());
+    }
+
+    // 카카오 API 서버에 앱 연결 끊기(Unlink) 요청
+    public void unlinkKakao(String kakaoAccessToken) {
+        if (kakaoAccessToken == null || kakaoAccessToken.isEmpty()) {
+            log.warn("카카오 액세스 토큰이 없어 연동 해제 API 호출을 건너뜁니다.");
+            return;
+        }
+
+        String url = "https://kapi.kakao.com/v1/user/unlink";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.set("Authorization", "Bearer " + kakaoAccessToken);
+
+        HttpEntity<String> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                log.info("카카오 회원 연동 해제(Unlink) API 호출 성공: {}", response.getBody());
+            } else {
+                log.error("카카오 연동 해제 API 실패 (상태코드: {}): {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (Exception e) {
+            log.error("카카오 연동 해제 통신 중 장애 발생 (토큰 만료 등): {}", e.getMessage());
+        }
     }
 
     // 카카오 배송지 전용 API 호출 메서드

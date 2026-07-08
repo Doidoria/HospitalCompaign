@@ -11,6 +11,7 @@ public class AdminSalesResponse {
     private SalesSummary summary;
     private List<DailySalesData> chartData;
     private List<SalesDetail> salesDetails;
+    private List<ManagerSettlement> managerSettlements; // 매니저별 정산 요약 리스트
 
     @Getter
     @Builder
@@ -24,7 +25,7 @@ public class AdminSalesResponse {
     @Getter
     @Builder
     public static class DailySalesData {
-        private String date; // "MM/dd" 형식
+        private String date;
         private int baseFee;
         private int extraFee;
         private int total;
@@ -40,5 +41,15 @@ public class AdminSalesResponse {
         private int baseFee;
         private int extraFee;
         private int totalFee;
+        private String settlementStatus;
+    }
+
+    // 매니저별 정산액 집계 객체
+    @Getter
+    @Builder
+    public static class ManagerSettlement {
+        private String managerName;
+        private int matchCount;           // 매칭 건수
+        private int totalSettlementAmount; // 정산액 합계 (수수료 제외)
     }
 }

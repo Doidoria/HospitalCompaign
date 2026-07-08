@@ -276,7 +276,13 @@ export default function SignupPage() {
         }
       }
     } catch (error: any) {
-      setErrorMessage(error.message || '회원가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      const errorText = error.message || '회원가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.';
+      setErrorMessage(errorText); // 화면 하단 에러 메시지 업데이트
+      YesAlert.fire({
+        icon: 'error',
+        title: '회원가입 실패',
+        text: errorText
+      });
     }
   };
 

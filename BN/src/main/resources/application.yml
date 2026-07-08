@@ -31,22 +31,22 @@ coolsms:
     secret: ${COOLSMS_API_SECRET}
   sender: ${COOLSMS_SENDER}
   kakao:
-    #    pf-id: KA01PF260610022751924he8OYMm5jY7 # 카카오 채널 템플릿 ID
-    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
+    pf-id: KA01PF260610022751924he8OYMm5jY7 # 카카오 채널 템플릿 ID
+    #    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
     template:
-      report-completed: TEST_TPL_REPORT_COMPLETE              # 동행 리포트 전송
-      report-modified: KA01TP260622053627054rdN5lrJXqBS       # 동행 리포트 수정
+      report-completed: KA01TP260707060646274xEfqkCKp6PP     # 동행 리포트 전송
+      report-modified: KA01TP260707071909834rvX1V9pRGyP      # 동행 리포트 수정
       extra-charge-modified: KA01TP260612061114064hmI6Aoze8vj # 추가 요금 수정
-      inquiry-answered: KA01TP260610051333569jabJivnkzG6      # 1:1 문의 답변 완료
-      reservation-changed-or-canceled: KA01TP26061003351045985qNDAAsFtJ  # 예약 변경/취소 안내
+      inquiry-answered: KA01TP260707075516696m5X1EPH9EBr      # 1:1 문의 답변 완료
+      reservation-changed-or-canceled: KA01TP260707075610707ZHBCXvIjpTz  # 예약 변경/취소 안내
       extra-charge: KA01TP260610033213746m65rnzmIAEl          # 추가 요금 알림
-      accompany-completed: KA01TP2606220630547222QhgdF0fTva   # 동행 종료 알림
+      accompany-completed: KA01TP260707045755520VOrGavtnp1R   # 동행 종료 알림
       accompany-started: KA01TP260622035523521kAng1VBr7UY     # 동행 시작 알림
-      manager-assigned: KA01TP260610031814693YOYoTBSpJeo      # 매니저 배정 완료
-      reservation-complete: KA01TP260610031303911kWgOH3HfBwd  # 예약 접수 완료
+      manager-assigned: KA01TP260707075712457FOwPhisskcs      # 매니저 배정 확정
+      reservation-complete: KA01TP260707075812795RlRNMXerlfG  # 예약 접수 완료
       join-complete: KA01TP260610023305261Vl3MpZG0Sez         # 회원가입 완료
-      proxy-reservation-complete: KA01TP260623091218624XVKoBOatK2Y # 대리 신청 완료
-      manager-new-schedule: KA01TP260627015923209qJWEDdjmZzq  # 매니저 배정 확정(매니저용)
+      proxy-reservation-complete: KA01TP260707041138535RhuwJnb0GvU # 대리 신청 완료
+      manager-new-schedule: KA01TP260707041010097dZYmhUDwJmU  # 매니저 배정 확정(매니저용)
 
 server:
   port: 8081

@@ -121,6 +121,27 @@ public class Reservation {
     @OneToOne(mappedBy = "reservation") // 리포트 연결
     private Report report;
 
+    // 정산 관리 필드 (어드민 전용)
+    @Column(length = 20, columnDefinition = "varchar(20) default 'READY'")
+    private String settlementStatus = "READY"; // READY(정산대기), COMPLETED(입금완료)
+
+    public void setSettlementStatus(String settlementStatus) {
+        this.settlementStatus = settlementStatus;
+    }
+
+    // 어드민 금액 수정 및 환불 전용 메서드
+    public void setBaseFee(Integer baseFee) {
+        this.baseFee = baseFee;
+    }
+
+    public void setExtraChargeAmount(Integer extraChargeAmount) {
+        this.extraChargeAmount = extraChargeAmount;
+    }
+
+    public void setExtraChargeReason(String extraChargeReason) {
+        this.extraChargeReason = extraChargeReason;
+    }
+
     @Builder
     public Reservation(Member member, String patientName, String patientPhone, String hospitalName, LocalDateTime reservationTime,
                        String guardianName, String guardianPhone, String memo, ReservationStatus status, String requirements,

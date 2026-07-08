@@ -2,14 +2,21 @@ package com.yescare.api.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yescare.api.dto.ApiResponse;
+import com.yescare.api.exception.RequireAccountLinkException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import java.util.Map;
 
 @RestControllerAdvice(basePackages = "com.yescare.api.controller")
 @RequiredArgsConstructor
@@ -34,20 +41,16 @@ public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
                                   MediaType selectedContentType, Class selectedConverterType,
                                   ServerHttpRequest request, ServerHttpResponse response) {
 
-        // 1. 이미 ApiResponse 형태면 그냥 통과
-        if (body instanceof ApiResponse) {
+        if (body instanceof ApiResponse) return body;
+        if (body instanceof Resource || body instanceof byte[]) return body;
+
+        // 상태 코드가 아닌, ExceptionHandler가 보낸 'message' 키를 가진 Map인지 직접 확인하여 100% 통과시킴
+        if (body instanceof Map && ((Map<?, ?>) body).containsKey("message")) {
             return body;
         }
 
-        // 2. 엑셀 다운로드나 이미지 반환 등 바이너리 데이터(Resource, byte[])는 래핑하지 않음
-        if (body instanceof Resource || body instanceof byte[]) {
-            return body;
-        }
-
-        // 3. 공통 ApiResponse 객체 생성
         ApiResponse<Object> apiResponse = ApiResponse.success(body);
 
-        // 4. 우아한 해결책: 컨트롤러가 String을 반환할 때만 직접 직렬화하고, 나머지는 객체 반환
         if (body instanceof String) {
             try {
                 response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
@@ -57,7 +60,38 @@ public class GlobalResponseWrapper implements ResponseBodyAdvice<Object> {
             }
         }
 
-        // String이 아닌 객체(DTO, Long 등)는 그대로 반환하면 스프링(Jackson)이 알아서 처리함
         return apiResponse;
+    }
+
+    // 잘못된 인자나 계정 미존재(IllegalArgumentException) 발생 시 400 Bad Request와 함께 정확한 에러 메시지를 프론트엔드로 전달
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<?> handleIllegalArgumentException(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+    }
+
+    // 계정 정지 등 상태 에러(IllegalStateException) 발생 시
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<?> handleIllegalStateException(IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+    }
+
+    // 계정 연동 예외 발생 시, 409 Conflict 상태 코드와 함께 토큰/이메일을 안정적으로 전달
+    @ExceptionHandler(RequireAccountLinkException.class)
+    public ResponseEntity<?> handleRequireAccountLinkException(RequireAccountLinkException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT) // 409 에러
+                .body(Map.of(
+                        "message", e.getMessage(),
+                        "tempToken", e.getTempToken(), // 프론트에서 연동 승인 시 사용할 토큰
+                        "email", e.getEmail()
+                ));
+    }
+
+    // DB 유니크 제약조건(이메일, 연락처 중복 등) 충돌 발생 시 409 에러와 한글 메시지 반환
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", "이미 가입된 이메일이거나 사용 중인 휴대폰 번호입니다. 카카오 로그인 또는 다른 정보로 시도해 주세요."));
     }
 }

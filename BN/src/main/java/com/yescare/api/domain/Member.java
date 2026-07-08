@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.annotations.SQLDelete;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,7 +16,7 @@ import java.util.List;
 @Table(name = "members") // DB에 생성될 테이블 이름
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLDelete(sql = "UPDATE members SET is_active = false WHERE id = ?")
+@org.hibernate.annotations.Where(clause = "is_deleted = false")
 public class Member {
 
     @Id
@@ -125,7 +124,7 @@ public class Member {
     public void updateInfo(String name, String phoneNumber, String zipCode, String address,
                            String detailAddress, String guardianName, String guardianPhone) {
         this.name = name;
-        this.phoneNumber = phoneNumber;
+        this.phoneNumber = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : this.phoneNumber;
         this.zipCode = zipCode;
         this.address = address;
         this.detailAddress = detailAddress;
@@ -151,7 +150,17 @@ public class Member {
         this.isActive = true;
     }
 
-    // [추가] 기존 이메일 계정이 존재할 때 소셜 연동을 묶어주는 메서드
+    // 서비스 탈퇴 비즈니스 로직 최적화 (더티체킹 반영용)
+    public void withdraw() {
+        this.isDeleted = true;
+        this.email = "withdrawn_" + this.id + "_" + this.email;
+        this.phoneNumber = "000-0000-0000";
+        if (this.guardianPhone != null) this.guardianPhone = "000-0000-0000";
+        this.kakaoAccessToken = null;
+        this.isActive = false; // 탈퇴 시 계정 비활성화 처리 추가
+    }
+
+    // 기존 이메일 계정이 존재할 때 소셜 연동을 묶어주는 메서드
     public void linkSocialProvider(String provider, String gender, String birthDate, String kakaoAccessToken) {
         this.provider = provider; // "LOCAL" -> "KAKAO"로 소셜 전환 처리
         if (this.gender == null) this.gender = gender;

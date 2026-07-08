@@ -29,6 +29,9 @@ export const authApi = {
   updateMe: (data: any) => apiClient.put('/api/members/me', data),
   getManagerAppStatus: () => apiClient.get('/api/members/me/manager-application'),
 
+  // 회원 탈퇴 API
+  withdraw: () => apiClient.delete('/api/members/me'),
+
   // 토큰 재발급 API (HttpOnly 쿠키의 Refresh Token을 사용)
   refreshToken: () => apiClient.post('/api/members/refresh'),
   
@@ -116,8 +119,13 @@ export const adminApi = {
   getMemberStats: () => {return apiClient.get('/api/admin/members/stats');},
 
   // 매출 현황 통계 조회 API
-  getSalesStatistics: (period: string) => 
-    apiClient.get(`/api/admin/sales?period=${period}`),
+  getSalesStatistics: (period: string, keyword?: string, startDate?: string | null, endDate?: string | null) => 
+    apiClient.get(`/api/admin/sales`, { params: { period, keyword, startDate, endDate } }),
+
+  // src/api/index.ts 내 adminApi 객체 내부에 추가할 항목들
+  updateExtraFee: (id: number, extraFee: number) => apiClient.patch(`/api/admin/sales/${id}/extra-fee`, null, { params: { extraFee } }),
+  refundAllSales: (id: number) => apiClient.patch(`/api/admin/sales/${id}/refund`),
+  updateSettlementStatus: (id: number, status: string) => apiClient.patch(`/api/admin/sales/${id}/settlement`, null, { params: { status } }),
 
   // 전체 회원 조회
   getAllMembers: (page: number = 0, role?: string) => 

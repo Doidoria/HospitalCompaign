@@ -72,21 +72,21 @@ export default function LoginPage() {
 
     } catch (error: any) {
       console.error("🚨 [로그인 실패 상세]:", error);
+
       if (error.response?.status === 409) {
         YesAlert.fire({
           icon: 'error',
           title: '이용 정지 안내',
           text: '정지된 계정입니다. 관리자에게 문의하세요.',
         });
-      } 
-      else {
+      } else {
         YesAlert.fire({
           icon: 'error',
           title: '로그인 실패',
-          text: '이메일 또는 비밀번호를 다시 확인해주세요.',
+          text: error.message || '이메일 또는 비밀번호를 다시 확인해주세요.',
         });
       }
-    };
+    }
   }
 
   const pageVariants: Variants = {

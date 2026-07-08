@@ -8,15 +8,20 @@ import { AlertCircle, CheckCircle2, Info, HelpCircle, XCircle } from 'lucide-rea
 
 export default function GlobalAlert() {
   const { 
-    isOpen, title, html, icon, showCancelButton, confirmButtonText, 
-    cancelButtonText, input, inputValidator, close 
+    isOpen, title, text, html, icon, showCancelButton, confirmButtonText, 
+    cancelButtonText, input, inputValue: initialInputValue, inputValidator, close 
   } = useAlertStore();
   
   const [inputValue, setInputValue] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // 모달이 열릴 때 입력값 초기화
-  useEffect(() => { if (isOpen) { setInputValue(''); setErrorMsg(null); } }, [isOpen]);
+  useEffect(() => { 
+    if (isOpen) { 
+      setInputValue(initialInputValue !== undefined ? String(initialInputValue) : ''); 
+      setErrorMsg(null); 
+    } 
+  }, [isOpen, initialInputValue]);
 
   if (!isOpen) return null;
 
@@ -25,8 +30,8 @@ export default function GlobalAlert() {
       const error = inputValidator(inputValue);
       if (error) { setErrorMsg(error); return; }
     }
-    // Swal과 동일한 응답 구조 리턴
-    close({ isConfirmed: true, value: input ? inputValue : true });
+    const value = input === 'number' ? Number(inputValue) : (input ? inputValue : true);
+    close({ isConfirmed: true, value });
   };
 
   const renderIcon = () => {
@@ -59,9 +64,8 @@ export default function GlobalAlert() {
         >
           <div className="mb-4 bg-slate-50 p-3 rounded-full">{renderIcon()}</div>
           <h3 className="text-xl font-extrabold text-slate-800 mb-2">{title}</h3>
-
+          {text && ( <div className="text-sm text-slate-500 font-medium leading-relaxed mb-4 whitespace-pre-line">{text}</div>)}
           {html && <div className="text-sm text-slate-500 leading-relaxed mb-4" dangerouslySetInnerHTML={{ __html: html }} />}
-
           {input === 'textarea' && (
             <div className="w-full mt-2 mb-4">
               <textarea value={inputValue} onChange={(e) => { setInputValue(e.target.value); setErrorMsg(null); }}
@@ -69,6 +73,18 @@ export default function GlobalAlert() {
                 placeholder="내용을 입력하세요..."
               />
               {errorMsg && <p className="text-xs text-red-500 font-bold mt-1 text-left">{errorMsg}</p>}
+            </div>
+          )}
+          {input === 'number' && (
+            <div className="w-full mt-2 mb-4">
+              <input
+                type="number"
+                value={inputValue}
+                onChange={(e) => { setInputValue(e.target.value); setErrorMsg(null); }}
+                autoFocus
+                className={`w-[80%] mx-auto block px-4 py-3 bg-slate-50 border ${errorMsg ? 'border-red-400 focus:ring-red-500' : 'border-slate-200 focus:ring-blue-500'} rounded-xl text-slate-800 font-bold text-lg text-center focus:outline-none focus:ring-2 transition-all`}
+              />
+              {errorMsg && <p className="text-xs text-red-500 font-bold mt-1 text-center">{errorMsg}</p>}
             </div>
           )}
           <div className="w-full flex gap-2 mt-4">
