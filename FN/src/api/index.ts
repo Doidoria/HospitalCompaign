@@ -253,11 +253,7 @@ export const noticeApi = {
 // ==========================================
 export const inquiryApi = {
   submitInquiry: (formData: FormData) => 
-    apiClient.post('/api/inquiries', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }),
+    apiClient.post('/api/inquiries', formData),
 
   // 내 문의 내역 가져오기
   getMyInquiries: () => apiClient.get('/api/inquiries/me'),
