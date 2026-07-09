@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import java.util.TimeZone;
 
 @EnableRetry
-@EnableAsync
+@EnableAsync // 비동기 처리 활성화
 @EnableJpaAuditing
 @SpringBootApplication
 public class ApiApplication {

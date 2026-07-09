@@ -34,6 +34,7 @@ public class ReservationService {
     private final ReviewRepository reviewRepository;
     private final ManagerRepository managerRepository;
     private final KakaoAlimtalkService kakaoAlimtalkService;
+    private final SlackNotificationService slackNotificationService;
 
     @Transactional
     public Long createReservation(String email, ReservationRequest request) {
@@ -96,6 +97,10 @@ public class ReservationService {
                 request.getReservationTime().format(formatter),
                 request.getHospitalName()
         );
+
+        // 어드민에게 슬랙 알림 발송
+        slackNotificationService.sendNewReservationAlert(newReservation);
+
         return newReservation.getId();
     }
 

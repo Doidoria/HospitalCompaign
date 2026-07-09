@@ -1,4 +1,7 @@
 # application.yml
+server:
+  port: 8081
+
 spring:
   profiles:
     active: local # 기본값을 local로 설정 (운영 서버에서는 명령어로 prod를 주입)
@@ -31,8 +34,8 @@ coolsms:
     secret: ${COOLSMS_API_SECRET}
   sender: ${COOLSMS_SENDER}
   kakao:
-    pf-id: KA01PF260610022751924he8OYMm5jY7 # 카카오 채널 템플릿 ID
-    #    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
+    #    pf-id: ${COOLSMS_KAKAO_PF_ID:KA01PF260610022751924he8OYMm5jY7}
+    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
     template:
       report-completed: KA01TP260707060646274xEfqkCKp6PP     # 동행 리포트 전송
       report-modified: KA01TP260707071909834rvX1V9pRGyP      # 동행 리포트 수정
@@ -48,88 +51,6 @@ coolsms:
       proxy-reservation-complete: KA01TP260707041138535RhuwJnb0GvU # 대리 신청 완료
       manager-new-schedule: KA01TP260707041010097dZYmhUDwJmU  # 매니저 배정 확정(매니저용)
 
-server:
-  port: 8081
-
-#spring:
-#  servlet:
-#    multipart:
-#      max-file-size: 50MB
-#      max-request-size: 50MB
-#
-#  datasource:
-#    # MySQL 드라이버 설정
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-#    # 데이터베이스 연결 주소 (방금 만든 yescare_db 연결)
-#    url: jdbc:mysql://localhost:3306/yescare_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-#    # DB 계정 정보
-#    username: root
-#    password: ${DB_PASSWORD}
-#
-#  jpa:
-#    hibernate:
-#      # 서버 실행 시 엔티티를 보고 테이블을 자동으로 업데이트 (개발 환경 표준)
-#      ddl-auto: update
-#    properties:
-#      hibernate:
-#        # 실행되는 SQL 쿼리를 콘솔창에 예쁘게 보여줌
-#        format_sql: true
-#        show_sql: true
-#    # DB 방언 설정 (MySQL 8.0 이상 기준)
-#    database-platform: org.hibernate.dialect.MySQL8Dialect
-#
-#  mail:
-#    host: smtp.gmail.com
-#    port: 587
-#    username: ${MAIL_USERNAME}
-#    password: ${MAIL_PASSWORD}
-#    properties:
-#      mail:
-#        smtp:
-#          auth: true
-#          timeout: 5000
-#          starttls:
-#            enable: true
-#
-#  security:
-#    oauth2:
-#      client:
-#        registration:
-#          kakao:
-#            client-id: ${KAKAO_CLIENT_ID}
-#            client-secret: ${KAKAO_CLIENT_SECRET}
-#            authorization-grant-type: authorization_code
-#            client-authentication-method: client_secret_post # 카카오 권장 방식
-#            redirect-uri: http://localhost:3000/api/auth/callback/kakao
-#            #            redirect-uri: https://hospital-compaign.vercel.app/api/auth/callback/kakao
-#            scope: account_email,name,phone_number,shipping_address,gender,birthday,birthyear,talk_message,plusfriends
-#
-#jwt:
-#  # 💡 비밀 도장 (실무에서는 절대 외부에 노출하면 안 됩니다!)
-#  # 최소 256비트(32글자) 이상이어야 안전합니다.
-#  secret: ${JWT_SECRET_KEY:yescare-local-dev-secret-key-must-be-long-enough-for-hs256}
-#
-#  # 토큰 유효 시간 (단위: 밀리초) / 1000 * 60 * 60 * 24 = 24시간
-#  expiration_time: 86400000
-#
-#coolsms:
-#  api:
-#    key: ${COOLSMS_API_KEY}
-#    secret: ${COOLSMS_API_SECRET}
-#  sender: ${COOLSMS_SENDER}
-#  kakao:
-#    #    pf-id: KA01PF260610022751924he8OYMm5jY7 # 카카오 채널 템플릿 ID
-#    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
-#    template:
-#      report-completed: TEST_TPL_REPORT_COMPLETE              # 동행 리포트 전송
-#      report-modified: KA01TP260622053627054rdN5lrJXqBS       # 동행 리포트 수정
-#      extra-charge-modified: KA01TP260612061114064hmI6Aoze8vj # 추가 요금 수정
-#      inquiry-answered: KA01TP260610051333569jabJivnkzG6      # 1:1 문의 답변 완료
-#      reservation-changed-or-canceled: KA01TP26061003351045985qNDAAsFtJ  # 예약 변경/취소 안내
-#      extra-charge: KA01TP260610033213746m65rnzmIAEl          # 추가 요금 알림
-#      accompany-completed: KA01TP2606220630547222QhgdF0fTva   # 동행 종료 알림
-#      accompany-started: KA01TP260622035523521kAng1VBr7UY     # 동행 시작 알림
-#      manager-assigned: KA01TP260610031814693YOYoTBSpJeo      # 매니저 배정 완료
-#      reservation-complete: KA01TP260610031303911kWgOH3HfBwd  # 예약 접수 완료
-#      join-complete: KA01TP260610023305261Vl3MpZG0Sez         # 회원가입 완료
-#      proxy-reservation-complete: KA01TP260623091218624XVKoBOatK2Y # 대리 신청 완료
+slack:
+  webhook:
+    reservation-url: ${SLACK_WEBHOOK_RESERVATION_URL}
