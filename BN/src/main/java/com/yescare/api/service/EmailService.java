@@ -66,17 +66,30 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setTo(toEmail);
             helper.setSubject("[예스케어] 회원가입 이메일 인증번호");
-            helper.setText("예스케어 회원가입 이메일 인증번호는 [" + code + "] 입니다. 3분 내에 입력해 주세요.");
+
+            // 깔끔하고 신뢰감을 주는 HTML 이메일 템플릿
+            String htmlContent = "<div style=\"font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; text-align: center; border: 1px solid #eaeaea; border-radius: 10px;\">"
+                    + "<h2 style=\"color: #2563eb; margin-bottom: 20px;\">예스케어 이메일 인증</h2>"
+                    + "<p style=\"color: #4b5563; font-size: 16px; margin-bottom: 30px; line-height: 1.5;\">안녕하세요!<br>안전하고 편리한 병원 동행 서비스, <strong>예스케어</strong>입니다.<br>아래의 인증번호를 진행 중인 화면에 입력해 주세요.</p>"
+                    + "<div style=\"background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 30px;\">"
+                    + "<span style=\"font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1f2937;\">" + code + "</span>"
+                    + "</div>"
+                    + "<p style=\"color: #ef4444; font-size: 14px; margin-bottom: 0;\">※ 본 인증번호는 <strong>3분</strong> 동안만 유효합니다.</p>"
+                    + "<p style=\"color: #9ca3af; font-size: 12px; margin-top: 30px;\">본 요청을 하신 적이 없다면 이 메일을 무시해 주세요.</p>"
+                    + "</div>";
+
+            helper.setText(htmlContent, true); // true: HTML 형식으로 전송
 
             mailSender.send(message);
-            emailAuthMap.put(toEmail, code); // 발송 후 맵에 저장
+            emailAuthMap.put(toEmail, code);
 
-            // 3분(180초) 뒤에 Map에서 해당 이메일의 인증번호를 자동 삭제 (메모리 누수 및 만료 처리)
+            // 3분(180초) 뒤에 Map에서 해당 이메일의 인증번호를 자동 삭제
             scheduler.schedule(() -> {
                 emailAuthMap.remove(toEmail);
             }, 3, TimeUnit.MINUTES);
 
         } catch (Exception e) {
+            log.error("인증 이메일 발송 실패: {}", toEmail, e);
             throw new RuntimeException("이메일 인증번호 전송에 실패했습니다.", e);
         }
     }
