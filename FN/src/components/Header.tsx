@@ -50,8 +50,13 @@ export default function Header() {
       });
   }, [pathname, isLoggedIn, userName]);
 
-  const handleLogout = () => {
-    // 1. 공통: 프론트엔드 로컬스토리지 및 상태 초기화
+  const handleLogout = async () => {
+  try {
+    await authApi.logout(); 
+  } catch (error) {
+    console.error('서버 로그아웃 처리 실패:', error);
+  } finally {
+    // 공통: 프론트엔드 로컬스토리지 및 상태 초기화
     localStorage.removeItem('accessToken');
     document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Strict';
     
@@ -60,16 +65,17 @@ export default function Header() {
     setUserName('');
     setIsMobileMenuOpen(false);
 
-    // 2. 분기 처리: 로그인 유형에 따른 로그아웃 액션
+    // 분기 처리: 카카오 로그인 유저 vs 일반 유저
     if (userProvider === 'KAKAO') {
-      // 카카오 유저 -> 카카오 세션 파기를 위해 리다이렉트
       const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
       const LOGOUT_REDIRECT_URI = window.location.origin + '/'; 
+      // 카카오 세션 완전 파기를 위한 리다이렉트
       window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
     } else {
       router.push('/login'); 
     }
-  };
+  }
+};
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';

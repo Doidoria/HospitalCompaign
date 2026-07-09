@@ -55,6 +55,21 @@ public class MemberController {
         return ResponseEntity.ok(new LoginResponse(token));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@AuthenticationPrincipal String email) {
+        if (email != null) {
+            log.info("사용자 로그아웃 요청: {}", email);
+
+            // 추후 Redis 등을 도입하여 토큰 블랙리스트(Blacklist)를 구현하거나,
+            // DB에 저장된 Refresh Token을 삭제하는 로직을 여기에 추가하시면 됩니다.
+            // 예: memberService.logout(email);
+        }
+
+        // 프론트엔드에서 쿠키를 사용할 경우를 대비해 빈 쿠키를 내려보내 초기화할 수도 있습니다.
+        // 현재는 로컬스토리지를 메인으로 쓰시므로 성공 응답만 내려줍니다.
+        return ResponseEntity.ok(Map.of("message", "성공적으로 로그아웃 되었습니다."));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<MemberResponse> getMe(@AuthenticationPrincipal String email) {
         Member member = memberService.getMemberByEmail(email);
@@ -78,7 +93,7 @@ public class MemberController {
         memberService.changePassword(email, request.getNewPassword());
         return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
     }
-    
+
     @DeleteMapping("/me")
     public ResponseEntity<String> withdraw(@AuthenticationPrincipal String email) {
         memberService.withdraw(email);
