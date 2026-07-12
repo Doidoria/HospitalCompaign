@@ -132,16 +132,6 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
       title: '지원서 상세 내용',
       html: `
         <div class="text-left mt-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
-          <div class="mb-4 border-b border-slate-100 pb-3 flex justify-between items-end">
-            <div>
-              <span class="inline-block text-xs font-bold text-slate-400 mb-1">지원자 정보</span>
-              <p class="text-lg font-extrabold text-slate-800">${mgr.name} <span class="text-sm font-medium text-slate-500 ml-1">(${mgr.phone})</span></p>
-            </div>
-            <span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100">
-              ${getLicenseName(mgr.licenseName)}
-            </span>
-          </div>
-
           <div class="mb-4">
             <span class="inline-block text-xs font-bold text-slate-400 mb-1">관련 경력</span>
             <div class="bg-slate-50 border border-slate-100 p-3.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-keep">${mgr.experience || '작성된 내용이 없습니다.'}</div>
@@ -151,27 +141,12 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
             <span class="inline-block text-xs font-bold text-slate-400 mb-1">지원 동기</span>
             <div class="bg-blue-50/50 border border-blue-100 p-3.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-keep leading-relaxed">${mgr.motivation || '작성된 내용이 없습니다.'}</div>
           </div>
-          
-          ${mgr.certificateUrl ? `
-          <div class="mt-6">
-            <a href="${getFileUrl(mgr.certificateUrl)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full bg-slate-800 text-white border border-slate-700 py-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition-colors shadow-sm">
-              📄 자격증명 사본 보기 (PDF)
-            </a>
-          </div>
-          ` : ''}
         </div>
       `,
-      showCancelButton: true,
-      showConfirmButton: mgrAppStatus === 'WAITING',
-      confirmButtonText: '✔ 이 지원자 승인하기',
-      cancelButtonText: '닫기',
-      confirmButtonColor: '#059669',
+      showCancelButton: false, 
+      confirmButtonText: '닫기',
+      confirmButtonColor: '#64748b', // 무난한 회색(slate) 톤으로 변경
       width: '32em',
-    }).then((result) => {
-      // 팝업창 안에서 바로 승인 버튼을 눌렀을 경우 처리
-      if (result.isConfirmed && mgrAppStatus === 'WAITING') {
-        handleApprove(mgr.memberId, mgr.name);
-      }
     });
   };
 
