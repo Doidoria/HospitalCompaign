@@ -9,12 +9,12 @@ export const authApi = {
     // 백엔드 응답에서 토큰을 추출해 두 저장소에 동기화
     // (response.data의 실제 키값 구조에 맞게 매핑)
     const token = response.data.accessToken || response.data; 
-    
+
     if (token && typeof window !== 'undefined') {
       localStorage.setItem('accessToken', token);
-      // 미들웨어용 단순 권한 확인 쿠키 주입 (웹브라우저용 안전장치)
+      
       const isProd = process.env.NODE_ENV === 'production';
-      document.cookie = `accessToken=${token}; path=/; max-age=86400; SameSite=Lax${isProd ? '; Secure' : ''}`;
+      document.cookie = `accessToken=${token}; path=/; max-age=604800; SameSite=Lax${isProd ? '; Secure' : ''}`;
     }
     
     return response.data;

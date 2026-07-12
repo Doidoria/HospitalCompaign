@@ -13,19 +13,34 @@ export default function ManagerApplyPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false); // 중복 제출 방지 상태
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      authApi.getMe()
-        .then(res => {
-          if (res.data.role === 'MANAGER' || res.data.role === 'ADMIN') {
-            // [UX 개선] 불필요한 Alert 제거 후 즉시 리다이렉트
-            router.replace('/manager/dashboard'); 
-          }
-        })
-        .catch(() => {});
-    }
-  }, [router]);
+  // app/manager/page.tsx 내용 중 useEffect 부분 수정
+useEffect(() => {
+  const token = localStorage.getItem('accessToken');
+  
+  // 1. 토큰 자체가 없으면 신청 불가 -> 로그인 페이지로
+  if (!token || token === 'undefined' || token === 'null') {
+    Toast.fire({ icon: 'warning', title: '로그인 후 이용해 주세요.' });
+    router.replace('/login');
+    return;
+  }
+
+  // 2. 토큰이 있다면 유저 정보 및 권한 체크
+  authApi.getMe()
+    .then(res => {
+      // 백엔드 공통 포맷 언랩핑 구조 고려 (res.data 또는 res 자체)
+      const userData = res.data || res; 
+      if (userData.role === 'MANAGER' || userData.role === 'ADMIN') {
+        // 이미 매니저나 어드민 권한이 있다면 신청 폼을 볼 필요가 없으므로 대시보드로 이동
+        router.replace('/manager/dashboard'); 
+      }
+    })
+    .catch((err) => {
+      console.error("유저 정보 로드 실패:", err);
+      // 토큰이 만료되었거나 오류가 있으면 client.ts 인터셉터가 401 처리를 하겠지만, 
+      // 만약의 안전장치로 로그인 유도
+      router.replace('/login');
+    });
+}, [router]);
   
   const [formData, setFormData] = useState({
     licenseName: 'none',

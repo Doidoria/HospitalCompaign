@@ -3,21 +3,32 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // 쿠키에서 토큰 확인
   const token = request.cookies.get('accessToken')?.value;
   const { pathname } = request.nextUrl;
 
-  // 1. 로그인 안 한 사용자가 보호된 페이지(mypage, apply, manager, admin) 접근 시
-  if (!token && (pathname.startsWith('/mypage') || pathname.startsWith('/apply') || pathname.startsWith('/manager') || pathname.startsWith('/admin'))) {
+  // 로그인하지 않은 유저가 접근할 수 없는 완전 보호 경로
+  // /manager/dashboard, /manager/profile 등 하위 페이지 보호를 위해 startsWith 검증
+  const isProtectedPath = 
+    pathname.startsWith('/mypage') || 
+    pathname.startsWith('/manager/dashboard') || 
+    pathname.startsWith('/manager/profile') || 
+    pathname.startsWith('/admin');
+
+  // 매니저 신청 메인 페이지(/manager) 자체는 로그인 여부를 페이지 내부(Client Side)에서 
+  // 로컬스토리지를 기반으로 유연하게 체크하도록 미들웨어 보호 대상에서 제외하거나 분리 관리합니다.
+  if (!token && isProtectedPath) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // (선택) JWT를 디코딩해서 Role 기반으로 튕겨내는 로직도 여기에 추가할 수 있습니다.
-  
   return NextResponse.next();
 }
 
-// 미들웨어가 작동할 경로 지정
 export const config = {
-  matcher: ['/mypage/:path*', '/apply/:path*', '/manager/:path*', '/admin/:path*'],
+  // 미들웨어가 돌 구체적 매칭 경로 리스트
+  matcher: [
+    '/mypage/:path*', 
+    '/manager/dashboard/:path*', 
+    '/manager/profile/:path*', 
+    '/admin/:path*'
+  ],
 };
