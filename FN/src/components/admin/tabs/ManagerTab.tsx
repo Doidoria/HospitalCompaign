@@ -132,19 +132,19 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
       icon: 'info',
       title: '지원서 상세 내용',
       html: `
-        <div class="text-left mt-2 max-h-[55vh] overflow-y-auto pr-1 text-slate-700 space-y-4 break-words">
+        <div class="w-full text-left mt-4 max-h-[55vh] overflow-y-auto pr-1 text-slate-700 space-y-4 break-words">
           
           <div>
-            <span class="block text-[11px] font-bold text-slate-400 mb-1 pl-0.5">관련 경력</span>
-            <div class="bg-slate-50 border border-slate-100 p-3.5 rounded-xl text-sm whitespace-pre-wrap">
-              ${mgr.experience || '작성된 내용이 없습니다.'}
+            <span class="block text-[11px] font-bold text-slate-400 mb-1.5">관련 경력</span>
+            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed">
+              ${(mgr.experience || '작성된 내용이 없습니다.').trim()}
             </div>
           </div>
 
           <div>
-            <span class="block text-[11px] font-bold text-slate-400 mb-1 pl-0.5">지원 동기</span>
-            <div class="bg-blue-50/40 border border-blue-100 p-3.5 rounded-xl text-sm whitespace-pre-wrap leading-relaxed">
-              ${mgr.motivation || '작성된 내용이 없습니다.'}
+            <span class="block text-[11px] font-bold text-slate-400 mb-1.5">지원 동기</span>
+            <div class="bg-blue-50/40 border border-blue-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed">
+              ${(mgr.motivation || '작성된 내용이 없습니다.').trim()}
             </div>
           </div>
 
