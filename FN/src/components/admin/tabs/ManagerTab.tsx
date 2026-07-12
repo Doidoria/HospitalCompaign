@@ -131,23 +131,25 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
     YesAlert.fire({
       title: '지원서 상세 내용',
       html: `
-        <div class="text-left mt-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
-          <div class="mb-3">
-            <span class="inline-block text-[11px] font-bold text-slate-400 mb-1">관련 경력</span>
-            <div class="bg-slate-50 border border-slate-100 px-3 py-2.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-keep">${mgr.experience || '작성된 내용이 없습니다.'}</div>
+        <div class="text-left mt-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+          <div class="mb-4">
+            <span class="inline-block text-[11px] font-bold text-slate-400 mb-1 px-1">관련 경력</span>
+            <div class="bg-slate-50 border-y border-slate-100 px-6 py-4 text-sm text-slate-700 whitespace-pre-wrap break-keep -mx-6">
+              ${mgr.experience || '작성된 내용이 없습니다.'}
+            </div>
           </div>
-
           <div class="mb-1">
-            <span class="inline-block text-[11px] font-bold text-slate-400 mb-1">지원 동기</span>
-            <div class="bg-blue-50/50 border border-blue-100 px-3 py-2.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-keep leading-relaxed">${mgr.motivation || '작성된 내용이 없습니다.'}</div>
+            <span class="inline-block text-[11px] font-bold text-slate-400 mb-1 px-1">지원 동기</span>
+            <div class="bg-blue-50/50 border-y border-blue-100 px-6 py-4 text-sm text-slate-700 whitespace-pre-wrap break-keep leading-relaxed -mx-6">
+              ${mgr.motivation || '작성된 내용이 없습니다.'}
+            </div>
           </div>
         </div>
       `,
       showCancelButton: false, 
       confirmButtonText: '닫기',
       confirmButtonColor: '#64748b',
-      width: '26em',
-      padding: '1.5em',
+      width: '28em',
     });
   };
 
