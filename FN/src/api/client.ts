@@ -80,7 +80,9 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401 && originalRequestUrl && !originalRequestUrl.includes('/login')) {
       if (typeof window !== 'undefined') {
+        // 로컬스토리지 삭제 + 브라우저 쿠키 강제 만료(삭제) 동시 진행
         localStorage.removeItem('accessToken'); 
+        document.cookie = 'accessToken=; path=/; max-age=0;'; 
         
         if (!isAlertOpen) {
           isAlertOpen = true;

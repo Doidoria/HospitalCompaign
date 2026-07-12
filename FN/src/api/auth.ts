@@ -1,3 +1,4 @@
+// src/api/auth.ts
 import { apiClient } from './client';
 
 export const authApi = {
@@ -12,7 +13,8 @@ export const authApi = {
     if (token && typeof window !== 'undefined') {
       localStorage.setItem('accessToken', token);
       // 미들웨어용 단순 권한 확인 쿠키 주입 (웹브라우저용 안전장치)
-      document.cookie = `accessToken=${token}; path=/; max-age=86400; SameSite=Lax`;
+      const isProd = process.env.NODE_ENV === 'production';
+      document.cookie = `accessToken=${token}; path=/; max-age=86400; SameSite=Lax${isProd ? '; Secure' : ''}`;
     }
     
     return response.data;

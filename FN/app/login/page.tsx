@@ -45,7 +45,9 @@ export default function LoginPage() {
       }
 
       localStorage.setItem('accessToken', token);
-      document.cookie = `accessToken=${token}; path=/; max-age=86400; Secure; SameSite=Strict`;
+      // 개발 환경(http)과 운영 환경(https)을 모두 지원하는 하이브리드 쿠키 설정
+      const isProd = process.env.NODE_ENV === 'production';
+      document.cookie = `accessToken=${token}; path=/; max-age=86400; SameSite=Lax${isProd ? '; Secure' : ''}`;
 
       const meResponse = await authApi.getMe(); 
       const meData = meResponse.data as any;

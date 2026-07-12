@@ -103,7 +103,7 @@ export default function ManagerApplyPage() {
       console.error(error);
       
       if (error.response?.status === 409) {
-        Toast.fire({ icon: 'info', title: '이미 지원이 완료되었습니다' });
+        Toast.fire({ icon: 'info', title: error.message || '이미 지원이 완료되었습니다' });
         router.push('/mypage');
       } else {
         // 그 외의 진짜 서버 에러 (500 등)
