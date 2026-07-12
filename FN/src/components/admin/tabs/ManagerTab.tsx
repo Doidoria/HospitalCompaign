@@ -2,15 +2,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { UserPlus, Loader2, FileText, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserPlus, Loader2, FileText, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import { adminApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
 
-// ==========================================
-// 1. 타입 정의
-// ==========================================
 interface ManagerApplication {
   id: number;
   memberId: number;
@@ -22,6 +19,8 @@ interface ManagerApplication {
   availableTime: string;
   certificateUrl: string | null;
   rejectReason?: string;
+  experience?: string;
+  motivation?: string;
 }
 
 interface ManagerTabProps {
@@ -107,7 +106,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
       adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();
-      if (refreshBadges) refreshBadges(); // 승인 완료 후 사이드바 뱃지 갱신 호출
+      if (refreshBadges) refreshBadges();
     }
   };
 
@@ -123,11 +122,59 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
       adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();
-      if (refreshBadges) refreshBadges(); // 반려 완료 후 사이드바 뱃지 갱신 호출
+      if (refreshBadges) refreshBadges();
     }
   };
 
-  // 반려 사유 확인 알람 함수
+  // 지원서 상세 보기 팝업 함수
+  const handleViewDetails = (mgr: ManagerApplication) => {
+    YesAlert.fire({
+      title: '지원서 상세 내용',
+      html: `
+        <div class="text-left mt-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+          <div class="mb-4 border-b border-slate-100 pb-3 flex justify-between items-end">
+            <div>
+              <span class="inline-block text-xs font-bold text-slate-400 mb-1">지원자 정보</span>
+              <p class="text-lg font-extrabold text-slate-800">${mgr.name} <span class="text-sm font-medium text-slate-500 ml-1">(${mgr.phone})</span></p>
+            </div>
+            <span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100">
+              ${getLicenseName(mgr.licenseName)}
+            </span>
+          </div>
+
+          <div class="mb-4">
+            <span class="inline-block text-xs font-bold text-slate-400 mb-1">관련 경력</span>
+            <div class="bg-slate-50 border border-slate-100 p-3.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-keep">${mgr.experience || '작성된 내용이 없습니다.'}</div>
+          </div>
+
+          <div class="mb-4">
+            <span class="inline-block text-xs font-bold text-slate-400 mb-1">지원 동기</span>
+            <div class="bg-blue-50/50 border border-blue-100 p-3.5 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-keep leading-relaxed">${mgr.motivation || '작성된 내용이 없습니다.'}</div>
+          </div>
+          
+          ${mgr.certificateUrl ? `
+          <div class="mt-6">
+            <a href="${getFileUrl(mgr.certificateUrl)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full bg-slate-800 text-white border border-slate-700 py-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition-colors shadow-sm">
+              📄 자격증명 사본 보기 (PDF)
+            </a>
+          </div>
+          ` : ''}
+        </div>
+      `,
+      showCancelButton: true,
+      showConfirmButton: mgrAppStatus === 'WAITING',
+      confirmButtonText: '✔ 이 지원자 승인하기',
+      cancelButtonText: '닫기',
+      confirmButtonColor: '#059669',
+      width: '32em',
+    }).then((result) => {
+      // 팝업창 안에서 바로 승인 버튼을 눌렀을 경우 처리
+      if (result.isConfirmed && mgrAppStatus === 'WAITING') {
+        handleApprove(mgr.memberId, mgr.name);
+      }
+    });
+  };
+
   const handleViewRejectReason = (reason?: string) => {
     YesAlert.fire({
       icon: 'info',
@@ -140,11 +187,8 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
 
   const handleTabChange = (status: string) => {
     if (mgrAppStatus === status) return;
-    
-    // [최적화] 이전 탭의 잔상(데이터)이 남아서 깜빡이는 현상 제거
     setLoading(true);
     setPendingManagers([]); 
-    
     setMgrAppStatus(status);
     setCurrentPage(1);
   };
@@ -165,40 +209,17 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
 
     return (
       <div className="flex items-center justify-center gap-2 py-6 border-t border-slate-100 bg-white">
-        <button
-          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        
+        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"><ChevronLeft className="w-4 h-4" /></button>
         <div className="flex gap-1">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                currentPage === page ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {page}
-            </button>
+            <button key={page} onClick={() => setCurrentPage(page)} className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>{page}</button>
           ))}
         </div>
-
-        <button
-          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"><ChevronRight className="w-4 h-4" /></button>
       </div>
     );
   };
 
-  // 테이블 컬럼 수 (계정 승인 열이 포함되는지 여부에 따라 계산)
   const tableColSpan = mgrAppStatus === 'WAITING' ? 6 : 5;
 
   return (
@@ -223,8 +244,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
           <div className="flex gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-fit">
             {['WAITING', 'APPROVED', 'REJECTED'].map(s => (
               <button 
-                key={s} 
-                onClick={() => handleTabChange(s)} 
+                key={s} onClick={() => handleTabChange(s)} 
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mgrAppStatus === s ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
               >
                 {s === 'WAITING' ? '신규 대기' : s === 'APPROVED' ? '승인 완료' : '반려 내역'}
@@ -233,6 +253,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
           </div>
         </div>
 
+        {/* 데스크탑 뷰 */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="bg-slate-50/80 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
@@ -241,7 +262,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                 <th className="p-4 font-bold text-center">이름/연락처</th>
                 <th className="p-4 font-bold text-center">보유 자격증</th>
                 <th className="p-4 font-bold text-center">근무 가능 시간</th>
-                <th className="p-4 font-bold text-center">첨부파일</th>
+                <th className="p-4 font-bold text-center">지원서 / 첨부파일</th>
                 {mgrAppStatus === 'WAITING' && <th className="p-4 font-bold text-center pr-6">계정 승인</th>}
                 {mgrAppStatus === 'REJECTED' && <th className="p-4 font-bold text-center pr-6">반려 사유</th>}
               </tr>
@@ -274,13 +295,22 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                       <span className="text-[11px] text-slate-500 font-medium">{mgr.availableTime}</span>
                     </div>
                   </td>
+                  
+                  {/* 지원서 상세 보기 버튼 */}
                   <td className="p-4 text-center">
-                    {mgr.certificateUrl ? (
-                      <a href={getFileUrl(mgr.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm"><FileText className="w-3.5 h-3.5" /> 보기</a>
-                    ) : <span className="text-slate-300 text-xs font-medium">없음</span>}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button onClick={() => handleViewDetails(mgr)} className="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 shadow-sm transition-colors">
+                        <Search className="w-3.5 h-3.5" /> 상세 보기
+                      </button>
+                      
+                      {mgr.certificateUrl && (
+                        <a href={getFileUrl(mgr.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm transition-colors">
+                          <FileText className="w-3.5 h-3.5 text-slate-400" /> 자격증명
+                        </a>
+                      )}
+                    </div>
                   </td>
                   
-                  {/* [최적화] 대기 상태일 때만 '계정 승인' td 노출 */}
                   {mgrAppStatus === 'WAITING' && (
                     <td className="p-4 pr-6 text-center">
                       <div className="flex justify-center gap-2">
@@ -291,8 +321,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                   )}
                   {mgrAppStatus === 'REJECTED' && (
                     <td className="p-4 pr-6 text-center">
-                      <button onClick={() => handleViewRejectReason(mgr.rejectReason)} 
-                        className="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
+                      <button onClick={() => handleViewRejectReason(mgr.rejectReason)} className="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
                         사유 보기
                       </button>
                     </td>
@@ -305,7 +334,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
           </table>
         </div>
 
-        {/* 2. 모바일 뷰: 카드형 리스트 */}
+        {/* 모바일 뷰: 카드형 리스트 */}
         <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 flex-1 overflow-y-auto bg-slate-50/50 content-start">
           {loading ? (
             <div className="py-16 text-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto" /></div>
@@ -337,13 +366,19 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              {/* 🌟 모바일: 지원서 상세 보기 버튼 추가 */}
+              <div className="flex items-center gap-2 pt-1 border-b border-slate-100 pb-3">
+                <button onClick={() => handleViewDetails(mgr)} className="flex-1 flex justify-center items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 shadow-sm transition-colors">
+                  <Search className="w-3.5 h-3.5" /> 지원서 상세 보기
+                </button>
                 {mgr.certificateUrl && (
-                  <a href={getFileUrl(mgr.certificateUrl)} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
-                    증명서 보기
+                  <a href={getFileUrl(mgr.certificateUrl)} target="_blank" rel="noopener noreferrer" className="flex justify-center bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
+                    증명서
                   </a>
                 )}
-                {/* 모바일에서도 버튼 영역 숨김 */}
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
                 {mgrAppStatus === 'WAITING' && (
                   <>
                     <button onClick={() => handleApprove(mgr.memberId, mgr.name)} className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm">승인</button>
@@ -351,8 +386,7 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
                   </>
                 )}
                 {mgrAppStatus === 'REJECTED' && (
-                  <button onClick={() => handleViewRejectReason(mgr.rejectReason)} 
-                    className="flex-1 bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
+                  <button onClick={() => handleViewRejectReason(mgr.rejectReason)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 shadow-sm">
                     반려 사유 보기
                   </button>
                 )}

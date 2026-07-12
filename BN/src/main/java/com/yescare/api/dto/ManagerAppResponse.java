@@ -15,6 +15,8 @@ public class ManagerAppResponse {
     private String availableDays;
     private String availableTime;
     private String rejectReason; // 반려 사유 필드
+    private String experience;
+    private String motivation;
 
     public ManagerAppResponse(ManagerApplication entity) {
         this.id = entity.getId();
@@ -27,5 +29,7 @@ public class ManagerAppResponse {
         this.availableDays = entity.getAvailableDays();
         this.availableTime = entity.getAvailableTime();
         this.rejectReason = entity.getRejectionReason();
+        this.experience = entity.getExperience();
+        this.motivation = entity.getMotivation();
     }
 }
