@@ -129,31 +129,29 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
   // 지원서 상세 보기 팝업 함수
   const handleViewDetails = (mgr: ManagerApplication) => {
     YesAlert.fire({
+      icon: 'info',
       title: '지원서 상세 내용',
       html: `
-        <div class="text-left mt-2 max-h-[70vh] overflow-y-auto px-1">
-          <div class="mb-4">
-            <span class="inline-block text-[11px] font-bold text-slate-400 mb-1.5 px-1">관련 경력</span>
-            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-words">
+        <div class="text-left mt-2 max-h-[55vh] overflow-y-auto pr-1 text-slate-700 space-y-4 break-words">
+          
+          <div>
+            <span class="block text-[11px] font-bold text-slate-400 mb-1 pl-0.5">관련 경력</span>
+            <div class="bg-slate-50 border border-slate-100 p-3.5 rounded-xl text-sm whitespace-pre-wrap">
               ${mgr.experience || '작성된 내용이 없습니다.'}
             </div>
           </div>
-          <div class="mb-1">
-            <span class="inline-block text-[11px] font-bold text-slate-400 mb-1.5 px-1">지원 동기</span>
-            <div class="bg-blue-50/50 border border-blue-100 p-4 rounded-xl text-sm text-slate-700 whitespace-pre-wrap break-words leading-relaxed">
+
+          <div>
+            <span class="block text-[11px] font-bold text-slate-400 mb-1 pl-0.5">지원 동기</span>
+            <div class="bg-blue-50/40 border border-blue-100 p-3.5 rounded-xl text-sm whitespace-pre-wrap leading-relaxed">
               ${mgr.motivation || '작성된 내용이 없습니다.'}
             </div>
           </div>
+
         </div>
       `,
-      showCancelButton: false, 
-      confirmButtonText: '닫기',
-      confirmButtonColor: '#64748b',
-      width: '90%',
-      customClass: {
-        popup: 'max-w-[450px]',
-      },
-      padding: '1.25em',
+      showCancelButton: false,
+      confirmButtonText: '닫기'
     });
   };
 
