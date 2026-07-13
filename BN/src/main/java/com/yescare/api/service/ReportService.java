@@ -140,7 +140,7 @@ public class ReportService {
         );
 
         kakaoAlimtalkService.sendReportModified(
-                reservation.getMember().getEmail(), reservation.getMember().getPhoneNumber(), reservation.getMember().getName()
+                reservation.getMember().getPhoneNumber(), reservation.getMember().getName(), reservation.getMember().getEmail()
         );
 
         return report.getId();
