@@ -23,8 +23,9 @@ export default function MyPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterPeriod, setFilterPeriod] = useState('ALL'); // '1M', '3M', '6M', 'ALL'
-
-  const [activeFilterStatus, setActiveFilterStatus] = useState('ALL'); // 'ALL', 'CONFIRMED', 'WAITING'
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
+  const [activeFilterStatus, setActiveFilterStatus] = useState('ALL');
+  const [activeFilterPeriod, setActiveFilterPeriod] = useState('ALL'); // '1M', '3M', '6M', 'ALL'
 
 
   // 상태별 정렬 순서 정의
@@ -69,14 +70,35 @@ export default function MyPage() {
       return orderA - orderB;
     });
 
-    // 다가오는 예약 필터링 및 정렬 (예약 확정 우선)
+  // 다가오는 예약 필터링 및 정렬 (검색어, 기간, 상태 적용 + 예약 확정 최상단 정렬)
   const filteredAndSortedActiveRecords = activeReservations
     .filter((record) => {
-      if (activeFilterStatus === 'ALL') return true;
-      // 한글/영문 상태값 모두 커버
-      if (activeFilterStatus === 'CONFIRMED') return record.status === 'CONFIRMED' || record.status === '예약 확정';
-      if (activeFilterStatus === 'WAITING') return record.status === 'WAITING' || record.status === '매칭 대기';
-      return true;
+      // 1. 상태 필터
+      let matchStatus = true;
+      if (activeFilterStatus === 'CONFIRMED') matchStatus = record.status === 'CONFIRMED' || record.status === '예약 확정';
+      else if (activeFilterStatus === 'WAITING') matchStatus = record.status === 'WAITING' || record.status === '매칭 대기';
+      
+      // 2. 검색어 필터 (병원명)
+      const term = activeSearchTerm.toLowerCase();
+      const matchSearch = term === '' || record.hospital.toLowerCase().includes(term);
+
+      // 3. 기간 필터 (다가오는 예약이므로 '미래' 날짜 기준)
+      let matchPeriod = true;
+      if (activeFilterPeriod !== 'ALL') {
+        const parts = record.date.match(/\d+/g);
+        if (parts && parts.length >= 3) {
+          const recordDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          const limitDate = new Date();
+          
+          if (activeFilterPeriod === '1M') limitDate.setMonth(limitDate.getMonth() + 1);
+          else if (activeFilterPeriod === '3M') limitDate.setMonth(limitDate.getMonth() + 3);
+          else if (activeFilterPeriod === '6M') limitDate.setMonth(limitDate.getMonth() + 6);
+          
+          matchPeriod = recordDate <= limitDate; // 제한 기간 '이내'에 있는지 확인
+        }
+      }
+        
+      return matchStatus && matchSearch && matchPeriod;
     })
     .sort((a, b) => {
       const getStatusPriority = (status: string) => {
@@ -88,12 +110,12 @@ export default function MyPage() {
       const priorityA = getStatusPriority(a.status);
       const priorityB = getStatusPriority(b.status);
       
-      // 1순위: 상태 (예약 확정 1, 매칭 대기 2)
+      // 1순위: 예약 확정이 위로 오도록 정렬
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
       
-      // 2순위: 상태가 같다면 ID 역순(최신순) 또는 날짜순 (여기서는 ID 최신순으로 정렬)
+      // 2순위: 상태가 같다면 최신 예약건(ID 큰 순)을 위로
       return b.id - a.id; 
     });
 
@@ -345,77 +367,111 @@ export default function MyPage() {
               {activeTab === 'upcoming' ? (
                 activeReservations.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="flex justify-end mb-4">
-                      <select value={activeFilterStatus} onChange={(e) => setActiveFilterStatus(e.target.value)}
-                        className="px-3 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer appearance-none"
-                      >
-                        <option value="ALL">전체 보기</option>
-                        <option value="CONFIRMED">예약 확정만</option>
-                        <option value="WAITING">매칭 대기만</option>
-                      </select>
+                    <div className="flex flex-col gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      {/* 검색창 */}
+                      <div className="relative w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="병원명으로 예약 검색"
+                          value={activeSearchTerm}
+                          onChange={(e) => setActiveSearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 text-sm font-medium bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      {/* 기간 & 상태 필터 */}
+                      <div className="flex gap-2">
+                        <select value={activeFilterPeriod} onChange={(e) => setActiveFilterPeriod(e.target.value)}
+                          className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
+                        >
+                          <option value="ALL">전체 기간</option>
+                          <option value="1M">1개월 이내</option>
+                          <option value="3M">3개월 이내</option>
+                          <option value="6M">6개월 이내</option>
+                        </select>
+                        <select value={activeFilterStatus} onChange={(e) => setActiveFilterStatus(e.target.value)}
+                          className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
+                        >
+                          <option value="ALL">전체 상태</option>
+                          <option value="CONFIRMED">예약 확정</option>
+                          <option value="WAITING">매칭 대기</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {filteredAndSortedActiveRecords.map((req) => (
-                      <div key={req.id} className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-slate-100 relative overflow-hidden group">
-                        <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100 relative z-10">
-                          <span className={`text-[13px] font-bold px-3 py-1.5 rounded-lg border ${STATUS_MAP[req.status as StatusKey]?.colorClass || 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                            {STATUS_MAP[req.status as StatusKey]?.label || req.status}
-                          </span>
-                          <span className="text-[13px] text-slate-400 font-semibold tracking-wide">NO. {req.id}</span>
-                        </div>
-                        <Link href={`/reservation/${req.id}`} className="block relative z-10">
-                          <div className="bg-slate-50/50 rounded-2xl p-5 mb-5 space-y-5 border border-slate-100/60 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
-                                <Clock className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 일시</p>
-                                <p className="text-lg sm:text-2xl font-extrabold text-slate-900">{req.date} <span className="text-indigo-600">{req.time}</span></p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4 pt-1">
-                              <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 shadow-sm">
-                                <MapPin className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 병원</p>
-                                <p className="text-lg font-bold text-slate-800">{req.hospital}</p>
-                              </div>
-                            </div>
+                    {/* [필터링된 다가오는 예약 카드 리스트] */}
+                    {filteredAndSortedActiveRecords.length > 0 ? (
+                      filteredAndSortedActiveRecords.map((req) => (
+                        <div key={req.id} className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-slate-100 relative overflow-hidden group">
+                          
+                          <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100 relative z-10">
+                            <span className={`text-[13px] font-bold px-3 py-1.5 rounded-lg border ${STATUS_MAP[req.status as StatusKey]?.colorClass || 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                              {STATUS_MAP[req.status as StatusKey]?.label || req.status}
+                            </span>
+                            <span className="text-[13px] text-slate-400 font-semibold tracking-wide">NO. {req.id}</span>
                           </div>
-                          <div className="flex justify-end text-sm text-indigo-600 font-bold items-center gap-1 group-hover:text-indigo-700">
-                            상세 정보 보기 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                          </div>
-                        </Link>
 
-                        {/* 매니저 정보 렌더링 */}
-                        {req.managerId ? (
-                          <div className="mt-6 pt-6 border-t border-slate-100 relative z-10">
-                            <Link href={`/manager/profile/${req.managerId}`}>
-                              <div className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50/80 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors group/manager cursor-pointer">
-                                <div className="w-12 h-12 rounded-full bg-emerald-200/60 flex items-center justify-center text-emerald-700 shrink-0">
-                                  <User className="w-5 h-5" />
+                          <Link href={`/reservation/${req.id}`} className="block relative z-10">
+                            <div className="bg-slate-50/50 rounded-2xl p-5 mb-5 space-y-5 border border-slate-100/60 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
+                                  <Clock className="w-5 h-5" />
                                 </div>
                                 <div>
-                                  <p className="text-[11px] text-emerald-600 font-bold mb-1 tracking-wide">배정된 매니저</p>
-                                  <p className="text-base font-extrabold text-slate-900 group-hover/manager:text-emerald-800 transition-colors">
-                                    {req.managerName} <span className="font-medium text-sm text-emerald-700">매니저</span>
-                                  </p>
+                                  <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 일시</p>
+                                  <p className="text-lg sm:text-2xl font-extrabold text-slate-900">{req.date} <span className="text-indigo-600">{req.time}</span></p>
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-emerald-400 ml-auto group-hover/manager:translate-x-1 transition-transform" />
                               </div>
-                            </Link>
-                          </div>
-                        ) : (
-                          // 매칭 대기 중일 때 보여줄 친절한 안내 문구
-                          <div className="mt-6 pt-5 border-t border-slate-100 relative z-10 text-center">
-                            <p className="text-sm text-slate-500 font-medium">현재 최적의 동행 매니저를 <span className="text-indigo-500 font-bold">매칭 중</span>입니다.</p>
-                          </div>
-                        )}
-                        <Activity className="absolute -bottom-10 -right-10 w-56 h-56 text-indigo-50/60 pointer-events-none transition-transform group-hover:scale-110 duration-500 z-0" />
+
+                              <div className="flex items-center gap-4 pt-1">
+                                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 shadow-sm">
+                                  <MapPin className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className="text-[12px] text-slate-500 font-bold mb-0.5">방문 병원</p>
+                                  <p className="text-lg font-bold text-slate-800">{req.hospital}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end text-sm text-indigo-600 font-bold items-center gap-1 group-hover:text-indigo-700">
+                              상세 정보 보기 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </div>
+                          </Link>
+
+                          {/* 매니저 정보 렌더링 */}
+                          {req.managerId ? (
+                            <div className="mt-6 pt-6 border-t border-slate-100 relative z-10">
+                              <Link href={`/manager/profile/${req.managerId}`}>
+                                <div className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50/80 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors group/manager cursor-pointer">
+                                  <div className="w-12 h-12 rounded-full bg-emerald-200/60 flex items-center justify-center text-emerald-700 shrink-0">
+                                    <User className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] text-emerald-600 font-bold mb-1 tracking-wide">배정된 매니저</p>
+                                    <p className="text-base font-extrabold text-slate-900 group-hover/manager:text-emerald-800 transition-colors">
+                                      {req.managerName} <span className="font-medium text-sm text-emerald-700">매니저</span>
+                                    </p>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 text-emerald-400 ml-auto group-hover/manager:translate-x-1 transition-transform" />
+                                </div>
+                              </Link>
+                            </div>
+                          ) : (
+                            <div className="mt-6 pt-5 border-t border-slate-100 relative z-10 text-center">
+                              <p className="text-sm text-slate-500 font-medium">현재 최적의 동행 매니저를 <span className="text-indigo-500 font-bold">매칭 중</span>입니다.</p>
+                            </div>
+                          )}
+                          <Activity className="absolute -bottom-10 -right-10 w-56 h-56 text-indigo-50/60 pointer-events-none transition-transform group-hover:scale-110 duration-500 z-0" />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-16 text-center bg-white rounded-[32px] border border-slate-200 shadow-sm">
+                        <p className="text-slate-400 font-bold text-base mb-2">조회된 예약이 없습니다.</p>
+                        <p className="text-sm text-slate-400">검색어와 필터 조건을 확인해 주세요.</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
                   <div className="bg-white p-12 rounded-[32px] shadow-sm border border-slate-200/60 text-center flex flex-col items-center">
@@ -426,28 +482,20 @@ export default function MyPage() {
                   </div>
                 )
               ) : (
-                /* 과거 내역 화면 */
                 <div className="space-y-4">
-                  {/* 검색 및 필터 UI */}
                   <div className="flex flex-col gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                     
-                    {/* 검색창 (오직 병원명만) */}
+                    {/* 검색창 */}
                     <div className="relative w-full">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="병원명으로 내역 검색"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                      <input type="text" placeholder="병원명으로 내역 검색" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 text-sm font-medium bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
                       />
                     </div>
 
-                    {/* 모바일에서 터치하기 편한 나란한 드롭다운 */}
+                    {/* 기간 & 상태 필터 */}
                     <div className="flex gap-2">
-                      <select
-                        value={filterPeriod}
-                        onChange={(e) => {
+                      <select value={filterPeriod} onChange={(e) => {
                           setFilterPeriod(e.target.value);
                           setVisibleCount(3);
                         }}
@@ -459,9 +507,7 @@ export default function MyPage() {
                         <option value="6M">최근 6개월</option>
                       </select>
 
-                      <select
-                        value={filterStatus}
-                        onChange={(e) => {
+                      <select value={filterStatus} onChange={(e) => {
                           setFilterStatus(e.target.value);
                           setVisibleCount(3);
                         }}
@@ -475,6 +521,7 @@ export default function MyPage() {
                       </select>
                     </div>
                   </div>
+
                   {filteredAndSortedRecords.length > 0 ? (
                   <>
                     {filteredAndSortedRecords.slice(0, visibleCount).map((record) => (
@@ -525,10 +572,8 @@ export default function MyPage() {
                         </div>
                       </div>
                     ))}
-                    {/* 더보기 버튼 (필터링된 결과 갯수에 맞춰 표시) */}
                     {filteredAndSortedRecords.length > visibleCount && (
-                      <button 
-                        onClick={() => setVisibleCount(prev => prev + 3)}
+                      <button onClick={() => setVisibleCount(prev => prev + 3)}
                         className="w-full mt-6 py-4 text-sm text-slate-500 font-bold bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
                         과거 내역 더보기 ({visibleCount} / {filteredAndSortedRecords.length})
                       </button>
@@ -537,10 +582,10 @@ export default function MyPage() {
                 ) : (
                   <div className="py-16 text-center bg-white rounded-[32px] border border-slate-200 shadow-sm">
                     <p className="text-slate-400 font-bold text-base mb-2">조회된 내역이 없습니다.</p>
-                    {searchTerm !== '' && <p className="text-sm text-slate-400">검색어와 필터 조건을 확인해 주세요.</p>}
+                    <p className="text-sm text-slate-400">검색어와 필터 조건을 확인해 주세요.</p>
                   </div>
                 )}
-              </div>
+                </div>
               )}
             </div>
           </motion.div>
