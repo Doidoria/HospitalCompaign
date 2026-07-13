@@ -34,8 +34,8 @@ coolsms:
     secret: ${COOLSMS_API_SECRET}
   sender: ${COOLSMS_SENDER}
   kakao:
-    #    pf-id: ${COOLSMS_KAKAO_PF_ID:KA01PF260610022751924he8OYMm5jY7}
-    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
+    pf-id: ${COOLSMS_KAKAO_PF_ID:KA01PF260610022751924he8OYMm5jY7}
+    #    pf-id: KA01PF260610022751924he8OYMm5jY5 # 임시 템플릿 ID (미전송 테스트)
     template:
       report-completed: KA01TP260707060646274xEfqkCKp6PP     # 동행 리포트 전송
       report-modified: KA01TP260707071909834rvX1V9pRGyP      # 동행 리포트 수정

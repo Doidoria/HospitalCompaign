@@ -24,6 +24,8 @@ export default function MyPage() {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterPeriod, setFilterPeriod] = useState('ALL'); // '1M', '3M', '6M', 'ALL'
 
+  const [activeFilterStatus, setActiveFilterStatus] = useState('ALL'); // 'ALL', 'CONFIRMED', 'WAITING'
+
 
   // 상태별 정렬 순서 정의
   const statusOrder: Record<string, number> = {
@@ -65,6 +67,34 @@ export default function MyPage() {
       const orderA = statusOrder[a.status] || 99;
       const orderB = statusOrder[b.status] || 99;
       return orderA - orderB;
+    });
+
+    // 다가오는 예약 필터링 및 정렬 (예약 확정 우선)
+  const filteredAndSortedActiveRecords = activeReservations
+    .filter((record) => {
+      if (activeFilterStatus === 'ALL') return true;
+      // 한글/영문 상태값 모두 커버
+      if (activeFilterStatus === 'CONFIRMED') return record.status === 'CONFIRMED' || record.status === '예약 확정';
+      if (activeFilterStatus === 'WAITING') return record.status === 'WAITING' || record.status === '매칭 대기';
+      return true;
+    })
+    .sort((a, b) => {
+      const getStatusPriority = (status: string) => {
+        if (status === 'CONFIRMED' || status === '예약 확정') return 1;
+        if (status === 'WAITING' || status === '매칭 대기') return 2;
+        return 3;
+      };
+      
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+      
+      // 1순위: 상태 (예약 확정 1, 매칭 대기 2)
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // 2순위: 상태가 같다면 ID 역순(최신순) 또는 날짜순 (여기서는 ID 최신순으로 정렬)
+      return b.id - a.id; 
     });
 
   useEffect(() => {
@@ -313,19 +343,26 @@ export default function MyPage() {
             {/* 탭 내용 렌더링 */}
             <div className="pt-2">
               {activeTab === 'upcoming' ? (
-                /* 다가오는 예약 화면 */
                 activeReservations.length > 0 ? (
                   <div className="space-y-4">
-                    {activeReservations.map((req) => (
+                    <div className="flex justify-end mb-4">
+                      <select value={activeFilterStatus} onChange={(e) => setActiveFilterStatus(e.target.value)}
+                        className="px-3 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer appearance-none"
+                      >
+                        <option value="ALL">전체 보기</option>
+                        <option value="CONFIRMED">예약 확정만</option>
+                        <option value="WAITING">매칭 대기만</option>
+                      </select>
+                    </div>
+
+                    {filteredAndSortedActiveRecords.map((req) => (
                       <div key={req.id} className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-slate-100 relative overflow-hidden group">
-                        
                         <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100 relative z-10">
                           <span className={`text-[13px] font-bold px-3 py-1.5 rounded-lg border ${STATUS_MAP[req.status as StatusKey]?.colorClass || 'bg-slate-50 border-slate-200 text-slate-500'}`}>
                             {STATUS_MAP[req.status as StatusKey]?.label || req.status}
                           </span>
                           <span className="text-[13px] text-slate-400 font-semibold tracking-wide">NO. {req.id}</span>
                         </div>
-
                         <Link href={`/reservation/${req.id}`} className="block relative z-10">
                           <div className="bg-slate-50/50 rounded-2xl p-5 mb-5 space-y-5 border border-slate-100/60 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
                             <div className="flex items-center gap-4">
@@ -337,7 +374,6 @@ export default function MyPage() {
                                 <p className="text-lg sm:text-2xl font-extrabold text-slate-900">{req.date} <span className="text-indigo-600">{req.time}</span></p>
                               </div>
                             </div>
-
                             <div className="flex items-center gap-4 pt-1">
                               <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 shadow-sm">
                                 <MapPin className="w-5 h-5" />
@@ -348,7 +384,6 @@ export default function MyPage() {
                               </div>
                             </div>
                           </div>
-                          
                           <div className="flex justify-end text-sm text-indigo-600 font-bold items-center gap-1 group-hover:text-indigo-700">
                             상세 정보 보기 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </div>
