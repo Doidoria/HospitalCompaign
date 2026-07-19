@@ -3,7 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Calendar, Clock, MapPin, User, FileText, ChevronRight, Activity, CalendarDays, GraduationCap, Settings, Star, Crown, LogOut, Search } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, FileText, ChevronRight, Activity, CalendarDays, GraduationCap, Settings, 
+  Star, Crown, LogOut, Search, BookOpen 
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { STATUS_MAP, StatusKey } from '@/src/constants/statusMap';
 import { reservationApi, authApi } from '@/src/api/index';
@@ -282,6 +284,72 @@ export default function MyPage() {
       } else {
         YesAlert.fire({ icon: 'error', title: '오류', text: error.message || '신청 상태를 불러올 수 없습니다.' });
       }
+    }
+  };
+
+  // 예스케어 교육 신청 상태 및 반려 사유 조회 핸들러
+  const handleCheckEducationStatus = async () => {
+    try {
+      const res = await authApi.getEducationAppStatus();
+      
+      const payload = res.data?.data || res.data || {};
+      const status = payload.status || 'NONE';
+      const rejectionReason = payload.rejectionReason || '';
+      const courseType = payload.courseType || '';
+
+      let iconEmoji = '📚';
+      let title = '교육 신청 안내';
+      let description = '아직 신청하신 예스케어 교육 과정이 없습니다.<br/>최고의 병원동행 전문가 과정에 도전해 보세요!';
+
+      if (status === 'WAITING') {
+        iconEmoji = '⏳';
+        title = '교육 과정 심사 중';
+        description = `신청하신 <strong>[${courseType || '병원동행 전문가'}]</strong> 과정을 검토 중입니다.<br/>반 배정 및 일정이 확정되면 안내 문자가 발송됩니다.`;
+      } else if (status === 'APPROVED') {
+        iconEmoji = '🎓';
+        title = '교육 입과 승인 완료';
+        description = `축하합니다! <strong>[${courseType || '병원동행 전문가'}]</strong> 입과 승인이 완료되었습니다.<br/>상세 강의실 및 준비물 안내를 확인해 주세요.`;
+      } else if (status === 'REJECTED') {
+        iconEmoji = '❌';
+        title = '교육 신청 반려';
+        description = '아쉽게도 해당 교육 과정 신청이 반려되었습니다.<br/>아래 사유를 확인하신 후 기수를 변경하거나 재신청해 주세요.';
+      }
+
+      let htmlContent = `
+        <div style="padding: 10px 0;">
+          <div style="font-size: 60px; margin-bottom: 15px;">${iconEmoji}</div>
+          <h3 style="font-weight: 900; font-size: 22px; color: #1e293b; margin-bottom: 10px;">${title}</h3>
+          <p style="color: #64748b; font-size: 15px; line-height: 1.6; word-break: keep-all;">${description}</p>
+      `;
+
+      // 핵심 연동: 실제 어드민이 적은 반려 사유가 빨간 박스로 출력됨
+      if (status === 'REJECTED') {
+        const displayReason = rejectionReason || '정원 초과 또는 요건 미달로 반려되었습니다.';
+        htmlContent += `
+          <div style="margin-top: 20px; text-align: left; background: #fef2f2; padding: 15px; border-radius: 12px; border: 1px solid #fca5a5;">
+            <p style="font-size: 13px; font-weight: bold; color: #b91c1c; margin-bottom: 5px;">[반려 사유]</p>
+            <p style="font-size: 14px; color: #991b1b; line-height: 1.5; white-space: pre-wrap; word-break: break-all;">${displayReason}</p>
+          </div>
+        `;
+      }
+      htmlContent += `</div>`;
+
+      let confirmText = '확인';
+      if (status === 'NONE' || status === 'REJECTED') confirmText = '교육 안내 보러가기';
+
+      YesAlert.fire({
+        html: htmlContent,
+        confirmButtonText: confirmText,
+        showCancelButton: status === 'NONE' || status === 'REJECTED',
+        cancelButtonText: '닫기',
+      }).then((result) => {
+        if ((status === 'NONE' || status === 'REJECTED') && result.isConfirmed) {
+          router.push('/education'); 
+        }
+      });
+
+    } catch (error) {
+      YesAlert.fire({ icon: 'error', title: '오류', text: '교육 신청 상태를 불러올 수 없습니다.' });
     }
   };
 
@@ -613,8 +681,12 @@ export default function MyPage() {
               </div>
 
               <button onClick={handleCheckManagerStatus}
-                className="w-full flex items-center justify-center gap-2 bg-slate-50 text-slate-600 py-3.5 rounded-2xl font-bold text-sm border border-slate-200/60 hover:bg-slate-100 transition-all active:scale-[0.98]">
+                className="w-full flex items-center justify-center gap-2 bg-slate-50 text-slate-600 py-3.5 mb-3 rounded-2xl font-bold text-sm border border-slate-200/60 hover:bg-slate-100 transition-all active:scale-[0.98]">
                 <GraduationCap className="w-4 h-4 text-slate-400" /> 매니저 교육·지원 현황
+              </button>
+              <button onClick={handleCheckEducationStatus}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-50/60 text-indigo-700 py-3.5 rounded-2xl font-bold text-sm border border-indigo-100 hover:bg-indigo-100/60 transition-all active:scale-[0.98]">
+                <BookOpen className="w-4 h-4 text-indigo-400" /> 예스케어 교육 신청 현황
               </button>
             </div>
           </motion.div>

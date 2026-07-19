@@ -27,7 +27,9 @@ export const authApi = {
   verifyPassword: (password: string) => apiClient.post('/api/members/verify-password', { password }),
   changePassword: (newPassword: string) => apiClient.put('/api/members/password', { newPassword }),
   updateMe: (data: any) => apiClient.put('/api/members/me', data),
+  // 마이페이지 신청 상태 조회
   getManagerAppStatus: () => apiClient.get('/api/members/me/manager-application'),
+  getEducationAppStatus: () => apiClient.get('/api/members/me/education-application'),
 
   // 회원 탈퇴 API
   withdraw: () => apiClient.delete('/api/members/me'),
@@ -202,6 +204,16 @@ export const adminApi = {
   checkPinStatus: () => apiClient.get('/api/admin/pin/status'),
   setupPin: (pin: string) => apiClient.post('/api/admin/pin/setup', { pin }),
   verifyPin: (pin: string) => apiClient.post('/api/admin/pin/verify', { pin }),
+
+  // 교육 신청 대기 건수 조회 
+  getPendingEducationsCount: () => apiClient.get('/api/admin/educations/pending-count'), 
+
+  // 교육 신청 전체 목록 조회 (어드민)
+  getEducations: () => apiClient.get('/api/admin/educations'),
+
+  // 교육 신청 승인/거절 상태 변경 (어드민)
+  updateEducationStatus: (id: number, status: string, rejectionReason?: string) => 
+    apiClient.patch(`/api/admin/educations/${id}/status`, { status, rejectionReason }),
 };
 
 export const systemApi = {
@@ -219,9 +231,7 @@ export const managerApi = {
     apiClient.put(`/api/managers/profile`, data),
 };
 
-// ==========================================
 // 리뷰 (review)
-// ==========================================
 export const reviewApi = {
   // 리뷰 목록 조회
   getReviews: (page = 0, size = 10) => 
@@ -237,9 +247,7 @@ export const categoryApi = {
   getAll: () => apiClient.get('/api/categories'), 
 };
 
-// ==========================================
-// 공지사항 (notice)
-// ==========================================
+// 공지사항
 export const noticeApi = {
   // 일반 유저용 공지사항 목록 조회
   getNotices: (page: number = 0) => apiClient.get(`/api/notices?page=${page}`),
@@ -248,9 +256,7 @@ export const noticeApi = {
   getNotice: (id: number) => apiClient.get(`/api/notices/${id}`),
 };
 
-// ==========================================
 // 1:1 문의 (Inquiry)
-// ==========================================
 export const inquiryApi = {
   submitInquiry: (formData: FormData) => 
     apiClient.post('/api/inquiries', formData),
@@ -266,9 +272,7 @@ export const inquiryApi = {
     apiClient.post(`/api/inquiries/${id}/check-password`, { password }),
 };
 
-// ==========================================
 // 팝업창 (Popup)
-// ==========================================
 export const popupApi = {
   // 클라이언트: 현재 활성화된 팝업 정보 가져오기
   getActivePopup: () => apiClient.get('/api/popups/active'),
@@ -286,4 +290,10 @@ export const popupApi = {
     apiClient.patch(`/api/admin/popups/${id}/status`, { isActive }),
 
   deletePopup: (id: number) => apiClient.delete(`/api/admin/popups/${id}`),
+};
+
+// 교육 신청 (Education)
+export const educationApi = {
+  // 일반 유저 수강 신청 등록
+  create: (courseType: string) => apiClient.post('/api/members/educations', { courseType }),
 };

@@ -5,10 +5,11 @@ import React from 'react';
 import Link from 'next/link';
 import { 
   LayoutDashboard, Users, CalendarDays, UserPlus, UserCog, Star, Megaphone, 
-  MessageCircleQuestion, ImageIcon, Home, TrendingUp
+  MessageCircleQuestion, ImageIcon, Home, TrendingUp, BookOpen // BookOpen 아이콘 추가
 } from 'lucide-react';
 
-type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups' | 'sales';
+// 'educations' 탭 타입 추가
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups' | 'sales' | 'educations';
 
 interface SidebarProps {
   activeTab: AdminTab;
@@ -16,6 +17,7 @@ interface SidebarProps {
   pendingManagerCount: number;     // 매니저 승인 대기 카운트
   pendingReservationCount: number; // 예약 매칭 대기 카운트
   pendingInquiryCount: number;     // 1:1 문의 답변 대기 카운트
+  pendingEducationCount: number;   // 신규 교육 신청 대기 카운트
 }
 
 export default function Sidebar({ 
@@ -23,11 +25,13 @@ export default function Sidebar({
   setActiveTab, 
   pendingManagerCount, 
   pendingReservationCount, 
-  pendingInquiryCount 
+  pendingInquiryCount,
+  pendingEducationCount
 }: SidebarProps) {
 
   const navItems = [
     { id: 'dashboard', icon: CalendarDays, label: '예약 관리', badge: pendingReservationCount > 0 ? pendingReservationCount : undefined },
+    { id: 'educations', icon: BookOpen, label: '교육 신청', badge: pendingEducationCount > 0 ? pendingEducationCount : undefined }, // 교육 신청 탭 추가 (눈에 잘 띄도록 상단 배치)
     { id: 'managers', icon: UserPlus, label: '승인 관리', badge: pendingManagerCount > 0 ? pendingManagerCount : undefined },
     { id: 'members', icon: UserCog, label: '회원 관리' },
     { id: 'reviews', icon: Star, label: '리뷰 관리' },

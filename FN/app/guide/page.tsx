@@ -4,8 +4,8 @@
 import { motion, Variants } from 'framer-motion';
 import { 
   Check, Clock, CreditCard, Sparkles, Copy, FileBadge,
-  PenTool, Users, MapPin, Car, Building2, Stethoscope, Home, 
-  AlertCircle, ArrowRight
+  PenTool, Users, MapPin, Car, Building2, Stethoscope, Home, X,
+  AlertCircle, ArrowRight, ShieldCheck, AlertTriangle, CalendarRange, Ban
 } from 'lucide-react';
 import { Toast } from '@/src/utils/alert';
 import Link from 'next/link';
@@ -260,6 +260,117 @@ export default function GuidePage() {
                 </div>
               );
             })}
+          </div>
+        </motion.div>
+
+        {/* 서비스 핵심 가이드 및 이용 조건 */}
+        <motion.div variants={FADE_UP} className="mb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* 좌측: 서비스 이용 규정 (리스트 형태 개선) */}
+            <div className="bg-slate-800/80 border border-slate-700 rounded-[2rem] p-8 md:p-10 shadow-xl flex flex-col h-full">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2.5 bg-blue-500/10 rounded-xl">
+                  <ShieldCheck className="w-6 h-6 text-blue-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">서비스 이용 규정</h3>
+              </div>
+              
+              <div className="flex-1 space-y-8">
+                {/* 이용 가능 조건 */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                    <h4 className="font-bold text-slate-200">이용 가능 조건</h4>
+                  </div>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3 text-sm text-slate-300 leading-relaxed">
+                      <Check className="w-5 h-5 text-blue-400 shrink-0" />
+                      <span>청년, 중장년, 어르신 등 혼자 병원 가기 힘든 분 누구나</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-slate-300 leading-relaxed">
+                      <Check className="w-5 h-5 text-blue-400 shrink-0" />
+                      <span>대중교통 이용 가능 또는 스스로 휠체어 착석 가능자</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-slate-300 leading-relaxed">
+                      <Check className="w-5 h-5 text-blue-400 shrink-0" />
+                      <span>대문 앞(공동현관) 서비스 시작 원칙 (자택 내부 진입 불가)</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* 이용 불가 사유 */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
+                    <h4 className="font-bold text-slate-200">이용 불가 사유</h4>
+                  </div>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3 text-sm text-slate-400 leading-relaxed">
+                      <X className="w-5 h-5 text-rose-400 shrink-0" />
+                      <span>휠체어 스스로 착석 불가 및 화장실 단독 이용 불가 시</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-slate-400 leading-relaxed">
+                      <X className="w-5 h-5 text-rose-400 shrink-0" />
+                      <span className="text-rose-300 font-medium">치료, 처치 및 주사 등 의료적 행위 대행 요구 불가</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-sm text-slate-400 leading-relaxed">
+                      <X className="w-5 h-5 text-rose-400 shrink-0" />
+                      <span>폭언, 위협 등 매니저 및 의료진에게 위해가 되는 경우</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 우측: 운영 및 예약 정책 (Key-Value 정렬로 스캐닝 강화) */}
+            <div className="bg-slate-800/80 border border-slate-700 rounded-[2rem] p-8 md:p-10 shadow-xl flex flex-col h-full">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2.5 bg-amber-500/10 rounded-xl">
+                  <CalendarRange className="w-6 h-6 text-amber-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">운영 및 예약 정책</h3>
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <div className="flex justify-between items-center py-4 border-b border-slate-700/50">
+                  <span className="text-slate-400 text-sm font-medium">운영 시간</span>
+                  <div className="text-right">
+                    <p className="text-slate-200 text-sm font-bold">평일 08:30 ~ 22:00</p>
+                    <p className="text-slate-400 text-xs mt-1">주말 09:30 ~ 18:00 (사전예약 필수)</p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center py-4 border-b border-slate-700/50">
+                  <span className="text-slate-400 text-sm font-medium">신청 시점</span>
+                  <div className="text-right">
+                    <p className="text-slate-200 text-sm font-bold">사전예약 : 최대 1주일 전</p>
+                    <p className="text-slate-400 text-xs mt-1">당일신청 : 접수 후 3시간 내 매칭</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center py-4 border-b border-slate-700/50">
+                  <span className="text-slate-400 text-sm font-medium">이용 한도</span>
+                  <span className="text-slate-200 text-sm font-bold">월 10회 / 연간 200시간</span>
+                </div>
+
+                <div className="flex justify-between items-center py-4">
+                  <span className="text-slate-400 text-sm font-medium">당일 취소 (5시간 내)</span>
+                  <span className="text-rose-400 text-sm font-bold">위약금 13,000원</span>
+                </div>
+              </div>
+
+              {/* 하단 패널티 안내 박스 */}
+              <div className="mt-6 p-5 bg-rose-500/5 border border-rose-500/20 rounded-2xl">
+                <h4 className="text-rose-400 text-sm font-bold flex items-center gap-2 mb-2">
+                  <Ban className="w-4 h-4" /> 패널티 규정 안내
+                </h4>
+                <p className="text-rose-200/70 text-xs leading-relaxed break-keep">
+                  노쇼 2회, 노쇼 1회 + 당일취소 2회, 또는 당일취소 3회 누적 시 <strong className="text-rose-300 font-bold">1개월간 서비스 이용이 제한</strong>됩니다.
+                </p>
+              </div>
+            </div>
+
           </div>
         </motion.div>
 

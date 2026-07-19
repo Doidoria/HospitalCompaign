@@ -21,6 +21,7 @@ public class ManagerProfileResponse {
     private int reviewCount;      // 리뷰 개수
     private String availableDays;
     private String availableTime;
+    private String address;
 
     public ManagerProfileResponse(Manager manager) {
         this.id = manager.getId();
@@ -32,6 +33,7 @@ public class ManagerProfileResponse {
         this.reviewCount = 0;     // 당장 에러를 막기 위해 기본값 0 처리
         this.availableDays = manager.getAvailableDays();
         this.availableTime = manager.getAvailableTime();
+        this.address = manager.getMember().getAddress();
     }
 
     // Entity들을 받아 DTO로 변환하는 정적 메서드
@@ -47,6 +49,7 @@ public class ManagerProfileResponse {
                 .reviewCount(reviewCount)
                 .availableDays(availableDays)
                 .availableTime(availableTime)
+                .address(manager.getAddress())
                 .build();
     }
 }

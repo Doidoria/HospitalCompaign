@@ -69,13 +69,22 @@ export default function Home() {
             전문 교육을 이수한 병원동행 매니저가<br className="hidden md:block" /> 집 앞부터 병원 진료, 귀가까지 안전하게 모십니다.
           </motion.p>
 
-          <motion.div className="pt-6 md:pt-10" variants={itemVariants}>
-            <Link href="/apply">
-              <button className="group bg-white text-blue-950 text-lg py-4 px-8 md:text-xl md:py-5 md:px-12 font-extrabold rounded-full shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300 active:scale-95 flex items-center justify-center mx-auto space-x-3">
-                <span>지금 바로 동행 신청하기</span>
+          <motion.div className="pt-6 md:pt-10 flex flex-col md:flex-row justify-center items-center gap-4 px-4" variants={itemVariants}>
+            <Link href="/apply" className="w-full md:w-auto">
+              <button className="group w-full bg-white text-blue-950 text-lg py-4 px-8 md:text-xl md:py-5 md:px-12 font-extrabold rounded-full shadow-2xl hover:shadow-blue-500/20 
+              hover:-translate-y-1 transition-all duration-300 active:scale-95 flex items-center justify-center space-x-3">
+                <span>동행 서비스 신청</span>
                 <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </button>
             </Link>
+            <Link href="/education" className="w-full md:w-auto">
+              <button className="group w-full bg-blue-600/90 text-white border border-blue-400/50 text-lg py-4 px-8 md:text-xl md:py-5 md:px-12 font-extrabold rounded-full shadow-lg 
+              hover:bg-blue-500 hover:-translate-y-1 transition-all duration-300 active:scale-95 flex items-center justify-center space-x-3 backdrop-blur-sm">
+                <span>예스케어 교육 신청</span>
+                <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </Link>
+
           </motion.div>
         </div>
       </motion.section>

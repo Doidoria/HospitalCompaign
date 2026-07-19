@@ -1,8 +1,9 @@
+// app/reservation/survey/[id]/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Star, CheckCircle2, Loader2, MessageSquare, Sparkles } from 'lucide-react';
+import { Star, CheckCircle2, Loader2, MessageSquare, Sparkles, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { reviewApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
@@ -132,10 +133,21 @@ export default function ReservationSurveyPage() {
                   placeholder="매니저님의 친절도, 시간 엄수, 진료 내용 전달 등 좋았던 점이나 아쉬웠던 점을 자유롭게 적어주세요. (최소 10자)"
                   className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none bg-white transition-all text-gray-700 leading-relaxed placeholder:text-gray-400"
                 ></textarea>
-                {/* 글자 수 표시 */}
                 <div className={`absolute bottom-4 right-4 text-xs font-medium ${comment.length < 10 ? 'text-red-400' : 'text-emerald-500'}`}>
                   {comment.length} / 10자 이상
                 </div>
+              </div>
+            </div>
+
+            {/* 후기 관리 규정 안내 영역 */}
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex gap-3 mt-6">
+              <Info className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+              <div className="text-[13px] text-gray-500 leading-relaxed break-keep space-y-1">
+                <p className="font-bold text-gray-700 mb-1">후기 작성 및 관리 안내</p>
+                <ul className="list-disc list-inside space-y-1 ml-1">
+                  <li>작성해주신 후기는 익명(이름 마스킹) 처리되어 예스케어 서비스 홍보 목적으로 활용될 수 있습니다.</li>
+                  <li>욕설, 비방, 허위 사실 유포, 타인의 개인정보(연락처 등)가 포함된 내용은 <strong>통보 없이 삭제되거나 노출이 제한</strong>될 수 있습니다.</li>
+                </ul>
               </div>
             </div>
 

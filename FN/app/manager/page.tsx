@@ -153,7 +153,7 @@ useEffect(() => {
           </motion.div>
           <motion.h2 variants={itemVariants} className="text-3xl md:text-5xl font-extrabold leading-tight tracking-tight">
             예스케어와 함께할 <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-blue-300">전문 동행 매니저</span>를 모십니다
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-blue-300">프리랜서 동행 매니저</span>를 모십니다
           </motion.h2>
           <motion.p variants={itemVariants} className="text-blue-100/90 text-lg break-keep leading-relaxed pt-4">
             체계적인 전문 교육을 통해 단순한 이동 보조를 넘어,<br className="hidden md:block" /> 
@@ -208,7 +208,7 @@ useEffect(() => {
 
         {/* 3. 우측: 지원 폼 (크기 비율 조정 lg:col-span-7) */}
         <div className="lg:col-span-7 bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 h-fit">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">교육 수강 및 지원 신청</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">프리랜서 교육 수강 및 지원 신청</h3>
           <p className="text-gray-500 mb-8 text-sm break-keep">정보를 남겨주시면 교육 일정 및 채용 절차를 안내해 드립니다.</p>
           
           <form onSubmit={handleSubmit} className="space-y-7">
@@ -245,7 +245,7 @@ useEffect(() => {
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-3">근무 가능 요일 <span className="text-emerald-600">*</span></label>
               <div className="flex flex-wrap gap-2.5">
-                {['월', '화', '수', '목', '금', '토', '일'].map((day) => (
+                {['월', '화', '수', '목', '금', '토'].map((day) => (
                   <button
                     key={day}
                     type="button"

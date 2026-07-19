@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ShieldAlert, HeartHandshake, Ban, Stethoscope, ShoppingBag, MessageSquareX, ArrowLeft, Info, X } from 'lucide-react';
+import { ShieldAlert, HeartHandshake, Ban, Stethoscope, ShoppingBag, MessageSquareX, ArrowLeft, Info, Umbrella, PhoneOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ManagerProtectionPolicy() {
@@ -51,25 +51,33 @@ export default function ManagerProtectionPolicy() {
       bgColor: "bg-purple-50",
       borderColor: "border-purple-100",
       iconBg: "bg-purple-100/50"
+    },
+    {
+      icon: <Umbrella className="w-7 h-7 text-teal-500" />,
+      title: "동행 중 돌발 사고 발생 시 보상 및 대처",
+      desc: "예스케어의 모든 매니저는 전문 배상책임보험에 가입되어 있습니다. 동행 중 낙상 등 예상치 못한 사고 발생 시, 지자체(서울시 등) 안전 가이드라인에 준하는 즉각적인 응급조치 및 보험사를 통한 투명한 보상 절차가 진행됩니다.",
+      bgColor: "bg-teal-50",
+      borderColor: "border-teal-100",
+      iconBg: "bg-teal-100/50"
+    },
+    {
+      icon: <PhoneOff className="w-7 h-7 text-indigo-500" />,
+      title: "개인 연락처 요구 및 사적 거래 금지",
+      desc: "매니저의 개인 연락처를 요구하거나, 플랫폼을 거치지 않은 직접 결제 및 사적인 우회 예약은 엄격히 금지됩니다. 이는 매니저의 사생활을 보호하고 안전한 서비스 품질 보증을 위해 반드시 지켜주셔야 합니다.",
+      bgColor: "bg-indigo-50",
+      borderColor: "border-indigo-100",
+      iconBg: "bg-indigo-100/50"
     }
   ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-24 selection:bg-emerald-100 selection:text-emerald-900">
-      {/* 상단 헤더 영역 (고급스러운 그라데이션) */}
+      {/* 상단 헤더 영역 */}
       <div className="bg-gradient-to-b from-slate-900 to-slate-800 text-white pt-14 pb-24 px-6 relative overflow-hidden shadow-md">
-        {/* 장식용 빛 효과 */}
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-emerald-500/20 rounded-full blur-[80px] pointer-events-none"></div>
         <div className="absolute top-20 -left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-[60px] pointer-events-none"></div>
         
         <div className="max-w-4xl mx-auto relative z-10">
-          <button onClick={() => window.close()} 
-            className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all active:scale-95 mb-8 border border-white/10"
-            title="창 닫기"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-8 h-8 text-emerald-400 drop-shadow-md" />

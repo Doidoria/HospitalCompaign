@@ -13,6 +13,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +33,7 @@ public class MemberController {
     private final KakaoAuthService kakaoAuthService;
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
+    private final EducationService educationService;
 
     // ==========================================
     // [회원(Member) 관련 API] -> memberService 사용
@@ -318,5 +320,41 @@ public class MemberController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", e.getMessage()));
         }
+    }
+
+    // 마이페이지 교육 신청 현황 조회 API
+    @GetMapping("/me/education-application")
+    public ResponseEntity<?> getMyEducationStatus(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        java.util.Map<String, String> statusData = educationService.getMyEducationStatus(authentication.getName());
+
+        // 프론트엔드가 res.data.status 형태로 바로 읽을 수 있도록 리턴
+        return ResponseEntity.ok(statusData);
+    }
+
+    // 일반 유저용 교육 과정 신청 접수 API
+    @PostMapping("/educations")
+    public ResponseEntity<ApiResponse<String>> applyEducation(
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("인증 정보가 유효하지 않습니다."));
+        }
+
+        String courseType = request.get("courseType");
+        if (courseType == null || courseType.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("신청할 교육 과정을 선택해 주세요."));
+        }
+
+        // 서비스단 호출하여 DB 최종 반영
+        educationService.applyEducation(authentication.getName(), courseType);
+
+        return ResponseEntity.ok(ApiResponse.success("교육 과정 신청이 접수되었습니다."));
     }
 }

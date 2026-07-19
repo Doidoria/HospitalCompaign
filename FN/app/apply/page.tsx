@@ -729,7 +729,7 @@ export default function ApplyPage() {
               </motion.div>
             )}
 
-            {/* 매니저 보호 및 안전 이용 규정 동의 체크박스 */}
+            {/* 매니저 보호 및 안전 이용(배상 보험) 규정 동의 체크박스 */}
             <div className="mb-6 p-5 sm:p-6 bg-slate-50 border border-slate-200 rounded-[24px] shadow-sm">
               <div className="flex items-start gap-3">
                 <input type="checkbox" id="policy-agree" checked={isPolicyAgreed}
@@ -741,17 +741,20 @@ export default function ApplyPage() {
                 />
                 <div className="flex-1">
                   <label htmlFor="policy-agree" className="text-[14px] sm:text-base font-extrabold text-slate-800 cursor-pointer block mb-1">
-                    예스케어 매니저 보호 및 안전 이용 규정에 동의합니다. <span className="text-red-500">*</span>
+                    예스케어 안전 이용 규정 및 배상 보험 안내에 동의합니다. <span className="text-red-500">*</span>
                   </label>
-                  <p className="text-[12px] sm:text-[13px] text-slate-500 font-medium break-keep leading-relaxed">
+                  <p className="text-[12px] sm:text-[13px] text-slate-500 font-medium break-keep leading-relaxed mb-1">
                     안전한 동행을 위해 의료 행위 요구, 개인 심부름, 폭언 등이 엄격히 금지됨을 확인했습니다.
+                  </p>
+                  <p className="text-[12px] sm:text-[13px] text-blue-600/90 font-bold break-keep leading-relaxed">
+                    * 동행 중 예기치 못한 사고 발생 시, 지자체 위탁 기관(서울시 등) 기준에 준하는 배상 책임 보험 규정이 적용됩니다.
                   </p>
                   <Link 
                     href="/policy/manager-protection" 
                     target="_blank" 
                     className="inline-block mt-2 text-[13px] font-bold text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors"
                   >
-                    안전 이용 규정 전문 보기 ↗
+                    안전 이용 및 배상 규정 전문 보기 ↗
                   </Link>
                 </div>
               </div>

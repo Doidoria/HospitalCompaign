@@ -2,24 +2,51 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserCheck, Clock, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { UserCheck, Clock, CalendarDays, CheckCircle2, AlertTriangle, MapPin } from 'lucide-react';
+import { Toast, YesAlert } from '@/src/utils/alert';
 
 interface ManagerListModalProps {
   managers: any[];
+  pickupAddress: string;
   onSelect: (email: string) => void;
 }
 
-export default function ManagerListModalContent({ managers, onSelect }: ManagerListModalProps) {
+export default function ManagerListModalContent({ managers, pickupAddress, onSelect }: ManagerListModalProps) {
   const [selectedEmail, setSelectedEmail] = useState<string>('');
 
-  const handleSelect = (email: string) => {
-    setSelectedEmail(email);
-    onSelect(email);
+  console.log("프론트로 넘어온 픽업 주소 텍스트 ->", pickupAddress);
+  console.log("프론트로 넘어온 매니저 리스트 배열 ->", managers);
+
+  // 2. 아래 두 줄을 컴포넌트 시작 부분에 추가하세요. (행정구역 추출)
+  const getRegion = (address: string) => address ? address.trim().split(' ').slice(0, 2).join(' ') : '';
+  const pickupRegion = getRegion(pickupAddress || '');
+
+  // 3. 기존 handleSelect 함수를 아래 코드로 완전히 교체하세요.
+  const handleSelect = async (manager: any) => {
+    const managerRegion = getRegion(manager.address || '');
+    const isDifferentRegion = pickupRegion && managerRegion && (pickupRegion !== managerRegion);
+
+    if (isDifferentRegion) {
+      const result = await YesAlert.fire({
+        title: '타 지역 배정 경고',
+        html: `환자의 픽업지는 <b>[${pickupRegion}]</b> 인데,<br/>매니저 자택은 <b>[${managerRegion}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '네, 배정합니다',
+        cancelButtonText: '다른 매니저 찾기'
+      });
+      if (!result.isConfirmed) return;
+    }
+
+    setSelectedEmail(manager.email);
+    onSelect(manager.email); // 여기서 밖으로 전달
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
       {managers.map((manager) => {
+        const managerRegion = getRegion(manager.address || '');
+        const isDifferentRegion = pickupRegion && managerRegion && (pickupRegion !== managerRegion);
         const daysHtml = manager.availableDays 
           ? manager.availableDays.split(',').map((day: string, idx: number) => (
               <span key={idx} className="bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm text-[11px] px-2 py-1 rounded-md font-extrabold mr-1.5 inline-block mb-1">
@@ -34,15 +61,26 @@ export default function ManagerListModalContent({ managers, onSelect }: ManagerL
         return (
           <div 
             key={manager.id} 
-            onClick={() => handleSelect(manager.email)}
+            onClick={() => handleSelect(manager)} 
             className={`relative flex flex-col p-4 rounded-[20px] border-2 cursor-pointer transition-all duration-200 overflow-hidden
               ${isChecked 
                 ? 'bg-blue-50/50 border-blue-500 shadow-[0_4px_15px_rgba(59,130,246,0.15)] scale-[1.02] z-10' 
-                : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'}`}
+                : isDifferentRegion 
+                  ? 'bg-red-50/30 border-red-100 hover:border-red-300 hover:bg-red-50 hover:shadow-sm' // 타지역일 때 은은한 붉은색
+                  : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'}`} // 일반 상태
           >
+            {/* 선택 시 나타나는 왼쪽 파란 줄 */}
             {isChecked && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-[20px]"></div>}
 
-            <div className="flex justify-between items-start mb-3">
+            {/* 타 지역 경고 뱃지 */}
+            {isDifferentRegion && (
+              <div className="absolute right-3 top-3 flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded-md text-[10px] font-black border border-red-200 animate-pulse">
+                <AlertTriangle className="w-3 h-3" />
+                장거리(타지역)
+              </div>
+            )}
+
+            <div className="flex justify-between items-start mb-3 mt-1 pr-16">
               <div className="flex items-center gap-2.5">
                 {/* 둥근 프로필 아이콘 */}
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center border shrink-0 transition-colors
@@ -55,12 +93,11 @@ export default function ManagerListModalContent({ managers, onSelect }: ManagerL
                     <span className="truncate">{manager.name}</span>
                     <span className="shrink-0 font-bold text-blue-600 text-[9px] bg-blue-100/50 px-1.5 py-0.5 rounded-full border border-blue-200/50">PRO</span>
                   </h4>
-                  <p className="text-[11px] font-medium text-slate-400 truncate w-full">{manager.email}</p>
+                  <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1 truncate w-full">
+                    <MapPin className="w-3 h-3 text-slate-400" />
+                    {managerRegion || '주소 미등록'}
+                  </p>
                 </div>
-              </div>
-              
-              <div className="text-[9px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold whitespace-nowrap border border-slate-200 shrink-0">
-                #{manager.id}
               </div>
             </div>
             

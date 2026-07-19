@@ -475,6 +475,7 @@ public class ReservationService {
             managerData.put("availableDays", manager.getAvailableDays() == null ? "상시" : manager.getAvailableDays());
             managerData.put("availableTime", manager.getAvailableTime() == null ? "상시" : manager.getAvailableTime());
             managerData.put("role", member.getRole().name());
+            managerData.put("address", member.getAddress() == null ? "" : member.getAddress());
 
             resultList.add(managerData);
         }

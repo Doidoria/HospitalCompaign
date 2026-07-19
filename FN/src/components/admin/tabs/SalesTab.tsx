@@ -46,8 +46,12 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
   const [customEnd, setCustomEnd] = useState('');
   const [customLoading, setCustomLoading] = useState(false);
 
-  // 플랫폼 수수료율 (80% 매니저 정산)
-  const SETTLEMENT_RATE = 0.8; 
+  // 매니저 70% 배분 후 8.8% 세금 공제 로직으로 변경
+  const calculateSettlement = (totalFee: number) => {
+    const managerShare = Math.floor(totalFee * 0.7); // 70% 배분
+    const taxAmount = Math.floor(managerShare * 0.088); // 8.8% 세금 공제
+    return managerShare - taxAmount; // 최종 실지급액
+  };
 
   // API Fetching 로직
   const fetchSalesData = useCallback(async () => {
@@ -186,11 +190,11 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
       return;
     }
 
-    const headers = ['예약번호', '서비스일자', '환자명', '매니저명', '선입금(기본요금)', '추가요금', '최종매출합계', '매니저정산금(80%)', '정산상태'];
+    const headers = ['예약번호', '서비스일자', '환자명', '매니저명', '선입금(기본요금)', '추가요금', '최종매출합계', '실지급액(세후)', '정산상태'];
 
     const rows = salesDetails.map(item => [
       item.id, item.date, `"${item.patientName}"`, `"${item.managerName}"`,
-      item.baseFee, item.extraFee, item.totalFee, item.totalFee * SETTLEMENT_RATE,
+      item.baseFee, item.extraFee, item.totalFee, calculateSettlement(item.totalFee),
       item.settlementStatus === 'COMPLETED' ? '정산완료' : '정산대기'
     ]);
 
@@ -210,7 +214,7 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
   const pendingSettlementTotal = useMemo(() => {
     return salesDetails
       .filter(item => item.settlementStatus !== 'COMPLETED')
-      .reduce((sum, item) => sum + (item.totalFee * SETTLEMENT_RATE), 0);
+      .reduce((sum, item) => sum + calculateSettlement(item.totalFee), 0);
   }, [salesDetails]);
 
   const statsCards = useMemo(() => [
@@ -301,7 +305,9 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
                     <th className="p-4 font-bold pl-6">예약 정보</th>
                     <th className="p-4 font-bold">환자 / 매니저</th>
                     <th className="p-4 font-bold text-right">총 결제금액 (기본+추가)</th>
-                    <th className="p-4 font-bold text-right text-indigo-600 bg-indigo-50/30">매니저 정산액 (80%)</th>
+                    <th className="p-4 font-bold text-right text-indigo-600 bg-indigo-50/30">실지급액
+                      <span className="block text-[10px] font-normal text-indigo-400 mt-0.5">(70% 배분 - 8.8% 세금)</span>
+                    </th>
                     <th className="p-4 font-bold text-center pr-6">정산 관리</th>
                   </tr>
                 </thead>
@@ -335,7 +341,7 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
                         </div>
                       </td>
                       <td className="p-4 text-right font-black text-indigo-600 bg-indigo-50/20 text-base">
-                        {formatCurrency(res.totalFee * SETTLEMENT_RATE)}
+                        {formatCurrency(calculateSettlement(res.totalFee))}
                       </td>
                       <td className="p-4 pr-6 text-center">
                         <button onClick={() => handleToggleSettlement(res.id, res.settlementStatus || 'READY')}
@@ -392,8 +398,8 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
                   </div>
                   <div className="flex items-center justify-between mt-1 pt-1">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-indigo-400 mb-0.5">매니저 정산액 (80%)</span>
-                      <span className="text-sm font-black text-indigo-600">{formatCurrency(res.totalFee * SETTLEMENT_RATE)}</span>
+                      <span className="text-[10px] font-bold text-indigo-400 mb-0.5">실지급액 (세후)</span>
+                      <span className="text-sm font-black text-indigo-600">{formatCurrency(calculateSettlement(res.totalFee))}</span>
                     </div>
                     <button onClick={() => handleToggleSettlement(res.id, res.settlementStatus || 'READY')}
                       className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border

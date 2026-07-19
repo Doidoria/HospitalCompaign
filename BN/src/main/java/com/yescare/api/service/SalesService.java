@@ -81,7 +81,13 @@ public class SalesService {
             int baseFee = r.getBaseFee() != null ? r.getBaseFee() : 44000;
             int extraFee = r.getExtraChargeAmount() != null ? r.getExtraChargeAmount() : 0;
             int totalFee = baseFee + extraFee;
-            int settlementAmount = (int) (totalFee * 0.8); // 플랫폼 수수료 20% 제외, 매니저 정산 80%
+
+            // 1. 매니저 수익 (총 매출의 70%)
+            int managerShare = (int) (totalFee * 0.7);
+            // 2. 원천세 공제 (매니저 수익의 8.8%)
+            int taxAmount = (int) (managerShare * 0.088);
+            // 3. 최종 매니저 실지급액 (매니저 수익 - 세금)
+            int finalSettlementAmount = managerShare - taxAmount;
 
             totalBase += baseFee;
             totalExtra += extraFee;
@@ -97,11 +103,11 @@ public class SalesService {
                     .extraFee(dailyMap.get(chartDate).build().getExtraFee() + extraFee)
                     .total(dailyMap.get(chartDate).build().getTotal() + totalFee);
 
-            // 매니저별 정산액 누적
+            // 매니저별 정산액 누적 (수정된 finalSettlementAmount 반영)
             if (!"-".equals(managerName)) {
                 managerMap.computeIfAbsent(managerName, k -> AdminSalesResponse.ManagerSettlement.builder().managerName(k).matchCount(0).totalSettlementAmount(0))
                         .matchCount(managerMap.get(managerName).build().getMatchCount() + 1)
-                        .totalSettlementAmount(managerMap.get(managerName).build().getTotalSettlementAmount() + settlementAmount);
+                        .totalSettlementAmount(managerMap.get(managerName).build().getTotalSettlementAmount() + finalSettlementAmount);
             }
 
             // 테이블 내역

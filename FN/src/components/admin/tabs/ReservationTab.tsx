@@ -35,7 +35,7 @@ export interface Reservation {
 interface ReservationTabProps {
   handleOpenDetail: (id: number) => void;
   members: Member[];
-  handleAssignManager: (id: number) => Promise<boolean>;
+  handleAssignManager: (id: number, pickupAddress?: string) => Promise<boolean>;
   handleCancelAssign: (id: number) => Promise<boolean>;
   handleViewMemberProfile: (member: Member) => void;
   refreshBadges?: () => void;
@@ -215,8 +215,8 @@ export default function ReservationTab({
   }, [searchTerm, statusFilter, currentPage, fetchReservations]);
 
   // [최적화 2] JSX 인라인 함수 외부 분리로 가독성 향상 및 렌더링 최적화
-  const onAssign = async (id: number) => {
-    const success = await handleAssignManager(id);
+  const onAssign = async (id: number, pickupAddress: string) => {
+    const success = await handleAssignManager(id, pickupAddress);
     if (success) fetchReservations(currentPage, searchTerm, statusFilter);
   };
 
@@ -349,7 +349,7 @@ export default function ReservationTab({
                         <Edit className="w-3.5 h-3.5" /> 수정
                       </button>
                       {res.status === 'WAITING' ? (
-                        <button onClick={() => onAssign(res.id)} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
+                        <button onClick={() => onAssign(res.id, res.raw?.meetingAddress || '')} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
                           <Send className="w-3.5 h-3.5" /> 매니저 배정
                         </button>
                       ) : res.status === 'CONFIRMED' ? (
@@ -431,7 +431,7 @@ export default function ReservationTab({
                   <Edit className="w-3.5 h-3.5" /> 수정
                 </button>
                 {res.status === 'WAITING' ? (
-                  <button onClick={() => onAssign(res.id)} className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
+                  <button onClick={() => onAssign(res.id, res.raw?.meetingAddress || '')} className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
                     <Send className="w-3.5 h-3.5" /> 매니저 배정
                   </button>
                 ) : res.status === 'CONFIRMED' ? (

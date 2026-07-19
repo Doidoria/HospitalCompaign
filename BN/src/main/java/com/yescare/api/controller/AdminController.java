@@ -3,6 +3,7 @@ package com.yescare.api.controller;
 import com.yescare.api.domain.Member;
 import com.yescare.api.dto.ApiResponse;
 import com.yescare.api.repository.MemberRepository;
+import com.yescare.api.service.EducationService;
 import com.yescare.api.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -26,6 +28,7 @@ public class AdminController {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final MemberService memberService;
+    private final EducationService educationService;
 
     // 2. 기존 PIN API 주소 유지를 위해 하위 경로에 /pin/status 명시
     @GetMapping("/pin/status")
@@ -111,5 +114,48 @@ public class AdminController {
         // 6. 중요: 프론트엔드가 데이터 분해(Destructuring)를 안전하게 처리하도록
         // 프로젝트 공통 규격인 ApiResponse.success()로 래핑하여 리턴합니다.
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    // 교육 신청 대기 건수 조회 API
+    @GetMapping("/educations/pending-count")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getPendingEducationCount() {
+        long count = educationService.getPendingCount();
+
+        Map<String, Long> response = new HashMap<>();
+        response.put("count", count);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // 교육 신청 전체 목록 조회 API
+    @GetMapping("/educations")
+    public ResponseEntity<ApiResponse<java.util.List<Map<String, Object>>>> getAllEducations() {
+        java.util.List<Map<String, Object>> result = educationService.getAllEducations().stream().map(app -> {
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", app.getId());
+            // 연관된 Member 객체에서 이름과 연락처를 뽑아서 프론트 규격에 맞춤
+            map.put("applicantName", app.getMember().getName());
+            map.put("applicantEmail", app.getMember().getEmail());
+            map.put("applicantPhone", app.getMember().getPhoneNumber());
+            map.put("courseType", app.getCourseType());
+            map.put("status", app.getStatus());
+            map.put("appliedAt", app.getAppliedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    // 교육 신청 승인/거절 상태 변경 API
+    @PatchMapping("/educations/{id}/status")
+    public ResponseEntity<ApiResponse<String>> updateEducationStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+
+        String status = request.get("status");
+        String rejectionReason = request.get("rejectionReason");
+        educationService.updateStatus(id, status, rejectionReason);
+
+        return ResponseEntity.ok(ApiResponse.success("교육 신청 상태가 변경되었습니다."));
     }
 }

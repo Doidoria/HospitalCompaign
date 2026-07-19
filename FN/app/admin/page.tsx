@@ -21,11 +21,12 @@ import NoticeTab from '@/src/components/admin/tabs/NoticeTab';
 import InquiryTab from '@/src/components/admin/tabs/InquiryTab';
 import PopupTab from '@/src/components/admin/tabs/PopupTab';
 import SalesTab from '@/src/components/admin/tabs/SalesTab';
+import EducationTab from '@/src/components/admin/tabs/EducationTab';
 
 import AdminPinLock from '@/src/components/admin/ui/AdminPinLock';
 import { useAdminAuthStore } from '@/src/store/useAdminAuthStore';
 
-type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups' | 'sales';
+type AdminTab = 'dashboard' | 'managers' | 'members' | 'reviews' | 'inquiries' | 'notices' | 'popups' | 'sales' | 'educations';
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -35,12 +36,14 @@ export default function AdminDashboardPage() {
   const [pendingManagerCount, setPendingManagerCount] = useState(0);
   const [pendingReservationCount, setPendingReservationCount] = useState(0); 
   const [pendingInquiryCount, setPendingInquiryCount] = useState(0);
+  const [pendingEducationCount, setPendingEducationCount] = useState(0);
 
   const [allManagers, setAllManagers] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedPickupAddress, setSelectedPickupAddress] = useState<string>('');
 
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
   const [availableManagers, setAvailableManagers] = useState<any[]>([]);
@@ -52,6 +55,7 @@ export default function AdminDashboardPage() {
 
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  
 
   const { lock } = useAdminAuthStore();
 
@@ -93,11 +97,12 @@ export default function AdminDashboardPage() {
     const loadGlobalData = async () => {
       setLoading(true);
       try {
-        const [managerRes, waitingRes, inquiryRes, memberRes] = await Promise.all([
+        const [managerRes, waitingRes, inquiryRes, memberRes, educationRes] = await Promise.all([
           adminApi.getPendingManagers('WAITING'),
           reservationApi.getWaiting(), 
           adminApi.getAllInquiries(0, 'PENDING'), // 1:1 문의 답변 대기 상태
-          adminApi.getAllMembers(0)
+          adminApi.getAllMembers(0),
+          adminApi.getPendingEducationsCount(), // 신규 교육 신청 대기 카운트 API 호출
         ]);
 
         // 1. 매니저 승인 대기
@@ -106,6 +111,9 @@ export default function AdminDashboardPage() {
         // 2. 예약 매칭 대기 (Spring Boot의 반환 형태에 따라 .data.length 또는 .data.content.length 로 조정하세요)
         const resWaitingList = waitingRes.data?.content || waitingRes.data || [];
         setPendingReservationCount(resWaitingList.length);
+
+        // 교육 카운트 세팅 (백엔드 설계에 따라 .data 혹은 .data.length 적용)
+        setPendingEducationCount(educationRes.data?.count || educationRes.data?.length || 0);
 
         // 3. 문의 답변 대기 (Spring Boot Page 객체 반환 시 totalElements 사용)
         const inqWaitingTotal = inquiryRes.data?.totalElements || inquiryRes.data?.content?.length || inquiryRes.data?.length || 0;
@@ -183,7 +191,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAssignManager = async (reservationId: number) => {
+  const handleAssignManager = async (reservationId: number, pickupAddress: string = '') => {
     try {
       const res = await adminApi.getAvailableManagers(reservationId);
       
@@ -202,6 +210,7 @@ export default function AdminDashboardPage() {
       setAvailableManagers(managers);
       setSelectedResId(reservationId);
       setSelectedManagerEmail(''); // 선택 이메일 초기화
+      setSelectedPickupAddress(pickupAddress);
       setIsManagerModalOpen(true);
       
       return false;
@@ -215,10 +224,11 @@ export default function AdminDashboardPage() {
   // 뱃지 카운트만 전용으로 다시 불러오는 함수
   const refreshBadges = async () => {
     try {
-      const [managerRes, waitingRes, inquiryRes] = await Promise.all([
+      const [managerRes, waitingRes, inquiryRes, educationRes] = await Promise.all([
         adminApi.getPendingManagers('WAITING'),
         reservationApi.getWaiting(),
-        adminApi.getAllInquiries(0, 'PENDING')
+        adminApi.getAllInquiries(0, 'PENDING'),
+        adminApi.getPendingEducationsCount()
       ]);
 
       setPendingManagerCount(managerRes.data?.length || 0);
@@ -226,6 +236,7 @@ export default function AdminDashboardPage() {
       setPendingReservationCount(resWaitingList.length);
       const inqWaitingTotal = inquiryRes.data?.totalElements || inquiryRes.data?.content?.length || inquiryRes.data?.length || 0;
       setPendingInquiryCount(inqWaitingTotal);
+      setPendingEducationCount(educationRes.data?.count || educationRes.data?.length || 0);
     } catch (error) {
       console.error('뱃지 갱신 실패:', error);
     }
@@ -374,6 +385,7 @@ export default function AdminDashboardPage() {
   const getPageTitle = () => {
     switch(activeTab) {
       case 'dashboard': return '예약 및 매칭 현황';
+      case 'educations': return '교육 신청 관리';
       case 'managers': return '매니저 승인 관리';
       case 'members': return '전체 회원 관리';
       case 'reviews': return '리뷰 및 리포트 모니터링';
@@ -393,6 +405,7 @@ export default function AdminDashboardPage() {
         pendingManagerCount={pendingManagerCount} 
         pendingReservationCount={pendingReservationCount}
         pendingInquiryCount={pendingInquiryCount}
+        pendingEducationCount={pendingEducationCount}
       />
       <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden pb-24 lg:pb-8">
         <div className="max-w-7xl mx-auto">
@@ -436,6 +449,7 @@ export default function AdminDashboardPage() {
                 refreshBadges={refreshBadges}
               />
             )}
+            {activeTab === 'educations' && <EducationTab key="educations" />}
             {activeTab === 'managers' && <ManagerTab key="managers" refreshBadges={refreshBadges} />}
             {activeTab === 'members' && <MemberTab key="members" handleViewMemberProfile={handleViewMemberProfile} />}
             {activeTab === 'reviews' && (
@@ -480,6 +494,7 @@ export default function AdminDashboardPage() {
             <div className="flex-1 overflow-y-auto my-2">
               <ManagerListModalContent 
                 managers={availableManagers} // 백엔드에서 받아온 정제된 매니저 리스트만 주입
+                pickupAddress={selectedPickupAddress}
                 onSelect={(email) => setSelectedManagerEmail(email)} 
               />
             </div>

@@ -87,7 +87,7 @@ export default function Header() {
   const NAV_ITEMS = useMemo(() => [
     { name: '서비스 안내', path: '/guide', show: true },
     { name: '고객센터(FAQ)', path: '/support/faq', show: true },
-    { name: '매니저 교육신청', path: '/manager', show: userRole !== 'ADMIN' && userRole !== 'MANAGER' },
+    { name: '프리랜서 교육신청', path: '/manager', show: userRole !== 'ADMIN' && userRole !== 'MANAGER' },
   ], [userRole]);
 
   if (pathname?.startsWith('/admin')) return null;
