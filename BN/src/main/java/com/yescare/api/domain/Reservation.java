@@ -125,6 +125,15 @@ public class Reservation {
     @Column(length = 20, columnDefinition = "varchar(20) default 'READY'")
     private String settlementStatus = "READY"; // READY(정산대기), COMPLETED(입금완료)
 
+    @Column(length = 64, unique = true)
+    private String orderId; // 고유 주문번호 (예: res_12345_20231012) -> PG사로 넘기는 고유 번호
+
+    @Column(length = 200)
+    private String paymentKey; // PG사에서 발급해주는 결제 고유 키 (환불/취소 시 필수)
+
+    @Column(length = 20)
+    private String paymentStatus; // 결제 상태 (예: PENDING, DONE, CANCELED)
+
     public void setSettlementStatus(String settlementStatus) {
         this.settlementStatus = settlementStatus;
     }

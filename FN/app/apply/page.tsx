@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
+import { loadPaymentWidget, PaymentWidgetInstance } from '@tosspayments/payment-widget-sdk';
 import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle, 
   RefreshCcw, ChevronDown, ChevronUp, Heart
  } from 'lucide-react';
@@ -16,6 +17,11 @@ import Link from 'next/link';
 export default function ApplyPage() {
   const router = useRouter();
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
+
+  // 토스 위젯 상태 관리
+  const [paymentWidget, setPaymentWidget] = useState<PaymentWidgetInstance | null>(null);
+  const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm"; // 토스 테스트용 클라이언트 키
+  const customerKey = "generate-random-customer-key"; // 비회원/회원 식별용 난수
 
   // 누락된 입력 항목을 관리하는 State
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -80,6 +86,24 @@ export default function ApplyPage() {
         guardianPhone: res.data.guardianPhone || ''
       }));
     }).catch(err => console.log("사용자 정보를 불러올 수 없습니다."));
+  }, []);
+
+  // 페이지 로드 시 결제 위젯 렌더링
+  useEffect(() => {
+    const fetchPaymentWidget = async () => {
+      try {
+        const widget = await loadPaymentWidget(clientKey, customerKey);
+        setPaymentWidget(widget);
+        
+        // 결제 UI 렌더링 (#payment-widget 요소에 그려짐)
+        widget.renderPaymentMethods('#payment-widget', { value: 50000 }); // 예시 기본금액 5만원
+        // 이용약관 UI 렌더링
+        widget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
+      } catch (error) {
+        console.error("결제 위젯 렌더링 실패:", error);
+      }
+    };
+    fetchPaymentWidget();
   }, []);
 
   const handleSmartChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -211,29 +235,22 @@ export default function ApplyPage() {
     }
 
     // 누락된 항목이 있다면 State 업데이트 후 종료
-    if (missing.length > 0) {
+    if (missingFields.length > 0) {
       setMissingFields(missing);
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       return;
     }
-    // 검사 통과 시 초기화
-    setMissingFields([]);
 
     const confirmResult = await YesAlert.fire({
-      title: '서비스 신청',
-      text: '입력하신 내용으로 동행 서비스를 신청하시겠습니까?',
+      title: '결제 및 서비스 신청',
+      text: '선택하신 결제 수단으로 결제를 진행하시겠습니까?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#1e3a8a',
-      cancelButtonColor: '#94A3B8',
-      confirmButtonText: '네, 신청하겠습니다', // 텍스트를 알맞게 수정
+      confirmButtonText: '네, 결제하겠습니다',
       cancelButtonText: '닫기'
     });
 
-    // 사용자가 '닫기'를 누르면 여기서 함수를 즉시 종료
-    if (!confirmResult.isConfirmed) {
-      return; 
-    }
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const combinedDetailedContent = formData.category === '일반 진료'
@@ -264,17 +281,21 @@ export default function ApplyPage() {
         medication: healthData.medication || undefined,
         preparedDocuments: healthData.preparedDocuments || undefined
       };
+      sessionStorage.setItem('tempReservationData', JSON.stringify(requestBody));
 
-      await reservationApi.create(requestBody);
-      await YesAlert.fire({ 
-        icon: 'success', 
-        title: '신청 완료', 
-        text: '동행 서비스 예약이 성공적으로 접수되었습니다.', 
-        confirmButtonText: '확인',
-        showCancelButton: false,
-        confirmButtonColor: '#1e3a8a' 
+      // 토스페이먼츠 결제 요청 실행! (고객 화면이 결제창으로 덮이거나 리다이렉트 됨)
+      const orderId = `res_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+      
+      await paymentWidget?.requestPayment({
+        orderId: orderId,
+        orderName: `${formData.hospitalName} 병원 동행 서비스`,
+        successUrl: `${window.location.origin}/apply/success`, // 결제 성공 시 이동할 페이지
+        failUrl: `${window.location.origin}/apply/fail`,       // 결제 실패 시 이동할 페이지
+        customerEmail: formData.patientName + "@test.com",     // 옵션
+        customerName: formData.patientName,
       });
-      router.push('/mypage');
+
+      // 🚨 기존 백엔드로 쏘던 부분 지움 (결제 성공 후 백엔드로 쏴야 함)
     } catch (error: any) {
       console.error("예약 신청 에러 상세:", error.response?.data);
       const errorMsg = error.response?.data?.message || error.response?.data || '서버 오류로 인해 신청에 실패했습니다.';
@@ -749,9 +770,7 @@ export default function ApplyPage() {
                   <p className="text-[12px] sm:text-[13px] text-blue-600/90 font-bold break-keep leading-relaxed">
                     * 동행 중 예기치 못한 사고 발생 시, 지자체 위탁 기관(서울시 등) 기준에 준하는 배상 책임 보험 규정이 적용됩니다.
                   </p>
-                  <Link 
-                    href="/policy/manager-protection" 
-                    target="_blank" 
+                  <Link href="/policy/manager-protection" target="_blank" 
                     className="inline-block mt-2 text-[13px] font-bold text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors"
                   >
                     안전 이용 및 배상 규정 전문 보기 ↗
@@ -759,9 +778,12 @@ export default function ApplyPage() {
                 </div>
               </div>
             </div>
-
+            <div className="mb-6 bg-white border border-gray-100 rounded-[24px] overflow-hidden shadow-sm">
+              <div id="payment-widget" className="w-full" />
+              <div id="agreement" className="w-full" />
+            </div>
             <button type="submit" className="w-full bg-blue-950 text-white text-xl font-bold py-6 rounded-[24px] shadow-xl hover:bg-blue-900 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
-              <CheckCircle2 className="w-7 h-7" /> 동행 서비스 신청 완료하기
+              <CheckCircle2 className="w-7 h-7" /> 결제하고 동행 서비스 신청하기
             </button>
           </motion.div>
         </motion.form>

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -60,7 +61,43 @@ public class ReservationService {
             throw new IllegalStateException("해당 시간에 이미 예약된 내역이 존재합니다.");
         }
 
-        // 3. 저장 진행
+        // 토스페이먼츠 최종 결제 승인 API 호출 로직
+        if (request.getPaymentKey() != null && request.getOrderId() != null) {
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+
+                // [중요] 토스 시크릿 키는 반드시 뒤에 콜론(:)을 붙이고 Base64로 인코딩해야 합니다.
+                String widgetSecretKey = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
+                String encodedAuth = java.util.Base64.getEncoder().encodeToString((widgetSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+                headers.setBasicAuth(encodedAuth);
+                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+                Map<String, Object> paymentPayload = new HashMap<>();
+                paymentPayload.put("orderId", request.getOrderId());
+                paymentPayload.put("amount", request.getAmount());
+                paymentPayload.put("paymentKey", request.getPaymentKey());
+
+                org.springframework.http.HttpEntity<Map<String, Object>> httpEntity = new org.springframework.http.HttpEntity<>(paymentPayload, headers);
+
+                // 토스 서버로 최종 승인 요청
+                org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                        "https://api.tosspayments.com/v1/payments/confirm",
+                        httpEntity,
+                        String.class
+                );
+
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    throw new IllegalStateException("결제 승인에 실패했습니다.");
+                }
+            } catch (Exception e) {
+                System.err.println("토스 결제 승인 에러: " + e.getMessage());
+                // 결제 승인 실패 시 예외를 발생시켜 DB 저장을 막습니다.
+                throw new IllegalStateException("결제 검증 과정에서 오류가 발생했습니다. 금액이나 주문번호가 조작되었을 수 있습니다.");
+            }
+        }
+        
         Reservation newReservation = Reservation.builder()
                 .patientName(request.getPatientName())
                 .patientPhone(request.getPatientPhone())
@@ -84,6 +121,7 @@ public class ReservationService {
                 .medication(request.getMedication())
                 .preparedDocuments(request.getPreparedDocuments())
                 .status(ReservationStatus.WAITING)
+                .baseFee(request.getAmount()) // 선입금된 기본 요금 저장
                 .build();
 
         reservationRepository.save(newReservation);

@@ -28,4 +28,8 @@ public class ReservationRequest {
     private String underlyingDisease;
     private String medication;
     private String preparedDocuments;
+    // 결제 관련 필드
+    private String paymentKey;
+    private String orderId;
+    private Integer amount;
 }
