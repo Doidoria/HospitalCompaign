@@ -29,3 +29,6 @@ spring:
             client-authentication-method: client_secret_post
             redirect-uri: http://localhost:3000/api/auth/callback/kakao
             scope: account_email,name,phone_number,shipping_address,gender,birthday,birthyear,talk_message,plusfriends
+
+toss:
+  secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
