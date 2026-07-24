@@ -72,7 +72,8 @@ public class SecurityConfig {
                 "https://wellcommunity-yescare.co.kr",
                 "https://www.wellcommunity-yescare.co.kr",
                 "http://localhost",                      // Android 앱 내부 웹뷰
-                "capacitor://localhost"                  // iOS 앱 내부 웹뷰
+                "capacitor://localhost",                  // iOS 앱 내부 웹뷰
+                "ionic://localhost"
         ));
         // 허용할 HTTP 메서드 지정 (OPTIONS는 브라우저의 사전 검사를 위해 필수)
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

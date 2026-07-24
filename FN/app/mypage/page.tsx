@@ -174,6 +174,8 @@ export default function MyPage() {
             reviewRating: res.reviewRating,
             managerId: res.managerId || null, 
             managerName: res.managerName || null,
+            extraChargeAmount: res.extraChargeAmount || 0,
+            extraPaymentStatus: res.extraPaymentStatus || 'PENDING',
           };
         });
 
@@ -609,6 +611,20 @@ export default function MyPage() {
                             <User className="w-4 h-4" /> {record.patientName} 님 동행
                           </p>
                         </div>
+
+                        {record.extraChargeAmount > 0 && record.extraPaymentStatus !== 'DONE' && (
+                          <div className="mx-2 mb-2 p-3 bg-red-50/80 border border-red-100 rounded-xl">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs font-bold text-red-500">추가 요금 미납</span>
+                              <span className="text-sm font-extrabold text-red-600">{record.extraChargeAmount.toLocaleString()}원</span>
+                            </div>
+                            <Link href={`/pay/extra/${record.id}`}>
+                              <button className="w-full py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex justify-center items-center gap-1.5">
+                                추가 요금 결제하기
+                              </button>
+                            </Link>
+                          </div>
+                        )}
                         
                         <div className="flex gap-3 mt-2 pt-4 border-t border-slate-100 pl-2">
                           <Link href={`/reservation/${record.id}`} className="flex-1">

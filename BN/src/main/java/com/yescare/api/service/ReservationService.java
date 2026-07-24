@@ -1,15 +1,13 @@
 package com.yescare.api.service;
 
 import com.yescare.api.domain.*;
-import com.yescare.api.dto.AdminReservationUpdateRequest;
-import com.yescare.api.dto.ReservationRequest;
-import com.yescare.api.dto.ReservationResponse;
-import com.yescare.api.dto.ReviewResponse;
+import com.yescare.api.dto.*;
 import com.yescare.api.repository.ManagerRepository;
 import com.yescare.api.repository.MemberRepository;
 import com.yescare.api.repository.ReservationRepository;
 import com.yescare.api.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,6 +34,9 @@ public class ReservationService {
     private final ManagerRepository managerRepository;
     private final KakaoAlimtalkService kakaoAlimtalkService;
     private final SlackNotificationService slackNotificationService;
+
+    @Value("${toss.secret-key}")
+    private String tossSecretKey;
 
     @Transactional
     public Long createReservation(String email, ReservationRequest request) {
@@ -67,9 +68,8 @@ public class ReservationService {
                 RestTemplate restTemplate = new RestTemplate();
                 org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
 
-                // [중요] 토스 시크릿 키는 반드시 뒤에 콜론(:)을 붙이고 Base64로 인코딩해야 합니다.
-                String widgetSecretKey = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
-                String encodedAuth = java.util.Base64.getEncoder().encodeToString((widgetSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                String encodedAuth = java.util.Base64.getEncoder()
+                        .encodeToString((tossSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
                 headers.setBasicAuth(encodedAuth);
                 headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
@@ -97,7 +97,7 @@ public class ReservationService {
                 throw new IllegalStateException("결제 검증 과정에서 오류가 발생했습니다. 금액이나 주문번호가 조작되었을 수 있습니다.");
             }
         }
-        
+
         Reservation newReservation = Reservation.builder()
                 .patientName(request.getPatientName())
                 .patientPhone(request.getPatientPhone())
@@ -688,5 +688,55 @@ public class ReservationService {
             kakaoAlimtalkService.sendExtraChargeNotification(phoneNumber, customerName, amount, reason);
             System.out.println("🆕 [알림톡 분기] 최초 추가 요금 청구 메시지 트리거");
         }
+    }
+
+    // 추가 요금 최종 결제 승인 로직
+    @Transactional
+    public void confirmExtraPayment(Long reservationId, ExtraPaymentRequest request) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        // 1. 금액 위변조 검증: DB에 청구된 금액과 고객이 실제 결제한 금액이 같은지 확인
+        if (reservation.getExtraChargeAmount() == null || !reservation.getExtraChargeAmount().equals(request.getAmount())) {
+            throw new IllegalStateException("청구된 추가 요금과 실제 결제 금액이 일치하지 않습니다.");
+        }
+
+        // 2. 이미 결제가 완료된 건인지 방어
+        if ("DONE".equals(reservation.getExtraPaymentStatus())) {
+            throw new IllegalStateException("이미 결제가 완료된 추가 요금입니다.");
+        }
+
+        // 3. 토스페이먼츠 승인 API 호출
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            String encodedAuth = java.util.Base64.getEncoder().encodeToString((tossSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            headers.setBasicAuth(encodedAuth);
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            Map<String, Object> paymentPayload = new HashMap<>();
+            paymentPayload.put("orderId", request.getOrderId());
+            paymentPayload.put("amount", request.getAmount());
+            paymentPayload.put("paymentKey", request.getPaymentKey());
+
+            org.springframework.http.HttpEntity<Map<String, Object>> httpEntity = new org.springframework.http.HttpEntity<>(paymentPayload, headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://api.tosspayments.com/v1/payments/confirm",
+                    httpEntity,
+                    String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new IllegalStateException("추가 요금 결제 승인에 실패했습니다.");
+            }
+        } catch (Exception e) {
+            System.err.println("토스 추가 결제 승인 에러: " + e.getMessage());
+            throw new IllegalStateException("추가 요금 결제 검증 중 오류가 발생했습니다.");
+        }
+
+        // 4. DB 상태 업데이트 (결제 완료)
+        reservation.completeExtraPayment(request.getOrderId(), request.getPaymentKey());
     }
 }

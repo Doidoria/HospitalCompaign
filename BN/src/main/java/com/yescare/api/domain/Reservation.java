@@ -134,6 +134,15 @@ public class Reservation {
     @Column(length = 20)
     private String paymentStatus; // 결제 상태 (예: PENDING, DONE, CANCELED)
 
+    @Column(length = 64, unique = true)
+    private String extraOrderId; // 추가 결제 고유 주문번호
+
+    @Column(length = 200)
+    private String extraPaymentKey; // 추가 결제 토스 승인 키
+
+    @Column(length = 20)
+    private String extraPaymentStatus = "PENDING"; // 추가 결제 상태 (PENDING: 대기, DONE: 완료)
+
     public void setSettlementStatus(String settlementStatus) {
         this.settlementStatus = settlementStatus;
     }
@@ -276,6 +285,13 @@ public class Reservation {
         }
         this.extraChargeAmount = amount;
         this.extraChargeReason = reason;
+    }
+
+    // 추가 요금 결제 완료 처리 메서드
+    public void completeExtraPayment(String extraOrderId, String extraPaymentKey) {
+        this.extraOrderId = extraOrderId;
+        this.extraPaymentKey = extraPaymentKey;
+        this.extraPaymentStatus = "DONE";
     }
 
     public void setReport(Report report) {

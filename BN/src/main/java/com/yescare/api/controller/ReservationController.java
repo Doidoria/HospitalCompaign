@@ -186,4 +186,14 @@ public class ReservationController {
 
         return ResponseEntity.ok(reservationService.getAllReservationsForExcel(keyword, status));
     }
+
+    // 추가 요금 결제 승인 API
+    @PostMapping("/{id}/extra-payment/confirm")
+    public ResponseEntity<?> confirmExtraPayment(
+            @PathVariable("id") Long id,
+            @RequestBody ExtraPaymentRequest request) {
+
+        reservationService.confirmExtraPayment(id, request);
+        return ResponseEntity.ok().body("추가 요금 결제 승인이 완료되었습니다.");
+    }
 }

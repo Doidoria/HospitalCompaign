@@ -84,6 +84,10 @@ export const reservationApi = {
   completeAccompany: (id: number) => apiClient.patch(`/api/managers/reservations/${id}/complete`),
   addExtraCharge: (id: number, data: { amount: number; reason: string }) => 
     apiClient.post(`/api/managers/reservations/${id}/extra-charge`, data),
+
+  // 추가 요금 결제 승인 요청
+  confirmExtraPayment: (id: number, data: { paymentKey: string, orderId: string, amount: number }) =>
+    apiClient.post(`/api/reservations/${id}/extra-payment/confirm`, data),
 };
 
 // ==========================================

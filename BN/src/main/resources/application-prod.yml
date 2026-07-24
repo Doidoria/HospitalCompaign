@@ -41,3 +41,6 @@ cloud:
       static: ap-northeast-2
     stack:
       auto: false
+
+toss:
+  secret-key: ${TOSS_SECRET_KEY}

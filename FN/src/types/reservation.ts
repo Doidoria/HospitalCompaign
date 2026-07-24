@@ -25,6 +25,9 @@ export interface ReservationRequest {
   underlyingDisease?: string;
   medication?: string;
   preparedDocuments?: string;
+  amount?: number;
+  paymentKey?: string;
+  orderId?: string;
 }
 
 // 3. 예약 응답 DTO 매칭 (ReservationResponse.java)

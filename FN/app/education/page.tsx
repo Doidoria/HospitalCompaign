@@ -13,9 +13,12 @@ export default function EducationLandingPage() {
 
   // 쌤플 교육 사진 슬라이드 데이터 (대표님의 실제 이미지 에셋 경로로 교체해 쓰시면 됩니다)
   const slideImages = [
-    { url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200', title: '전문적이고 체계적인 이론 교육 현장' },
-    { url: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=1200', title: '실제 병원 환경을 재현한 실무 시뮬레이션' },
-    { url: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?q=80&w=1200', title: '응급 처치 및 시니어 케어 밀착 훈련' },
+    { url: '/images/education/edu-slide-01.jpg', title: '계명문화대학교 강의 현장' },
+    { url: '/images/education/edu-slide-02.jpg', title: '전문적이고 체계적인 이론 교육 현장' },
+    { url: '/images/education/edu-slide-03.jpg', title: '노사발전재단 교육 현장' },
+    { url: '/images/education/edu-slide-04.jpg', title: '칠곡군 교육 강의 현장' },
+    { url: '/images/education/edu-slide-05.jpg', title: '남구노인대학 강의 현장' },
+    { url: '/images/education/edu-slide-06.jpg', title: '상주 교육 강의 현장' },
   ];
 
   // 5초마다 슬라이드 자동 재생 (오토 슬라이드)
@@ -73,7 +76,7 @@ export default function EducationLandingPage() {
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <span className="px-3 py-1 bg-emerald-500/80 text-white backdrop-blur-md rounded-full text-[11px] font-extrabold shadow-sm">
-                      현장 스케치 {currentSlide + 1} / {slideImages.length}
+                      교육 강의 {currentSlide + 1} / {slideImages.length}
                     </span>
                   </div>
                   <h3 className="text-white text-2xl md:text-3xl font-extrabold drop-shadow-lg break-keep">

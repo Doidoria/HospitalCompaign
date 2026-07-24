@@ -1,7 +1,7 @@
 //app/apply/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { loadPaymentWidget, PaymentWidgetInstance } from '@tosspayments/payment-widget-sdk';
 import { Calendar, MapPin, User, FileText, ArrowLeft, CheckCircle2, Search, Car, Accessibility, HeartPulse, Stethoscope, Building2, X, AlertCircle, 
@@ -19,9 +19,9 @@ export default function ApplyPage() {
   const [postTarget, setPostTarget] = useState<'none' | 'hospital' | 'meeting'>('none');
 
   // 토스 위젯 상태 관리
-  const [paymentWidget, setPaymentWidget] = useState<PaymentWidgetInstance | null>(null);
-  const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm"; // 토스 테스트용 클라이언트 키
-  const customerKey = "generate-random-customer-key"; // 비회원/회원 식별용 난수
+  const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
+  const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "";
+  const customerKey = "generate-random-customer-key";
 
   // 누락된 입력 항목을 관리하는 State
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -88,21 +88,30 @@ export default function ApplyPage() {
     }).catch(err => console.log("사용자 정보를 불러올 수 없습니다."));
   }, []);
 
+  // 위젯 중복 실행 방지용 Ref
+  const widgetInit = useRef(false);
+
+  // 사용자가 선택한 동행 목적(category)에 따라 동적으로 기본 요금 책정
+  const calculatedBaseFee = formData.category === '일반 진료' ? 44000 : 66000; // 정밀 검사 등은 더 비싸게
+
   // 페이지 로드 시 결제 위젯 렌더링
   useEffect(() => {
     const fetchPaymentWidget = async () => {
+      // 이미 렌더링을 시작했다면 중단 (React Strict Mode 방어)
+      if (widgetInit.current) return;
+      widgetInit.current = true;
+
       try {
         const widget = await loadPaymentWidget(clientKey, customerKey);
-        setPaymentWidget(widget);
+        paymentWidgetRef.current = widget;
         
-        // 결제 UI 렌더링 (#payment-widget 요소에 그려짐)
-        widget.renderPaymentMethods('#payment-widget', { value: 50000 }); // 예시 기본금액 5만원
-        // 이용약관 UI 렌더링
+        widget.renderPaymentMethods('#payment-widget', { value: calculatedBaseFee });
         widget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
       } catch (error) {
         console.error("결제 위젯 렌더링 실패:", error);
       }
     };
+    
     fetchPaymentWidget();
   }, []);
 
@@ -241,17 +250,6 @@ export default function ApplyPage() {
       return;
     }
 
-    const confirmResult = await YesAlert.fire({
-      title: '결제 및 서비스 신청',
-      text: '선택하신 결제 수단으로 결제를 진행하시겠습니까?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: '네, 결제하겠습니다',
-      cancelButtonText: '닫기'
-    });
-
-    if (!confirmResult.isConfirmed) return;
-
     try {
       const combinedDetailedContent = formData.category === '일반 진료'
         ? `- 진료 과목: ${detailData.department}\n- 주요 증상: ${detailData.symptoms}`
@@ -270,23 +268,22 @@ export default function ApplyPage() {
         meetingDetailAddress: basicExtraData.meetingType === '자택' ? '' : basicExtraData.meetingDetail,
         transportation: basicExtraData.transportation,
         mobility: basicExtraData.mobility,
-        // 수정된 부분: 백엔드 DTO에 맞게 분리
         memo: formData.memo || undefined,             // 보호자 특별 요청사항
         requirements: formData.requirements || undefined, // 만약 따로 쓰는 요구사항이 없다면 생략 가능
         detailedContent: combinedDetailedContent,
         doctorInquiry: formData.doctorInquiry || undefined,
-        // 건강 정보 4종 추가 (값이 있을 때만 전송)
         bloodType: healthData.bloodType || undefined,
         underlyingDisease: healthData.underlyingDisease || undefined,
         medication: healthData.medication || undefined,
-        preparedDocuments: healthData.preparedDocuments || undefined
+        preparedDocuments: healthData.preparedDocuments || undefined,
+        amount: calculatedBaseFee
       };
       sessionStorage.setItem('tempReservationData', JSON.stringify(requestBody));
 
       // 토스페이먼츠 결제 요청 실행! (고객 화면이 결제창으로 덮이거나 리다이렉트 됨)
       const orderId = `res_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
       
-      await paymentWidget?.requestPayment({
+      await paymentWidgetRef.current?.requestPayment({
         orderId: orderId,
         orderName: `${formData.hospitalName} 병원 동행 서비스`,
         successUrl: `${window.location.origin}/apply/success`, // 결제 성공 시 이동할 페이지
@@ -295,15 +292,16 @@ export default function ApplyPage() {
         customerName: formData.patientName,
       });
 
-      // 🚨 기존 백엔드로 쏘던 부분 지움 (결제 성공 후 백엔드로 쏴야 함)
+    // 🚨 기존 백엔드로 쏘던 부분 지움 (결제 성공 후 백엔드로 쏴야 함)
     } catch (error: any) {
-      console.error("예약 신청 에러 상세:", error.response?.data);
-      const errorMsg = error.response?.data?.message || error.response?.data || '서버 오류로 인해 신청에 실패했습니다.';
+      console.error("결제 호출 에러 상세:", error);
+      // 토스 결제창 에러(약관 미동의, 결제창 강제 종료 등)의 메시지를 직접 출력
+      const errorMsg = error.message || '결제창을 띄우는 중 문제가 발생했습니다.';
       
       YesAlert.fire({ 
-        icon: 'error', 
-        title: '신청 실패', 
-        text: typeof errorMsg === 'string' ? errorMsg : '다시 시도해주세요.' 
+        icon: 'warning', 
+        title: '결제 진행 안내', 
+        text: errorMsg 
       });
     }
   };
@@ -434,6 +432,12 @@ export default function ApplyPage() {
                 <label className="block text-sm font-bold text-gray-500 mb-2 ml-1">방문 병원 <span className="text-red-500">*</span></label>
                 <div className="flex gap-2">
                   <input type="text" name="hospitalName" value={formData.hospitalName} placeholder="병원을 검색하거나 직접 입력하세요" onChange={handleSmartChange} 
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault(); // 폼 자동 제출(결제창 호출) 완벽 방어
+                        setPostTarget('hospital'); // 엔터 누르면 돋보기 버튼 누른 것처럼 주소 검색창 오픈!
+                      }
+                    }}
                     className="flex-1 min-w-0 px-4 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium text-gray-800 text-sm md:text-base" />
                   <button type="button" onClick={() => setPostTarget('hospital')} 
                     className="w-14 shrink-0 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-colors shadow-md flex items-center justify-center">
