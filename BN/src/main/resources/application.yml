@@ -54,3 +54,11 @@ coolsms:
 slack:
   webhook:
     reservation-url: ${SLACK_WEBHOOK_RESERVATION_URL}
+
+# 로깅용 슬랙 웹훅 추가
+logging:
+  slack:
+    webhook-uri: ${SLACK_WEBHOOK_URI}
+
+toss:
+  secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}
