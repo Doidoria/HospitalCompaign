@@ -67,9 +67,9 @@ export const metadata: Metadata = {
   },
   // 🔑 구글 서치 콘솔 & 네이버 서치어드바이저 소유권 확인 태그
   verification: {
-    google: "구글_서치_콘솔에서_발급받은_메타태그_content값", // 👈 3단계에서 구글 코드 입력
+    google: "NgmVisPIrh0J2HeFxYcieuPHCqp7k_2meFb9EM--gJU", // 대표님이 방금 찾아오신 구글 코드!
     other: {
-      "naver-site-verification": "네이버_서치어드바이저에서_발급받은_코드", // 👈 3단계에서 네이버 코드 입력
+      "naver-site-verification": "네이버_코드도_발급받으셨다면_여기에_넣어주세요", // 네이버 코드가 아직 없다면 이 줄은 비워두셔도 됩니다.
     },
   },
   robots: {
