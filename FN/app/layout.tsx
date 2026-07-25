@@ -1,3 +1,5 @@
+// app/layout.tsx
+
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
@@ -36,25 +38,44 @@ export const viewport: Viewport = {
 
 // 4. SEO 및 카카오톡 공유하기(Open Graph)를 위한 메타데이터 고도화
 export const metadata: Metadata = {
-  title: "예스케어 (Ye's Care) - 믿을 수 있는 병원 동행 서비스",
-  description: "가족 같은 마음으로 함께합니다. 안전하고 편안한 병원 동행 서비스 예스케어.",
-  keywords: ["병원동행", "병원동행서비스", "예스케어", "요양보호사", "진료동행"],
+  metadataBase: new URL("https://wellcommunity-yescare.co.kr"), // 상대경로 자동 완성용 Base URL
+  title: {
+    default: "예스케어 (Ye's Care) - 병원 동행 서비스",
+    template: "%s | 예스케어"
+  },
+  description: "가족 같은 마음으로 함께합니다. 거동이 불편한 환자와 전문 매니저를 연결해 드리는 안전한 병원 동행 서비스 예스케어.",
+  keywords: ["병원동행", "병원동행서비스", "예스케어", "YesCare", "병원동행매니저", "요양보호사", "진료동행", "대구병원동행"],
+  authors: [{ name: "예스케어" }],
+  alternates: {
+    canonical: "https://wellcommunity-yescare.co.kr",
+  },
   openGraph: {
     title: "예스케어 - 병원 동행 서비스",
-    description: "가족 같은 마음으로 함께합니다. 안전하고 편안한 병원 동행 서비스",
-    url: "https://yescare.co.kr", // 실제 배포될 도메인으로 변경하세요
+    description: "가족 같은 마음으로 함께합니다. 안전하고 편안한 병원 동행 서비스 예스케어",
+    url: "https://wellcommunity-yescare.co.kr",
     siteName: "예스케어(Ye's Care)",
     images: [
       {
-        url: "/images/og-image.jpg", // public/images 폴더에 1200x630 사이즈 썸네일 이미지 추가 권장
+        url: "/images/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "예스케어 서비스 썸네일",
+        alt: "예스케어 병원 동행 서비스",
       },
     ],
     locale: "ko_KR",
     type: "website",
   },
+  // 🔑 구글 서치 콘솔 & 네이버 서치어드바이저 소유권 확인 태그
+  verification: {
+    google: "구글_서치_콘솔에서_발급받은_메타태그_content값", // 👈 3단계에서 구글 코드 입력
+    other: {
+      "naver-site-verification": "네이버_서치어드바이저에서_발급받은_코드", // 👈 3단계에서 네이버 코드 입력
+    },
+  },
+  robots: {
+    index: true,
+    follow: true,
+  }
 };
 
 export default function RootLayout({

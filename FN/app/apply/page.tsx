@@ -286,6 +286,24 @@ export default function ApplyPage() {
       };
       sessionStorage.setItem('tempReservationData', JSON.stringify(requestBody));
 
+      // =====================================================================
+      // 🚀 [오픈 전 임시 방어막] 시작: 정식 오픈 시 이 부분을 삭제해 주세요!
+      const confirmBeta = await YesAlert.fire({
+        title: '현재 서비스 정식 오픈 준비 중입니다.',
+        text: '시스템 최종 점검(베타 테스트) 기간입니다. 테스트 목적으로 결제를 진행하시겠습니까?',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#1E3A8A', // bg-blue-950 색상에 맞춤
+        cancelButtonColor: '#94A3B8',
+        confirmButtonText: '네, 진행하겠습니다',
+        cancelButtonText: '취소'
+      });
+
+      if (!confirmBeta.isConfirmed) {
+        return; // 사용자가 '취소'를 누르면 여기서 함수를 종료하여 결제창을 안 띄움
+      }
+      // =====================================================================
+
       // 토스페이먼츠 결제 요청 실행! (고객 화면이 결제창으로 덮이거나 리다이렉트 됨)
       const orderId = `res_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
       
