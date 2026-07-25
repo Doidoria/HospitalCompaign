@@ -195,8 +195,6 @@ export default function ApplyPage() {
 
     const missing: string[] = [];
 
-    if (!formData.date) missing.push('진료 날짜');
-    if (!formData.time) missing.push('진료 시간');
     if (!formData.hospitalName) missing.push('방문 병원');
     if (!formData.patientName) missing.push('실제 이용자 성함');
     if (!formData.patientPhone) missing.push('환자 연락처');
@@ -244,9 +242,17 @@ export default function ApplyPage() {
     }
 
     // 누락된 항목이 있다면 State 업데이트 후 종료
-    if (missingFields.length > 0) {
+    if (missing.length > 0) {
       setMissingFields(missing);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      setTimeout(() => {
+        const errorSection = document.getElementById('error-section');
+        if (errorSection) {
+          // 요소의 현재 위치(Y좌표)를 구한 뒤, 상단에서 150px 정도 여유를 두고 멈춤
+          const y = errorSection.getBoundingClientRect().top + window.scrollY - 300;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 100);
+      
       return;
     }
 
@@ -731,7 +737,7 @@ export default function ApplyPage() {
             )}
           </motion.div>
 
-          <motion.div variants={itemVariants} className="pt-0">
+          <motion.div variants={itemVariants} className="pt-0" id="error-section">
             
             {/* 누락된 필드가 있을 때 보여주는 에러 안내 태그 */}
             {missingFields.length > 0 && (
