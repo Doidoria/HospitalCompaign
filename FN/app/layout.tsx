@@ -65,11 +65,11 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     type: "website",
   },
-  // 🔑 구글 서치 콘솔 & 네이버 서치어드바이저 소유권 확인 태그
+  // 구글 서치 콘솔 & 네이버 서치어드바이저 소유권 확인 태그
   verification: {
     google: "NgmVisPIrh0J2HeFxYcieuPHCqp7k_2meFb9EM--gJU", // 대표님이 방금 찾아오신 구글 코드!
     other: {
-      "naver-site-verification": "네이버_코드도_발급받으셨다면_여기에_넣어주세요", // 네이버 코드가 아직 없다면 이 줄은 비워두셔도 됩니다.
+      "naver-site-verification": "5193895e45d4f7a36ee19f7f423ac477ea0a47ef", // 네이버 코드가 아직 없다면 이 줄은 비워두셔도 됩니다.
     },
   },
   robots: {
