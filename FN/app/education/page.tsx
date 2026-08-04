@@ -42,7 +42,7 @@ export default function EducationLandingPage() {
             <GraduationCap className="w-4 h-4" /> 최고 수준의 동행 매니저 양성
           </div>
           <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight break-keep">
-            예스케어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-emerald-300">플러스 평생교육원</span>
+            예스케어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-emerald-300">교육원</span>
           </h2>
           <p className="text-slate-300 text-base md:text-lg max-w-xl mx-auto break-keep leading-relaxed">
             단순한 이동 보조를 넘어, 환자의 심리적 안정과 전문 의료 행정 조력까지 수행하는 대한민국 1% 병원동행 전문가를 양성합니다.
@@ -53,7 +53,7 @@ export default function EducationLandingPage() {
       <main className="max-w-4xl mx-auto px-6 pt-12 space-y-12">
         <section className="space-y-4">
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 ml-1">
-            ● 플러스 평생교육원 생생한 교육 현장
+            ● 병원 동행 매니저 생생한 교육 현장
           </h3>
           {/* 슬라이드 UI */}
           <div className="relative h-[300px] md:h-[480px] w-full rounded-[32px] overflow-hidden shadow-2xl border border-gray-200 bg-slate-900 group">
@@ -119,7 +119,7 @@ export default function EducationLandingPage() {
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-2">
             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-2"><Award className="w-5 h-5" /></div>
             <h4 className="font-extrabold text-slate-800 text-base">공식 인증 수료증 발급</h4>
-            <p className="text-gray-500 text-xs leading-relaxed break-keep">플러스 평생교육원 명의의 정식 수료증이 발급되어 전문 스펙으로 활용 가능합니다.</p>
+            <p className="text-gray-500 text-xs leading-relaxed break-keep">한국직업능률개발원의 정식 수료증이 발급되어 전문 스펙으로 활용 가능합니다.</p>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-2">
             <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-2"><ShieldCheck className="w-5 h-5" /></div>
