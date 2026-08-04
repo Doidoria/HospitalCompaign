@@ -53,7 +53,7 @@ export default function EducationLandingPage() {
       <main className="max-w-4xl mx-auto px-6 pt-12 space-y-12">
         <section className="space-y-4">
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 ml-1">
-            ● 병원 동행 매니저 생생한 교육 현장
+            ● 예스케어 생생한 교육 현장
           </h3>
           {/* 슬라이드 UI */}
           <div className="relative h-[300px] md:h-[480px] w-full rounded-[32px] overflow-hidden shadow-2xl border border-gray-200 bg-slate-900 group">
