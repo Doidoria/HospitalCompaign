@@ -118,8 +118,8 @@ export default function EducationLandingPage() {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-2">
             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-2"><Award className="w-5 h-5" /></div>
-            <h4 className="font-extrabold text-slate-800 text-base">공식 인증 수료증 발급</h4>
-            <p className="text-gray-500 text-xs leading-relaxed break-keep">한국직업능률개발원의 정식 수료증이 발급되어 전문 스펙으로 활용 가능합니다.</p>
+            <h4 className="font-extrabold text-slate-800 text-base">공식 인증 자격증 발급</h4>
+            <p className="text-gray-500 text-xs leading-relaxed break-keep">한국직업능률개발원의 정식 자격증이 발급되어 전문 스펙으로 활용 가능합니다.</p>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-2">
             <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-2"><ShieldCheck className="w-5 h-5" /></div>
