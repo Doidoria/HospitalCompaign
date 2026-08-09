@@ -220,7 +220,7 @@ export default function EducationLandingPage() {
             <ul className="space-y-1.5 text-[13px] text-gray-500 leading-relaxed break-keep">
               <li className="flex gap-2">
                 <span className="font-semibold">1.</span>
-                <span>상기 병원동행매니저 1급 자격은 자격기본법 규정에 따라 등록한 민간자격으로, 국가로부터 인정받은 공인자격이 아닙니다.</span>
+                <span>상기 병원동행매니저 자격은 자격기본법 규정에 따라 등록한 민간자격으로, 국가로부터 인정받은 공인자격이 아닙니다.</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold">2.</span>
