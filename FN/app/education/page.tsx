@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Award, CheckCircle2, ChevronLeft, ChevronRight, GraduationCap, ShieldCheck, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award, CheckCircle2, ChevronLeft, ChevronRight, GraduationCap, ShieldCheck, Star, 
+  BookOpen, Users, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -119,7 +120,7 @@ export default function EducationLandingPage() {
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-2">
             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-2"><Award className="w-5 h-5" /></div>
             <h4 className="font-extrabold text-slate-800 text-base">공식 인증 자격증 발급</h4>
-            <p className="text-gray-500 text-xs leading-relaxed break-keep">한국직업능률개발원의 정식 자격증이 발급되어 전문 스펙으로 활용 가능합니다.</p>
+            <p className="text-gray-500 text-xs leading-relaxed break-keep">한국직업능력연구원에 등록된 민간 자격증이 발급되어 전문 스펙으로 활용 가능합니다.</p>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-2">
             <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-2"><ShieldCheck className="w-5 h-5" /></div>
@@ -133,24 +134,105 @@ export default function EducationLandingPage() {
           </div>
         </section>
 
-        {/* 📋 간단 커리큘럼 요약표 */}
-        <section className="bg-white p-6 md:p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
-          <h3 className="text-lg font-bold text-slate-800 border-b border-gray-50 pb-3">운영 과정 가이드</h3>
-          <div className="space-y-4 text-sm font-medium">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-extrabold text-slate-800 block">1. 병원동행 매니저 자격증반</span>
-                <span className="text-xs text-gray-500 block mt-0.5">기초 의료 행정 이론, 노인 장기요양 보험 제도의 이해, 매니저 기본 직무 소양 교육</span>
+        {/* 상세 교육과정 및 수강 안내 */}
+        <section className="bg-white p-6 md:p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
+          <div className="border-b border-gray-100 pb-4">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+              <span>병원동행매니저 교육과정 안내</span>
+            </h3>
+            <p className="text-gray-500 text-xs mt-1">
+              전문 동행 매니저로 성장하기 위한 체계적인 교육 프로그램 및 수강 정보를 안내해 드립니다.
+            </p>
+          </div>
+
+          {/* 1. 교육 대상 & 수혜 혜택 (2단 카드) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 교육 대상 */}
+            <div className="bg-blue-50/60 p-5 rounded-2xl border border-blue-100/80">
+              <h4 className="font-extrabold text-blue-950 text-sm mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span>교육 대상</span>
+              </h4>
+              <ul className="space-y-2 text-xs text-gray-700 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 shrink-0"></span>
+                  <span>요양보호사, 사회복지사, 간호사/간호조무사 자격 소지자</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 shrink-0"></span>
+                  <span>병원동행 전문가로 활동 및 취업을 희망하는 일반인 누구나</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* 수강 혜택 */}
+            <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-100/80">
+              <h4 className="font-extrabold text-emerald-950 text-sm mb-3 flex items-center gap-2">
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span>수강 및 수료 혜택</span>
+              </h4>
+              <ul className="space-y-2 text-xs text-gray-700 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0"></span>
+                  <span>한국직업능력연구원 등록 민간자격증 발급 지원</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0"></span>
+                  <span>예스케어 매니저 등록 및 우선 매칭 기회 제공</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* 2. 주요 교육 과목 (4대 모듈) */}
+          <div className="pt-2">
+            <h4 className="font-bold text-slate-800 text-sm mb-3">주요 교육 과목</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <span className="text-xs font-bold text-blue-600 block mb-1">모듈 01</span>
+                <p className="font-bold text-slate-800 text-sm">병원동행 서비스 개요 및 직무 소양</p>
+                <p className="text-xs text-gray-500 mt-1">매니저 역할, 윤리 강령, 서비스 기본 마인드</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <span className="text-xs font-bold text-blue-600 block mb-1">모듈 02</span>
+                <p className="font-bold text-slate-800 text-sm">의료 소통 및 커뮤니케이션</p>
+                <p className="text-xs text-gray-500 mt-1">환자·보호자·의료진 간 원활한 공감 소통 기법</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <span className="text-xs font-bold text-blue-600 block mb-1">모듈 03</span>
+                <p className="font-bold text-slate-800 text-sm">질환별 케어 및 안전/응급 대처</p>
+                <p className="text-xs text-gray-500 mt-1">낙상 위험 평가, 주요 질환 주의사항, CPR 응급처치</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <span className="text-xs font-bold text-blue-600 block mb-1">모듈 04</span>
+                <p className="font-bold text-slate-800 text-sm">병원 행정 동행 및 케어 리포트 실무</p>
+                <p className="text-xs text-gray-500 mt-1">접수/수납/약국 동행, 케어 리포트 작성 가이드</p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-extrabold text-slate-800 block">2. 예스케어 전문 심화반</span>
-                <span className="text-xs text-gray-500 block mt-0.5">상황별 응급 처치 가이드(CPR), 휠체어/이동 보조 실습, 진료 동석 리포트 작성 기법</span>
-              </div>
+          </div>
+
+          <div className="mt-8 bg-gray-50 rounded-2xl p-5 border border-gray-200/80">
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-bold text-gray-700">소비자 알림사항</span>
             </div>
+            <ul className="space-y-1.5 text-[13px] text-gray-500 leading-relaxed break-keep">
+              <li className="flex gap-2">
+                <span className="font-semibold">1.</span>
+                <span>상기 병원동행매니저 1급 자격은 자격기본법 규정에 따라 등록한 민간자격으로, 국가로부터 인정받은 공인자격이 아닙니다.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold">2.</span>
+                <span> 민간자격 등록 및 공인 제도에 대한 상세내용은 민간자격 정보서비스(
+                  <a href="https://www.pqi.or.kr" target="_blank" rel="noopener noreferrer" 
+                    className="text-blue-600 underline hover:text-blue-800 transition-colors"
+                  >www.pqi.or.kr
+                  </a>
+                  )의 [민간자격 소개] 란을 참고하여 주십시오.
+                </span>
+              </li>
+            </ul>
           </div>
         </section>
 
