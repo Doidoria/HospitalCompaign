@@ -17,15 +17,13 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
   console.log("프론트로 넘어온 픽업 주소 텍스트 ->", pickupAddress);
   console.log("프론트로 넘어온 매니저 리스트 배열 ->", managers);
 
-  // 💡 [수정됨] 주소 정규화 함수: '대구광역시 북구'와 '대구 북구'를 동일하게 '대구 북구'로 변환
+  // 화면 표시용 (예: 대구 달서구)
   const getRegion = (address: string) => {
     if (!address) return '';
     const parts = address.trim().split(' ');
     if (parts.length === 0) return '';
 
     let city = parts[0];
-    
-    // 4음절 도/특별시 이름 축약 (예: 경상북도 -> 경북)
     if (city === '경상북도') city = '경북';
     if (city === '경상남도') city = '경남';
     if (city === '전라북도' || city === '전북특별자치도') city = '전북';
@@ -34,27 +32,33 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
     if (city === '충청남도') city = '충남';
     if (city === '제주특별자치도') city = '제주';
 
-    // '대구광역시' -> '대구', '서울특별시' -> '서울' 등 앞 2글자 추출
     city = city.substring(0, 2);
-    
-    // 구/군 (ex: 북구, 달서구) 추출
     const district = parts.length > 1 ? parts[1] : '';
     
     return `${city} ${district}`.trim();
   };
 
-  const pickupRegion = getRegion(pickupAddress || '');
+  // 경고 판별용: '구/군'을 제외하고 오직 '시/도'만 추출 (예: 대구)
+  const getCityOnly = (address: string) => {
+    const region = getRegion(address);
+    return region ? region.split(' ')[0] : '';
+  };
+
+  // 픽업지 주소에서 '시/도'만 추출
+  const pickupCity = getCityOnly(pickupAddress || '');
 
   const handleSelect = async (manager: any) => {
-    const managerRegion = getRegion(manager.address || '');
-    
-    // 시/도 또는 구/군이 다를 경우 타지역으로 판별
-    const isDifferentRegion = pickupRegion && managerRegion && (pickupRegion !== managerRegion);
+    // 매니저 주소에서 '시/도'만 추출
+    const managerCity = getCityOnly(manager.address || '');
+
+    const isDifferentRegion = pickupCity && managerCity && (pickupCity !== managerCity);
 
     if (isDifferentRegion) {
+      const pickupFullRegion = getRegion(pickupAddress);
+      const managerFullRegion = getRegion(manager.address);
       const result = await YesAlert.fire({
         title: '타 지역 배정 경고',
-        html: `환자의 픽업지는 <b>[${pickupRegion}]</b> 인데,<br/>매니저 활동지역은 <b>[${managerRegion}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
+        html: `환자의 픽업지는 <b>[${pickupFullRegion}]</b> 인데,<br/>매니저 활동지역은 <b>[${managerFullRegion}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '네, 배정합니다',
@@ -70,8 +74,10 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
       {managers.map((manager) => {
-        const managerRegion = getRegion(manager.address || '');
-        const isDifferentRegion = pickupRegion && managerRegion && (pickupRegion !== managerRegion);
+        const managerCity = getCityOnly(manager.address || '');
+        const isDifferentRegion = pickupCity && managerCity && (pickupCity !== managerCity);
+        const managerRegionDisplay = getRegion(manager.address || '');
+
         const daysHtml = manager.availableDays 
           ? manager.availableDays.split(',').map((day: string, idx: number) => (
               <span key={idx} className="bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm text-[11px] px-2 py-1 rounded-md font-extrabold mr-1.5 inline-block mb-1">
@@ -117,7 +123,7 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
                   </h4>
                   <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1 truncate w-full">
                     <MapPin className="w-3 h-3 text-slate-400" />
-                    {managerRegion || '주소 미등록'}
+                    {managerRegionDisplay || '주소 미등록'}
                   </p>
                 </div>
               </div>
