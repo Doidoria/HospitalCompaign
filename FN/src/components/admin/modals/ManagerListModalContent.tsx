@@ -14,65 +14,63 @@ interface ManagerListModalProps {
 export default function ManagerListModalContent({ managers, pickupAddress, onSelect }: ManagerListModalProps) {
   const [selectedEmail, setSelectedEmail] = useState<string>('');
 
-  // 💡 [최종 종결판] 모든 괄호, 특수기호, 우편번호를 뚫고 '시/도'만 핀셋으로 뽑아내는 정밀 파서
-  const getCityOnly = (address: string) => {
-    if (!address) return '미등록';
-
-    // 1. 모든 종류의 괄호를 공백으로 치환 (예: "(12345)" -> " 12345 ", "(계명대)" -> " 계명대 ")
-    const cleanStr = address.replace(/[()[\]{}]/g, ' ');
+  // 💡 [최종 종결판] 띄어쓰기, 괄호, 오타 상관없이 문장에 포함된 '모든' 시/도를 배열로 추출
+  const extractAllCities = (text: string) => {
+    if (!text) return [];
     
-    // 2. 띄어쓰기 기준으로 쪼갬
-    const words = cleanStr.trim().split(/\s+/);
-
+    // 공백을 모두 제거하여 "대 구 광 역 시", "서 울" 등 오타까지 100% 방어
+    const noSpaceText = text.replace(/\s+/g, '');
+    
     const cityMap: { [key: string]: string } = {
-      '서울': '서울', '서울특별시': '서울', '서울시': '서울',
-      '대구': '대구', '대구광역시': '대구', '대구시': '대구',
-      '부산': '부산', '부산광역시': '부산', '부산시': '부산',
-      '인천': '인천', '인천광역시': '인천', '인천시': '인천',
-      '광주': '광주', '광주광역시': '광주', '광주시': '광주',
-      '대전': '대전', '대전광역시': '대전', '대전시': '대전',
-      '울산': '울산', '울산광역시': '울산', '울산시': '울산',
-      '세종': '세종', '세종특별자치시': '세종', '세종시': '세종',
-      '경기': '경기', '경기도': '경기',
-      '강원': '강원', '강원도': '강원', '강원특별자치도': '강원',
-      '충북': '충북', '충청북도': '충북',
-      '충남': '충남', '충청남도': '충남',
-      '전북': '전북', '전라북도': '전북', '전북특별자치도': '전북',
-      '전남': '전남', '전라남도': '전남',
-      '경북': '경북', '경상북도': '경북',
-      '경남': '경남', '경상남도': '경남',
-      '제주': '제주', '제주특별자치도': '제주', '제주시': '제주'
+      '서울': '서울', '부산': '부산', '대구': '대구', '인천': '인천',
+      '광주': '광주', '대전': '대전', '울산': '울산', '세종': '세종',
+      '경기': '경기', '강원': '강원', '충북': '충북', '충남': '충남',
+      '전북': '전북', '전남': '전남', '경북': '경북', '경남': '경남', '제주': '제주'
     };
 
-    for (const word of words) {
-      if (/^\d+$/.test(word)) continue; // 숫자로만 된 단어(우편번호) 패스
-
-      for (const key of Object.keys(cityMap)) {
-        if (word.startsWith(key)) return cityMap[key];
+    const foundCities = new Set<string>();
+    
+    // 텍스트 내에 cityMap의 키워드가 하나라도 포함되어 있으면 해당 지역(value)을 저장
+    for (const [key, value] of Object.entries(cityMap)) {
+      if (noSpaceText.includes(key)) {
+        foundCities.add(value);
       }
     }
-    return '알수없음';
+    
+    return Array.from(foundCities);
   };
 
-  const pickupCity = getCityOnly(pickupAddress || '');
+  // 1. 환자 주소(자택, 병원 등 포함된 모든 텍스트)에서 지역 모두 추출
+  const pickupCities = extractAllCities(pickupAddress || '');
 
   const handleSelect = async (manager: any) => {
-    const rawManagerAddress = manager.address || manager.baseAddress || manager.activityArea || '';
-    const managerCity = getCityOnly(rawManagerAddress);
+    // 2. 매니저 주소 텍스트 모두 합치기 (address, activityArea 등 만약의 사태 대비)
+    const rawManagerAddress = `${manager.address || ''} ${manager.baseAddress || ''} ${manager.activityArea || ''}`;
+    const managerCities = extractAllCities(rawManagerAddress);
 
-    // 💡 디버깅용 콘솔 (F12 눌러서 어떻게 인식했는지 확인 가능)
-    console.log(`[배정 로직] 픽업지: ${pickupCity} / 매니저: ${managerCity}`);
+    // [개발자 확인용 상세 로그]
+    console.log(`[배정 테스트] 픽업지 주소 원본: ${pickupAddress}`);
+    console.log(`[배정 테스트] 추출된 픽업 지역:`, pickupCities);
+    console.log(`[배정 테스트] 매니저 주소 원본: ${rawManagerAddress}`);
+    console.log(`[배정 테스트] 추출된 매니저 지역:`, managerCities);
 
-    // 지역이 명확히 다를 때만 경고 (한쪽이라도 미등록/알수없음이면 무조건 배정 차단하지 않고 진행)
-    const isDifferentRegion = 
-      pickupCity !== '미등록' && pickupCity !== '알수없음' && 
-      managerCity !== '미등록' && managerCity !== '알수없음' && 
-      (pickupCity !== managerCity);
+    // 💡 핵심 로직: 둘 다 지역 정보가 존재할 때만 비교 수행
+    let isDifferentRegion = false;
+    
+    if (pickupCities.length > 0 && managerCities.length > 0) {
+      // 픽업지 지역 배열과 매니저 지역 배열 중 '단 하나라도' 겹치는 곳이 있는지 확인
+      const hasCommonCity = pickupCities.some(city => managerCities.includes(city));
+      
+      // 겹치는 지역이 하나도 없을 때만 완벽한 타지역으로 간주 (경고 발생)
+      if (!hasCommonCity) {
+        isDifferentRegion = true;
+      }
+    }
 
     if (isDifferentRegion) {
       const result = await YesAlert.fire({
         title: '타 지역 배정 경고',
-        html: `환자의 픽업지는 <b>[${pickupAddress || '미지정'}]</b> 인데,<br/>매니저 활동지역은 <b>[${rawManagerAddress || '미지정'}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
+        html: `환자의 위치는 <b>[${pickupCities.join(', ')}]</b> 인데,<br/>매니저 활동지역은 <b>[${managerCities.join(', ')}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '네, 배정합니다',
@@ -88,13 +86,16 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
       {managers.map((manager) => {
-        const rawManagerAddress = manager.address || manager.baseAddress || manager.activityArea || '';
-        const managerCity = getCityOnly(rawManagerAddress);
+        const rawManagerAddress = `${manager.address || ''} ${manager.baseAddress || ''} ${manager.activityArea || ''}`;
+        const managerCities = extractAllCities(rawManagerAddress);
         
-        const isDifferentRegion = 
-          pickupCity !== '미등록' && pickupCity !== '알수없음' && 
-          managerCity !== '미등록' && managerCity !== '알수없음' && 
-          (pickupCity !== managerCity);
+        let isDifferentRegion = false;
+        if (pickupCities.length > 0 && managerCities.length > 0) {
+          const hasCommonCity = pickupCities.some(city => managerCities.includes(city));
+          if (!hasCommonCity) {
+            isDifferentRegion = true;
+          }
+        }
 
         const daysHtml = manager.availableDays 
           ? manager.availableDays.split(',').map((day: string, idx: number) => (
@@ -106,6 +107,9 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
         
         const timeText = manager.availableTime || '시간 미지정';
         const isChecked = selectedEmail === manager.email;
+
+        // 화면에 보여줄 매니저 주소
+        const displayAddress = manager.address || manager.baseAddress || manager.activityArea || '주소 미등록';
 
         return (
           <div 
@@ -141,7 +145,7 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
                   </h4>
                   <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1 truncate w-full">
                     <MapPin className="w-3 h-3 text-slate-400" />
-                    {rawManagerAddress || '주소 미등록'}
+                    {displayAddress}
                   </p>
                 </div>
               </div>
