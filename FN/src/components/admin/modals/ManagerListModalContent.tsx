@@ -14,18 +14,16 @@ interface ManagerListModalProps {
 export default function ManagerListModalContent({ managers, pickupAddress, onSelect }: ManagerListModalProps) {
   const [selectedEmail, setSelectedEmail] = useState<string>('');
 
-  // [최종 고도화] 우편번호, 괄호 제거 후 '시/도' 단위를 정확히 추출하거나, 모르는 단어면 그대로 반환
-  const getNormalizedCity = (address: string) => {
-    if (!address) return '';
+  // 💡 [최종 종결판] 모든 괄호, 특수기호, 우편번호를 뚫고 '시/도'만 핀셋으로 뽑아내는 정밀 파서
+  const getCityOnly = (address: string) => {
+    if (!address) return '미등록';
+
+    // 1. 모든 종류의 괄호를 공백으로 치환 (예: "(12345)" -> " 12345 ", "(계명대)" -> " 계명대 ")
+    const cleanStr = address.replace(/[()[\]{}]/g, ' ');
     
-    // 1. 앞부분의 우편번호(예: 42800, 우12345) 및 괄호([자택], (사무실)) 완벽 제거
-    const cleanAddr = address.replace(/^(\[.*?\]|\(.*?\)|우?\s*\d{5})\s*/g, '').trim();
-    if (!cleanAddr) return '';
+    // 2. 띄어쓰기 기준으로 쪼갬
+    const words = cleanStr.trim().split(/\s+/);
 
-    // 2. 첫 번째 띄어쓰기 기준 앞 단어 추출 (예: '대구광역시', '서울', '계명대')
-    const firstWord = cleanAddr.split(/\s+/)[0]; 
-
-    // 3. 광역시/도 정규화 맵
     const cityMap: { [key: string]: string } = {
       '서울': '서울', '서울특별시': '서울', '서울시': '서울',
       '대구': '대구', '대구광역시': '대구', '대구시': '대구',
@@ -46,18 +44,30 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
       '제주': '제주', '제주특별자치도': '제주', '제주시': '제주'
     };
 
-    // 4. 정규화된 시/도 이름이 있으면 반환, 없으면 입력된 첫 단어 그대로 반환 (안전을 위해 경고 띄움)
-    return cityMap[firstWord] || firstWord;
+    for (const word of words) {
+      if (/^\d+$/.test(word)) continue; // 숫자로만 된 단어(우편번호) 패스
+
+      for (const key of Object.keys(cityMap)) {
+        if (word.startsWith(key)) return cityMap[key];
+      }
+    }
+    return '알수없음';
   };
 
-  const pickupCity = getNormalizedCity(pickupAddress || '');
+  const pickupCity = getCityOnly(pickupAddress || '');
 
   const handleSelect = async (manager: any) => {
     const rawManagerAddress = manager.address || manager.baseAddress || manager.activityArea || '';
-    const managerCity = getNormalizedCity(rawManagerAddress);
+    const managerCity = getCityOnly(rawManagerAddress);
 
-    // [핵심] 둘 다 값이 존재하고, 추출된 지역(또는 첫 단어)이 서로 다를 경우 무조건 경고!
-    const isDifferentRegion = pickupCity !== '' && managerCity !== '' && (pickupCity !== managerCity);
+    // 💡 디버깅용 콘솔 (F12 눌러서 어떻게 인식했는지 확인 가능)
+    console.log(`[배정 로직] 픽업지: ${pickupCity} / 매니저: ${managerCity}`);
+
+    // 지역이 명확히 다를 때만 경고 (한쪽이라도 미등록/알수없음이면 무조건 배정 차단하지 않고 진행)
+    const isDifferentRegion = 
+      pickupCity !== '미등록' && pickupCity !== '알수없음' && 
+      managerCity !== '미등록' && managerCity !== '알수없음' && 
+      (pickupCity !== managerCity);
 
     if (isDifferentRegion) {
       const result = await YesAlert.fire({
@@ -79,9 +89,12 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-h-[60vh] overflow-y-auto mt-4 custom-scrollbar pr-2 py-1">
       {managers.map((manager) => {
         const rawManagerAddress = manager.address || manager.baseAddress || manager.activityArea || '';
-        const managerCity = getNormalizedCity(rawManagerAddress);
-
-        const isDifferentRegion = pickupCity !== '' && managerCity !== '' && (pickupCity !== managerCity);
+        const managerCity = getCityOnly(rawManagerAddress);
+        
+        const isDifferentRegion = 
+          pickupCity !== '미등록' && pickupCity !== '알수없음' && 
+          managerCity !== '미등록' && managerCity !== '알수없음' && 
+          (pickupCity !== managerCity);
 
         const daysHtml = manager.availableDays 
           ? manager.availableDays.split(',').map((day: string, idx: number) => (
