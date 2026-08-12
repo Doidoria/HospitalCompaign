@@ -28,6 +28,10 @@ export default function MyPage() {
   const [activeSearchTerm, setActiveSearchTerm] = useState('');
   const [activeFilterStatus, setActiveFilterStatus] = useState('ALL');
   const [activeFilterPeriod, setActiveFilterPeriod] = useState('ALL'); // '1M', '3M', '6M', 'ALL'
+  const [activeStartDate, setActiveStartDate] = useState('');
+  const [activeEndDate, setActiveEndDate] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
 
 
   // 상태별 정렬 순서 정의
@@ -54,13 +58,19 @@ export default function MyPage() {
         const parts = record.date.match(/\d+/g);
         if (parts && parts.length >= 3) {
           const recordDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          const limitDate = new Date();
           
-          if (filterPeriod === '1M') limitDate.setMonth(limitDate.getMonth() - 1);
-          else if (filterPeriod === '3M') limitDate.setMonth(limitDate.getMonth() - 3);
-          else if (filterPeriod === '6M') limitDate.setMonth(limitDate.getMonth() - 6);
-          
-          matchPeriod = recordDate >= limitDate;
+          if (filterPeriod === 'CUSTOM') { // 직접 선택 로직
+            const sDate = filterStartDate ? new Date(filterStartDate) : new Date('2000-01-01');
+            const eDate = filterEndDate ? new Date(filterEndDate) : new Date('2099-12-31');
+            eDate.setHours(23, 59, 59, 999);
+            matchPeriod = recordDate >= sDate && recordDate <= eDate;
+          } else { // 기존 1M, 3M, 6M 로직
+            const limitDate = new Date();
+            if (filterPeriod === '1M') limitDate.setMonth(limitDate.getMonth() - 1);
+            else if (filterPeriod === '3M') limitDate.setMonth(limitDate.getMonth() - 3);
+            else if (filterPeriod === '6M') limitDate.setMonth(limitDate.getMonth() - 6);
+            matchPeriod = recordDate >= limitDate;
+          }
         }
       }
         
@@ -90,13 +100,19 @@ export default function MyPage() {
         const parts = record.date.match(/\d+/g);
         if (parts && parts.length >= 3) {
           const recordDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          const limitDate = new Date();
           
-          if (activeFilterPeriod === '1M') limitDate.setMonth(limitDate.getMonth() + 1);
-          else if (activeFilterPeriod === '3M') limitDate.setMonth(limitDate.getMonth() + 3);
-          else if (activeFilterPeriod === '6M') limitDate.setMonth(limitDate.getMonth() + 6);
-          
-          matchPeriod = recordDate <= limitDate; // 제한 기간 '이내'에 있는지 확인
+          if (activeFilterPeriod === 'CUSTOM') { // 직접 선택 로직
+            const sDate = activeStartDate ? new Date(activeStartDate) : new Date(new Date().setHours(0,0,0,0));
+            const eDate = activeEndDate ? new Date(activeEndDate) : new Date('2099-12-31');
+            eDate.setHours(23, 59, 59, 999);
+            matchPeriod = recordDate >= sDate && recordDate <= eDate;
+          } else { // 기존 로직
+            const limitDate = new Date();
+            if (activeFilterPeriod === '1M') limitDate.setMonth(limitDate.getMonth() + 1);
+            else if (activeFilterPeriod === '3M') limitDate.setMonth(limitDate.getMonth() + 3);
+            else if (activeFilterPeriod === '6M') limitDate.setMonth(limitDate.getMonth() + 6);
+            matchPeriod = recordDate <= limitDate; // 다가오는 예약이므로 이내인지 확인
+          }
         }
       }
         
@@ -451,22 +467,37 @@ export default function MyPage() {
                       </div>
 
                       {/* 기간 & 상태 필터 */}
-                      <div className="flex gap-2">
-                        <select value={activeFilterPeriod} onChange={(e) => setActiveFilterPeriod(e.target.value)}
-                          className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
-                        >
-                          <option value="ALL">전체 기간</option>
-                          <option value="1M">1개월 이내</option>
-                          <option value="3M">3개월 이내</option>
-                          <option value="6M">6개월 이내</option>
-                        </select>
-                        <select value={activeFilterStatus} onChange={(e) => setActiveFilterStatus(e.target.value)}
-                          className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
-                        >
-                          <option value="ALL">전체 상태</option>
-                          <option value="CONFIRMED">예약 확정</option>
-                          <option value="WAITING">매칭 대기</option>
-                        </select>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <select value={activeFilterPeriod} onChange={(e) => setActiveFilterPeriod(e.target.value)}
+                            className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
+                          >
+                            <option value="ALL">전체 기간</option>
+                            <option value="1M">1개월 이내</option>
+                            <option value="3M">3개월 이내</option>
+                            <option value="6M">6개월 이내</option>
+                            <option value="CUSTOM">직접 선택</option> {/* 옵션 추가 */}
+                          </select>
+                          {/* 상태 필터 Select는 그대로 둠 */}
+                          <select value={activeFilterStatus} onChange={(e) => setActiveFilterStatus(e.target.value)}
+                            className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
+                          >
+                            <option value="ALL">전체 상태</option>
+                            <option value="CONFIRMED">예약 확정</option>
+                            <option value="WAITING">매칭 대기</option>
+                          </select>
+                        </div>
+                        
+                        {/* CUSTOM 선택 시 나타나는 날짜 입력 폼 */}
+                        {activeFilterPeriod === 'CUSTOM' && (
+                          <div className="flex gap-2 items-center">
+                            <input type="date" value={activeStartDate} onChange={(e) => setActiveStartDate(e.target.value)}
+                              className="flex-1 px-3 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                            <span className="text-slate-400 font-bold">~</span>
+                            <input type="date" value={activeEndDate} onChange={(e) => setActiveEndDate(e.target.value)}
+                              className="flex-1 px-3 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -564,31 +595,44 @@ export default function MyPage() {
                     </div>
 
                     {/* 기간 & 상태 필터 */}
-                    <div className="flex gap-2">
-                      <select value={filterPeriod} onChange={(e) => {
-                          setFilterPeriod(e.target.value);
-                          setVisibleCount(3);
-                        }}
-                        className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
-                      >
-                        <option value="ALL">전체 기간</option>
-                        <option value="1M">최근 1개월</option>
-                        <option value="3M">최근 3개월</option>
-                        <option value="6M">최근 6개월</option>
-                      </select>
+                    <div className="flex flex-col gap-2"> {/* 감싸는 div 변경 */}
+                      <div className="flex gap-2">
+                        <select value={filterPeriod} onChange={(e) => {
+                            setFilterPeriod(e.target.value);
+                            setVisibleCount(3);
+                          }}
+                          className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
+                        >
+                          <option value="ALL">전체 기간</option>
+                          <option value="1M">최근 1개월</option>
+                          <option value="3M">최근 3개월</option>
+                          <option value="6M">최근 6개월</option>
+                          <option value="CUSTOM">직접 선택</option> {/* 옵션 추가 */}
+                        </select>
 
-                      <select value={filterStatus} onChange={(e) => {
-                          setFilterStatus(e.target.value);
-                          setVisibleCount(3);
-                        }}
-                        className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
-                      >
-                        <option value="ALL">전체 상태</option>
-                        <option value="CONFIRMED">예약 확정</option>
-                        <option value="WAITING">매칭 대기</option>
-                        <option value="CANCELLED">예약 취소</option>
-                        <option value="COMPLETED">이용 완료</option>
-                      </select>
+                        <select value={filterStatus} onChange={(e) => {
+                            setFilterStatus(e.target.value);
+                            setVisibleCount(3);
+                          }}
+                          className="flex-1 px-3 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-center appearance-none"
+                        >
+                          <option value="ALL">전체 상태</option>
+                          <option value="CONFIRMED">예약 확정</option>
+                          <option value="WAITING">매칭 대기</option>
+                          <option value="CANCELLED">예약 취소</option>
+                          <option value="COMPLETED">이용 완료</option>
+                        </select>
+                      </div>
+                      {/* CUSTOM 선택 시 나타나는 날짜 입력 폼 */}
+                      {filterPeriod === 'CUSTOM' && (
+                        <div className="flex gap-2 items-center">
+                          <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)}
+                            className="flex-1 px-3 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                          <span className="text-slate-400 font-bold">~</span>
+                          <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)}
+                            className="flex-1 px-3 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                      )}
                     </div>
                   </div>
 
