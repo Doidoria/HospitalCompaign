@@ -17,19 +17,44 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
   console.log("프론트로 넘어온 픽업 주소 텍스트 ->", pickupAddress);
   console.log("프론트로 넘어온 매니저 리스트 배열 ->", managers);
 
-  // 2. 아래 두 줄을 컴포넌트 시작 부분에 추가하세요. (행정구역 추출)
-  const getRegion = (address: string) => address ? address.trim().split(' ').slice(0, 2).join(' ') : '';
+  // 💡 [수정됨] 주소 정규화 함수: '대구광역시 북구'와 '대구 북구'를 동일하게 '대구 북구'로 변환
+  const getRegion = (address: string) => {
+    if (!address) return '';
+    const parts = address.trim().split(' ');
+    if (parts.length === 0) return '';
+
+    let city = parts[0];
+    
+    // 4음절 도/특별시 이름 축약 (예: 경상북도 -> 경북)
+    if (city === '경상북도') city = '경북';
+    if (city === '경상남도') city = '경남';
+    if (city === '전라북도' || city === '전북특별자치도') city = '전북';
+    if (city === '전라남도') city = '전남';
+    if (city === '충청북도') city = '충북';
+    if (city === '충청남도') city = '충남';
+    if (city === '제주특별자치도') city = '제주';
+
+    // '대구광역시' -> '대구', '서울특별시' -> '서울' 등 앞 2글자 추출
+    city = city.substring(0, 2);
+    
+    // 구/군 (ex: 북구, 달서구) 추출
+    const district = parts.length > 1 ? parts[1] : '';
+    
+    return `${city} ${district}`.trim();
+  };
+
   const pickupRegion = getRegion(pickupAddress || '');
 
-  // 3. 기존 handleSelect 함수를 아래 코드로 완전히 교체하세요.
   const handleSelect = async (manager: any) => {
     const managerRegion = getRegion(manager.address || '');
+    
+    // 시/도 또는 구/군이 다를 경우 타지역으로 판별
     const isDifferentRegion = pickupRegion && managerRegion && (pickupRegion !== managerRegion);
 
     if (isDifferentRegion) {
       const result = await YesAlert.fire({
         title: '타 지역 배정 경고',
-        html: `환자의 픽업지는 <b>[${pickupRegion}]</b> 인데,<br/>매니저 자택은 <b>[${managerRegion}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
+        html: `환자의 픽업지는 <b>[${pickupRegion}]</b> 인데,<br/>매니저 활동지역은 <b>[${managerRegion}]</b> 입니다.<br/><br/><span class="text-red-500 font-bold">거리가 멀어 지각 위험이 있습니다.</span><br/>그래도 배정하시겠습니까?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '네, 배정합니다',
@@ -39,7 +64,7 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
     }
 
     setSelectedEmail(manager.email);
-    onSelect(manager.email); // 여기서 밖으로 전달
+    onSelect(manager.email);
   };
 
   return (
@@ -66,13 +91,11 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
               ${isChecked 
                 ? 'bg-blue-50/50 border-blue-500 shadow-[0_4px_15px_rgba(59,130,246,0.15)] scale-[1.02] z-10' 
                 : isDifferentRegion 
-                  ? 'bg-red-50/30 border-red-100 hover:border-red-300 hover:bg-red-50 hover:shadow-sm' // 타지역일 때 은은한 붉은색
-                  : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'}`} // 일반 상태
+                  ? 'bg-red-50/30 border-red-100 hover:border-red-300 hover:bg-red-50 hover:shadow-sm' 
+                  : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 hover:shadow-sm'}`}
           >
-            {/* 선택 시 나타나는 왼쪽 파란 줄 */}
             {isChecked && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-[20px]"></div>}
 
-            {/* 타 지역 경고 뱃지 */}
             {isDifferentRegion && (
               <div className="absolute right-3 top-3 flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded-md text-[10px] font-black border border-red-200 animate-pulse">
                 <AlertTriangle className="w-3 h-3" />
@@ -82,7 +105,6 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
 
             <div className="flex justify-between items-start mb-3 mt-1 pr-16">
               <div className="flex items-center gap-2.5">
-                {/* 둥근 프로필 아이콘 */}
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center border shrink-0 transition-colors
                   ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
                   {isChecked ? <CheckCircle2 className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
@@ -101,11 +123,9 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
               </div>
             </div>
             
-            {/* 하단 요일/시간 정보 박스 */}
             <div className={`p-3 rounded-xl border space-y-2.5 mt-auto flex-1 transition-colors
               ${isChecked ? 'bg-white border-blue-100' : 'bg-slate-50 border-slate-200/60'}`}>
               
-              {/* 근무 요일 */}
               <div>
                 <p className="text-[10px] font-extrabold text-slate-500 mb-1.5 flex items-center gap-1">
                   <CalendarDays className="w-3.5 h-3.5 text-emerald-500" /> 근무 가능 요일
@@ -121,7 +141,6 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
                 </span>
               </div>
             </div>
-
           </div>
         );
       })}
