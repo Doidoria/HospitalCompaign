@@ -217,11 +217,9 @@ export default function ReservationTab({
   // 매니저 배정 시 거리 계산을 위한 '전체 주소' 조합 함수
   const getFullAddress = (raw: any) => {
     if (!raw) return '';
-    // 만나는 장소(자택, 병원 등), 실제 집 주소, 병원 이름을 모두 합칩니다.
     const meeting = raw.meetingPlace || raw.meetingAddress || '';
     const homeAddr = raw.baseAddress || raw.address || '';
     const hospName = raw.hospitalName || '';
-    
     return `${meeting} ${homeAddr} ${hospName}`.trim();
   };
 

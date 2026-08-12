@@ -54,18 +54,11 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
     console.log(`[배정 테스트] 매니저 주소 원본: ${rawManagerAddress}`);
     console.log(`[배정 테스트] 추출된 매니저 지역:`, managerCities);
 
-    // 핵심 로직: 둘 다 지역 정보가 존재할 때만 비교 수행
-    let isDifferentRegion = false;
-    
-    if (pickupCities.length > 0 && managerCities.length > 0) {
-      // 픽업지 지역 배열과 매니저 지역 배열 중 '단 하나라도' 겹치는 곳이 있는지 확인
-      const hasCommonCity = pickupCities.some(city => managerCities.includes(city));
-      
-      // 겹치는 지역이 하나도 없을 때만 완벽한 타지역으로 간주 (경고 발생)
-      if (!hasCommonCity) {
-        isDifferentRegion = true;
-      }
-    }
+    // 둘 다 지역 정보가 존재할 때만 '서로 겹치는 지역이 없는지' 확인, 픽업 지역 정보가 없으면(빈 배열이면) 억지로 경고를 띄우지 않고 false 처리
+    const isDifferentRegion = 
+      pickupCities.length > 0 && 
+      managerCities.length > 0 && 
+      !pickupCities.some(city => managerCities.includes(city));
 
     if (isDifferentRegion) {
       const result = await YesAlert.fire({
@@ -89,13 +82,10 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
         const rawManagerAddress = `${manager.address || ''} ${manager.baseAddress || ''} ${manager.activityArea || ''}`;
         const managerCities = extractAllCities(rawManagerAddress);
         
-        let isDifferentRegion = false;
-        if (pickupCities.length > 0 && managerCities.length > 0) {
-          const hasCommonCity = pickupCities.some(city => managerCities.includes(city));
-          if (!hasCommonCity) {
-            isDifferentRegion = true;
-          }
-        }
+        const isDifferentRegion = 
+          pickupCities.length > 0 && 
+          managerCities.length > 0 && 
+          !pickupCities.some(city => managerCities.includes(city));
 
         const daysHtml = manager.availableDays 
           ? manager.availableDays.split(',').map((day: string, idx: number) => (
