@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { adminApi } from '@/src/api';
 import { 
   TrendingUp, CreditCard, Banknote, CalendarCheck, Loader2, Download, Search, User, CalendarDays, Edit, 
-  AlertCircle, CheckCircle2, RotateCcw
+  AlertCircle, CheckCircle2, RotateCcw, ChevronLeft, ChevronRight, Filter
 } from 'lucide-react';
 import { SalesSummary, DailySalesData, SalesDetail, Member, SalesTabProps, ManagerSettlement } from '@/src/types/sales';
 import { Toast, YesAlert } from '@/src/utils/alert';
@@ -36,6 +36,9 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
   // 검색 및 필터 상태
   const [period, setPeriod] = useState('MONTH'); 
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'READY' | 'COMPLETED'>('ALL'); 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // 데이터 상태
   const [summary, setSummary] = useState<SalesSummary>({ totalSales: 0, totalBaseFee: 0, totalExtraFee: 0, totalCompletedCount: 0 });
@@ -63,6 +66,7 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
       setSummary(data.summary);
       setChartData(data.chartData);
       setSalesDetails(data.salesDetails);
+      setCurrentPage(1);
     } catch (error) {
       console.error('매출 데이터 로딩 에러:', error);
       setSummary({ totalSales: 0, totalBaseFee: 0, totalExtraFee: 0, totalCompletedCount: 0 });
@@ -228,6 +232,18 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
     { title: '이용 완료 건수', value: `${summary.totalCompletedCount}건`, icon: <CalendarCheck className="w-6 h-6 text-orange-500" /> },
   ], [summary, pendingSettlementTotal]);
 
+  const filteredSalesDetails = useMemo(() => {
+    if (statusFilter === 'ALL') return salesDetails;
+    return salesDetails.filter(item => (item.settlementStatus || 'READY') === statusFilter);
+  }, [salesDetails, statusFilter]);
+
+  // 페이지네이션 적용된 리스트 (최종적으로 화면에 그릴 10개)
+  const totalPages = Math.ceil(filteredSalesDetails.length / itemsPerPage);
+  const currentSalesDetails = filteredSalesDetails.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // 페이지 이동 함수
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
   return (
     <>
       {/* 1. 요약 통계 카드 */}
@@ -270,7 +286,16 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
       <motion.div variants={tabVariants} initial="hidden" animate="visible" className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col">
         {/* 헤더 및 필터 */}
         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <h2 className="text-lg font-bold text-slate-800 shrink-0">매출 및 매니저 정산 장부</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-800 shrink-0">매출 및 매니저 정산 장부</h2>
+            
+            {/* 정산 상태 필터링 버튼 */}
+            <div className="hidden sm:flex bg-slate-200/50 p-1 rounded-lg">
+              <button onClick={() => { setStatusFilter('ALL'); setCurrentPage(1); }} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${statusFilter === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>전체</button>
+              <button onClick={() => { setStatusFilter('READY'); setCurrentPage(1); }} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${statusFilter === 'READY' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>정산 대기</button>
+              <button onClick={() => { setStatusFilter('COMPLETED'); setCurrentPage(1); }} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${statusFilter === 'COMPLETED' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>입금 완료</button>
+            </div>
+          </div>
           
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center w-full lg:w-auto gap-2">
             <select value={period} onChange={(e) => setPeriod(e.target.value)} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
@@ -312,7 +337,7 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
                   </tr>
                 </thead>
                 <tbody className="text-sm bg-white">
-                  {salesDetails.map((res) => (
+                  {currentSalesDetails.map((res) => (
                     <tr key={res.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-all ${
                       res.settlementStatus === 'COMPLETED' ? 'opacity-40 bg-slate-200 grayscale-[30%] select-none' : ''}`}>
                       <td className="p-4 pl-6">
@@ -359,7 +384,7 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
 
             {/* 3-B. 모바일/태블릿 뷰: 카드형 리스트 */}
             <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50/50 border-t border-slate-100">
-              {salesDetails.map((res) => (
+              {currentSalesDetails.map((res) => (
                 <div key={res.id} className={`p-4 rounded-[20px] border shadow-sm flex flex-col gap-3 transition-all ${
                   res.settlementStatus === 'COMPLETED' 
                     ? 'bg-slate-200 border-slate-300 opacity-40 grayscale-[30%]' 
@@ -411,6 +436,38 @@ export default function SalesTab({ members, handleViewMemberProfile }: SalesTabP
                 </div>
               ))}
             </div>
+            {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-white">
+              <span className="text-sm text-slate-500 font-medium">
+                총 <span className="font-bold text-slate-800">{filteredSalesDetails.length}</span>건 중 
+                <span className="font-bold text-slate-800 ml-1">{(currentPage - 1) * itemsPerPage + 1}</span>-
+                <span className="font-bold text-slate-800">{Math.min(currentPage * itemsPerPage, filteredSalesDetails.length)}</span>
+              </span>
+              
+              <div className="flex items-center gap-1">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} 
+                  className="p-1.5 rounded-md hover:bg-slate-100 text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                    <button key={num} onClick={() => paginate(num)}
+                      className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${
+                        currentPage === num ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                      }`}>
+                      {num}
+                    </button>
+                  ))}
+                </div>
+
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-md hover:bg-slate-100 text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
           </>
         )}
       </motion.div>

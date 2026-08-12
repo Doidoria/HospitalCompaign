@@ -345,7 +345,7 @@ export default function GuidePage() {
                   <span className="text-slate-400 text-sm font-medium">신청 시점</span>
                   <div className="text-right">
                     <p className="text-slate-200 text-sm font-bold">사전예약 : 최대 1주일 전</p>
-                    <p className="text-slate-400 text-xs mt-1">당일신청 : 접수 후 3시간 내 매칭</p>
+                    <p className="text-slate-400 text-xs mt-1">당일신청 : 원칙 상 당일 신청은 현재 불가능합니다.</p>
                   </div>
                 </div>
 
