@@ -214,6 +214,17 @@ export default function ReservationTab({
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, statusFilter, currentPage, fetchReservations]);
 
+  // 매니저 배정 시 거리 계산을 위한 '전체 주소' 조합 함수
+  const getFullAddress = (raw: any) => {
+    if (!raw) return '';
+    // 만나는 장소(자택, 병원 등), 실제 집 주소, 병원 이름을 모두 합칩니다.
+    const meeting = raw.meetingPlace || raw.meetingAddress || '';
+    const homeAddr = raw.baseAddress || raw.address || '';
+    const hospName = raw.hospitalName || '';
+    
+    return `${meeting} ${homeAddr} ${hospName}`.trim();
+  };
+
   // [최적화 2] JSX 인라인 함수 외부 분리로 가독성 향상 및 렌더링 최적화
   const onAssign = async (id: number, pickupAddress: string) => {
     const success = await handleAssignManager(id, pickupAddress);
@@ -349,7 +360,7 @@ export default function ReservationTab({
                         <Edit className="w-3.5 h-3.5" /> 수정
                       </button>
                       {res.status === 'WAITING' ? (
-                        <button onClick={() => onAssign(res.id, res.raw?.meetingAddress || '')} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
+                        <button onClick={() => onAssign(res.id, getFullAddress(res.raw))} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5">
                           <Send className="w-3.5 h-3.5" /> 매니저 배정
                         </button>
                       ) : res.status === 'CONFIRMED' ? (
@@ -431,7 +442,7 @@ export default function ReservationTab({
                   <Edit className="w-3.5 h-3.5" /> 수정
                 </button>
                 {res.status === 'WAITING' ? (
-                  <button onClick={() => onAssign(res.id, res.raw?.meetingAddress || '')} className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
+                  <button onClick={() => onAssign(res.id, getFullAddress(res.raw))} className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm flex items-center justify-center gap-1">
                     <Send className="w-3.5 h-3.5" /> 매니저 배정
                   </button>
                 ) : res.status === 'CONFIRMED' ? (

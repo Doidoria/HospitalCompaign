@@ -54,7 +54,7 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
     console.log(`[배정 테스트] 매니저 주소 원본: ${rawManagerAddress}`);
     console.log(`[배정 테스트] 추출된 매니저 지역:`, managerCities);
 
-    // 💡 핵심 로직: 둘 다 지역 정보가 존재할 때만 비교 수행
+    // 핵심 로직: 둘 다 지역 정보가 존재할 때만 비교 수행
     let isDifferentRegion = false;
     
     if (pickupCities.length > 0 && managerCities.length > 0) {
