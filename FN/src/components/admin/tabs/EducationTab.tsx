@@ -1,3 +1,4 @@
+// app/components/admin/tabs/EducationTab.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -81,10 +82,10 @@ export default function EducationTab() {
       return;
     }
 
-    // 승인 로직 (기존 유지)
+    // 승인 로직
     const confirm = await YesAlert.fire({
-      title: '교육 신청 승인',
-      html: `<strong>[${currentName}]</strong>님의 교육 신청을 승인하시겠습니까?`,
+      title: '예스케어 매니저 승인',
+      html: `<strong>[${currentName}]</strong>님을 <strong>예스케어 매니저(PRO)</strong>로 승인하시겠습니까?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: '승인하기',
@@ -96,7 +97,7 @@ export default function EducationTab() {
       try {
         await adminApi.updateEducationStatus(id, 'APPROVED');
         setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'APPROVED' } : app));
-        Toast.fire({ icon: 'success', title: '성공적으로 승인 처리되었습니다.' });
+        Toast.fire({ icon: 'success', title: '예스케어 PRO 매니저로 정상 승인되었습니다.' });
       } catch (error) {
         YesAlert.fire({ icon: 'error', title: '실패', text: '오류가 발생했습니다.' });
       }

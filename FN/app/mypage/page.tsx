@@ -550,7 +550,18 @@ export default function MyPage() {
                                     <User className="w-5 h-5" />
                                   </div>
                                   <div>
-                                    <p className="text-[11px] text-emerald-600 font-bold mb-1 tracking-wide">배정된 매니저</p>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="text-[11px] text-emerald-600 font-bold tracking-wide">배정된 매니저</p>
+                                      {req.managerType && (
+                                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full border ${
+                                          req.managerType === 'FREE' 
+                                            ? 'bg-emerald-100/50 text-emerald-600 border-emerald-200/50' 
+                                            : 'bg-blue-100/50 text-blue-600 border-blue-200/50'
+                                        }`}>
+                                          {req.managerType}
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-base font-extrabold text-slate-900 group-hover/manager:text-emerald-800 transition-colors">
                                       {req.managerName} <span className="font-medium text-sm text-emerald-700">매니저</span>
                                     </p>

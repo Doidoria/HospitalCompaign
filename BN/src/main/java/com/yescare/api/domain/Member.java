@@ -117,8 +117,12 @@ public class Member {
     private List<Reservation> reservations = new ArrayList<>();
 
     // 매니저 승인을 위한 상태 변경 메서드
-    public void approveManager() {
-        this.role = Role.MANAGER;
+    public void approveManager(Role newRole) {
+        if (newRole == Role.MANAGER_PRO || newRole == Role.MANAGER_FREE) {
+            this.role = newRole;
+        } else {
+            this.role = Role.MANAGER_PRO; // 기본값 예스케어 매니저
+        }
     }
 
     public void updateInfo(String name, String phoneNumber, String zipCode, String address,

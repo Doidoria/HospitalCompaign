@@ -33,12 +33,16 @@ const tabVariants: Variants = { hidden: { opacity: 0, y: 15 }, visible: { opacit
 
 const getRoleName = (role: string) => {
   if (role.includes('ADMIN')) return '관리자';
-  if (role.includes('MANAGER')) return '매니저';
+  if (role === 'MANAGER_PRO') return '예스케어 PRO';
+  if (role === 'MANAGER_FREE') return '프리랜서 FREE';
+  if (role.includes('MANAGER')) return '매니저'; // 하위 호환용
   return '일반 고객';
 };
 
 const getRoleStyles = (role: string) => {
   if (role.includes('ADMIN')) return 'bg-purple-50 text-purple-700 border-purple-200';
+  if (role === 'MANAGER_PRO') return 'bg-blue-50 text-blue-700 border-blue-200'; // PRO 배지 스타일 (파랑)
+  if (role === 'MANAGER_FREE') return 'bg-emerald-50 text-emerald-700 border-emerald-200'; // FREE 배지 스타일 (초록)
   if (role.includes('MANAGER')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   return 'bg-slate-100 text-slate-600 border-slate-200';
 };
@@ -188,7 +192,8 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
             >
               <option value="">전체 권한</option>
               <option value="USER">일반 고객</option>
-              <option value="MANAGER">매니저</option>
+              <option value="MANAGER_PRO">예스케어 PRO</option>
+              <option value="MANAGER_FREE">프리랜서 FREE</option>
               <option value="ADMIN">관리자</option>
             </select>
             <div className="relative w-full sm:w-64">
@@ -243,12 +248,13 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
                         ) : (
                           <>
                             <select
-                              value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'}
+                              value={member.role}
                               onChange={(e) => handleChangeRole(member.id, e.target.value)}
                               className="bg-white border border-slate-200 text-xs font-bold text-slate-600 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
                             >
                               <option value="USER">일반 고객</option>
-                              <option value="MANAGER">매니저</option>
+                              <option value="MANAGER_PRO">예스케어 PRO</option>
+                              <option value="MANAGER_FREE">프리랜서 FREE</option>
                               <option value="ADMIN">관리자</option>
                             </select>
 
@@ -296,9 +302,12 @@ export default function MemberTab({ handleViewMemberProfile }: MemberTabProps) {
                     <span className="flex-1 text-center py-2 text-xs font-bold text-slate-400 bg-slate-50 rounded-lg border border-slate-200">관리 불가</span>
                   ) : (
                     <>
-                      <select value={member.role.includes('MANAGER') ? 'MANAGER' : 'USER'} onChange={(e) => handleChangeRole(member.id, e.target.value)} className="flex-1 bg-white border border-slate-200 text-xs font-bold text-slate-600 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer">
+                      <select value={member.role} 
+                        onChange={(e) => handleChangeRole(member.id, e.target.value)} 
+                        className="flex-1 bg-white border border-slate-200 text-xs font-bold text-slate-600 py-2 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer">
                         <option value="USER">일반</option>
-                        <option value="MANAGER">매니저</option>
+                        <option value="MANAGER_PRO">예스케어 PRO</option>
+                        <option value="MANAGER_FREE">프리랜서 FREE</option>
                         <option value="ADMIN">관리자</option>
                       </select>
                       <button onClick={() => handleToggleStatus(member)} className={`flex-1 py-2 text-xs rounded-lg font-bold shadow-sm ${isAccountActive ? 'bg-white border border-red-200 text-red-600' : 'bg-emerald-600 text-white'}`}>

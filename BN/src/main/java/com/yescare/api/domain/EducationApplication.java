@@ -31,6 +31,9 @@ public class EducationApplication {
     @Column(nullable = false, length = 20)
     private String status = "WAITING";
 
+    private String availableDays;  // 예: "월,수,금"
+    private String availableTime;  // 예: "오전 (09:00~13:00)"
+
     @Column(updatable = false)
     private LocalDateTime appliedAt;
 
@@ -44,9 +47,11 @@ public class EducationApplication {
     }
 
     @Builder
-    public EducationApplication(Member member, String courseType) {
+    public EducationApplication(Member member, String courseType, String availableDays, String availableTime) {
         this.member = member;
         this.courseType = courseType;
+        this.availableDays = availableDays;
+        this.availableTime = availableTime;
         this.status = "WAITING";
         this.appliedAt = LocalDateTime.now();
     }

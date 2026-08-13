@@ -87,7 +87,7 @@ export default function Header() {
   const NAV_ITEMS = useMemo(() => [
     { name: '서비스 안내', path: '/guide', show: true },
     { name: '고객센터(FAQ)', path: '/support/faq', show: true },
-    { name: '프리랜서 교육신청', path: '/manager', show: userRole !== 'ADMIN' && userRole !== 'MANAGER' },
+    { name: '프리랜서 교육신청', path: '/manager', show: userRole !== 'ADMIN' && !userRole.includes('MANAGER') },
   ], [userRole]);
 
   if (pathname?.startsWith('/admin')) return null;
@@ -137,7 +137,7 @@ export default function Header() {
                       <ShieldAlert className="w-4 h-4" /> 관리자
                     </Link>
                   )}
-                  {userRole === 'MANAGER' && (
+                  {userRole.includes('MANAGER') && (
                     <Link href="/manager/dashboard" className="text-emerald-600 font-bold hover:text-emerald-800 transition duration-300 bg-emerald-50 px-3 py-1.5 rounded-full text-sm whitespace-nowrap">
                       매니저 시스템
                     </Link>
@@ -226,7 +226,7 @@ export default function Header() {
                         </button>
                       </Link>
                     )}
-                    {userRole === 'MANAGER' && (
+                    {userRole.includes('MANAGER') && (
                       <Link href="/manager/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                         <button className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-xl border border-emerald-100 mt-3 font-bold">
                           매니저 시스템

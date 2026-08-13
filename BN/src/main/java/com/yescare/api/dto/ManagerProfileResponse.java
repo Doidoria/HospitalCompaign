@@ -2,6 +2,7 @@ package com.yescare.api.dto;
 
 import com.yescare.api.domain.Manager;
 import com.yescare.api.domain.Member;
+import com.yescare.api.domain.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,6 +23,7 @@ public class ManagerProfileResponse {
     private String availableDays;
     private String availableTime;
     private String address;
+    private String managerType;
 
     public ManagerProfileResponse(Manager manager) {
         this.id = manager.getId();
@@ -34,11 +36,18 @@ public class ManagerProfileResponse {
         this.availableDays = manager.getAvailableDays();
         this.availableTime = manager.getAvailableTime();
         this.address = manager.getMember().getAddress();
+
+        // 매니저 타입 세팅 로직 (엔티티에 값이 없으면 권한 기반으로 Fallback 처리)
+        if (manager.getManagerType() != null) {
+            this.managerType = manager.getManagerType().name();
+        } else {
+            this.managerType = (manager.getMember().getRole() == Role.MANAGER_FREE) ? "FREE" : "PRO";
+        }
     }
 
     // Entity들을 받아 DTO로 변환하는 정적 메서드
     public static ManagerProfileResponse of(Member manager, String certifications, String career, String introduction,
-                                            double avgRating, int reviewCount, String availableDays, String availableTime) {
+                                            double avgRating, int reviewCount, String availableDays, String availableTime, String managerType) {
         return ManagerProfileResponse.builder()
                 .id(manager.getId())
                 .name(manager.getName())
@@ -50,6 +59,7 @@ public class ManagerProfileResponse {
                 .availableDays(availableDays)
                 .availableTime(availableTime)
                 .address(manager.getAddress())
+                .managerType(managerType)
                 .build();
     }
 }

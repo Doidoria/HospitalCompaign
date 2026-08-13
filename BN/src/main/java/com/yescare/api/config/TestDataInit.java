@@ -60,20 +60,23 @@ public class TestDataInit implements CommandLineRunner {
         // ==========================================
 
         // [서울 활동 매니저]
+        // [서울 활동 매니저]
         Manager seoulManager1 = createManager("seoul_m1@yescare.com", defaultPw, "이베테랑", "01033334444",
                 "서울 대형병원 길라잡이입니다.", "대학병원 5년 경력", "요양보호사 1급", "월, 수, 금", "09:00 - 18:00",
-                "05555", "서울 송파구 올림픽로 111", "잠실동");
+                "05555", "서울 송파구 올림픽로 111", "잠실동", Role.MANAGER_PRO, Manager.ManagerType.PRO); // PRO 매니저
+
         Manager seoulManager2 = createManager("seoul_m2@yescare.com", defaultPw, "최친절", "01044445555",
                 "어르신을 부모님처럼 모십니다.", "동행 서비스 3년", "요양보호사, CPR 수료", "화, 목, 토", "08:00 - 15:00",
-                "03111", "서울 종로구 율곡로 222", "혜화동");
+                "03111", "서울 종로구 율곡로 222", "혜화동", Role.MANAGER_FREE, Manager.ManagerType.FREE); // FREE 매니저
 
-        // [대구 활동 매니저]
+// [대구 활동 매니저]
         Manager daeguManager1 = createManager("daegu_m1@yescare.com", defaultPw, "김대구", "01077778888",
                 "경북대/영남대병원 행정 완벽 지원!", "병원 원무과 7년", "병원행정사, 사회복지사", "월, 화, 수, 목, 금", "10:00 - 19:00",
-                "41911", "대구 중구 국채보상로 333", "동인동");
+                "41911", "대구 중구 국채보상로 333", "동인동", Role.MANAGER_PRO, Manager.ManagerType.PRO); // PRO 매니저
+
         Manager daeguManager2 = createManager("daegu_m2@yescare.com", defaultPw, "박케어", "01088889999",
                 "안전하고 편안한 이동을 책임집니다.", "재활병원 4년", "물리치료사 면허증", "평일 주말 무관", "09:00 - 17:00",
-                "42722", "대구 달서구 상화로 444", "상인동");
+                "42722", "대구 달서구 상화로 444", "상인동", Role.MANAGER_FREE, Manager.ManagerType.FREE); // FREE 매니저
 
         // ==========================================
         // 3. 예약 데이터 시뮬레이션 (매출 통계 및 페이징 고도화)
@@ -146,8 +149,8 @@ public class TestDataInit implements CommandLineRunner {
 
     // 편의 메서드: 매니저 생성 (지역 맞춤 주소 파라미터 추가)
     private Manager createManager(String email, String pw, String name, String phone, String intro, String career, String cert, String days, String time,
-                                  String zipCode, String address, String detailAddress) {
-        Member m = createMember(email, pw, name, phone, Role.MANAGER, "LOCAL", zipCode, address, detailAddress);
+                                  String zipCode, String address, String detailAddress, Role role, Manager.ManagerType type) {
+        Member m = createMember(email, pw, name, phone, role, "LOCAL", zipCode, address, detailAddress);
         Manager manager = Manager.builder()
                 .member(m)
                 .introduction(intro)
@@ -155,6 +158,7 @@ public class TestDataInit implements CommandLineRunner {
                 .certifications(cert)
                 .availableDays(days)
                 .availableTime(time)
+                .managerType(type)
                 .build();
         return managerRepository.save(manager);
     }

@@ -23,7 +23,7 @@ public class ReservationController {
     private final ReservationService reservationService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER_PRO', 'MANAGER_FREE', 'ADMIN')")
     public ResponseEntity<String> makeReservation(@RequestAttribute("userEmail") String email, @RequestBody ReservationRequest request) {
         Long reservationId = reservationService.createReservation(email, request);
         return ResponseEntity.ok("예약이 성공적으로 접수되었습니다.");
@@ -93,24 +93,24 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getReservationDetail(id));
     }
 
-    // 매니저 대시보드 - 신규 동행 요청 (WAITING) 목록
+    // 2. 매니저 대시보드 - 신규 동행 요청 (WAITING) 목록
     @GetMapping("/waiting")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('MANAGER_PRO', 'MANAGER_FREE', 'ADMIN')")
     public ResponseEntity<List<ReservationResponse>> getWaitingReservations() {
         return ResponseEntity.ok(reservationService.getWaitingReservations());
     }
 
-    // 매니저 대시보드 - 나의 배정 일정
+    // 3. 매니저 대시보드 - 나의 배정 일정
     @GetMapping("/manager/me")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('MANAGER_PRO', 'MANAGER_FREE')")
     public ResponseEntity<List<ReservationResponse>> getManagerSchedules(Principal principal) {
         if (principal == null) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(reservationService.getManagerSchedules(principal.getName()));
     }
 
-    // 매니저 대리 예약 신청 API
+    // 4. 매니저 대리 예약 신청 API
     @PostMapping("/{id}/proxy")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('MANAGER_PRO', 'MANAGER_FREE', 'ADMIN')")
     public ResponseEntity<?> createProxyReservation(
             @PathVariable Long id,
             @RequestBody Map<String, String> request,
@@ -118,7 +118,6 @@ public class ReservationController {
 
         if (principal == null) return ResponseEntity.status(403).body("로그인이 필요합니다.");
 
-        // 서비스로 요청자의 이메일을 함께 넘겨줍니다.
         reservationService.createProxyReservation(id, principal.getName(), request);
         return ResponseEntity.ok(Map.of("message", "대리 예약이 완료되었습니다."));
     }

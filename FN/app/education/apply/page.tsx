@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowLeft, BookOpen, CheckCircle2, User, Phone, MapPin, Award, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle2, User, Phone, MapPin, Award, ShieldAlert, CalendarDays, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authApi, educationApi } from '@/src/api/index';
 import { Toast, YesAlert } from '@/src/utils/alert';
@@ -25,6 +25,14 @@ export default function EducationApplyPage() {
   const [selectedCourse, setSelectedCourse] = useState('');
   // 정책 동의 여부
   const [isAgreed, setIsPolicyAgreed] = useState(false);
+
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [availableTime, setAvailableTime] = useState('');
+
+  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+  const toggleDay = (day: string) => {
+    setAvailableDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+  };
 
   // 내 정보 가져오기 및 자동 매핑
   useEffect(() => {
@@ -52,6 +60,14 @@ export default function EducationApplyPage() {
       Toast.fire({ icon: 'warning', title: '원하시는 교육 과정을 선택해 주세요.' });
       return;
     }
+    if (availableDays.length === 0) {
+      Toast.fire({ icon: 'warning', title: '활동 가능 요일을 선택해 주세요.' });
+      return;
+    }
+    if (!availableTime) {
+      Toast.fire({ icon: 'warning', title: '활동 가능 시간을 선택해 주세요.' });
+      return;
+    }
     if (!isAgreed) {
       Toast.fire({ icon: 'warning', title: '필수 안내 및 이수 규정에 동의해 주세요.' });
       return;
@@ -72,7 +88,11 @@ export default function EducationApplyPage() {
 
     try {
       // 백엔드 통신
-      await educationApi.create(selectedCourse);
+      await educationApi.create({
+        courseType: selectedCourse,
+        availableDays: availableDays.join(','),
+        availableTime: availableTime
+      });
       
       await YesAlert.fire({
         icon: 'success',
@@ -196,6 +216,55 @@ export default function EducationApplyPage() {
                   </div>
                 </button>
               ))}
+            </div>
+          </motion.div>
+
+          {/* 3. 활동 가능 요일 및 시간 */}
+          <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3 border-b border-gray-50 pb-4">
+              <div className="p-2.5 bg-indigo-50 rounded-xl"><CalendarDays className="w-6 h-6 text-indigo-600" /></div>
+              3. 활동 가능 요일 및 시간
+            </h3>
+            
+            <div className="space-y-6">
+              {/* 요일 선택 */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-3">가능 요일 (다중 선택)</label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS.map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={`w-12 h-12 rounded-xl font-bold text-sm transition-all duration-200 border-2 ${
+                        availableDays.includes(day)
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm'
+                          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 시간 선택 */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
+                  <Clock className="w-4 h-4 text-indigo-500" /> 가능 시간대
+                </label>
+                <select
+                  value={availableTime}
+                  onChange={(e) => setAvailableTime(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all text-slate-700"
+                >
+                  <option value="" disabled>활동 가능한 시간대를 선택해주세요</option>
+                  <option value="오전 (09:00~13:00)">오전 (09:00~13:00)</option>
+                  <option value="오후 (13:00~18:00)">오후 (13:00~18:00)</option>
+                  <option value="종일 (09:00~18:00)">종일 (09:00~18:00)</option>
+                  <option value="협의 가능">시간 협의 가능</option>
+                </select>
+              </div>
             </div>
           </motion.div>
 

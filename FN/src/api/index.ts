@@ -117,7 +117,8 @@ export const adminApi = {
   getReservations: (page: number) => reservationApi.getAll(page),
   getPendingManagers: (status: string = 'WAITING') => 
     apiClient.get(`/api/members/manager-applications?status=${status}`),
-  approveManager: (memberId: number) => apiClient.patch(`/api/members/${memberId}/approve`),
+  approveManager: (memberId: number, type: 'PRO' | 'FREE' = 'PRO') => 
+    apiClient.patch(`/api/members/${memberId}/approve?type=${type}`),
   getManagerCount: () => apiClient.get('/api/members/managers/count'),
   rejectManagerApp: (id: number, data: { reason: string }) => 
     apiClient.patch(`/api/members/applications/${id}/reject`, data),
@@ -231,7 +232,7 @@ export const managerApi = {
     apiClient.get(`/api/managers/${managerId}/profile`),
 
   // 2. 매니저가 자신의 프로필을 수정/저장
-  updateManagerProfile: (data: { introduction: string; career: string; certifications: string }) => 
+  updateManagerProfile: (data: { introduction: string; career: string; certifications: string; availableDays: string; availableTime: string }) => 
     apiClient.put(`/api/managers/profile`, data),
 };
 
@@ -308,5 +309,6 @@ export const popupApi = {
 // 교육 신청 (Education)
 export const educationApi = {
   // 일반 유저 수강 신청 등록
-  create: (courseType: string) => apiClient.post('/api/members/educations', { courseType }),
+  create: (data: { courseType: string; availableDays: string; availableTime: string }) => 
+    apiClient.post('/api/members/educations', data),
 };

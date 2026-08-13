@@ -97,12 +97,14 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
 
   const handleApprove = async (memberId: number, name: string) => {
     const result = await YesAlert.fire({
-      title: '매니저 승인', html: `${name} 님의 매니저 자격을 승인하시겠습니까?`, icon: 'question',
+      title: '프리랜서 매니저 승인', // 💡 타이틀 변경
+      html: `${name} 님을 <strong>프리랜서 매니저(FREE)</strong>로 승인하시겠습니까?`,
+      icon: 'question',
       showCancelButton: true, confirmButtonText: '승인',
     });
     if (result.isConfirmed) {
-      await adminApi.approveManager(memberId);
-      Toast.fire({ icon: 'success', title: `${name} 님이 승인되었습니다.` });
+      await adminApi.approveManager(memberId, 'FREE'); 
+      Toast.fire({ icon: 'success', title: `${name} 님이 FREE 매니저로 승인되었습니다.` });
       adjustPaginationAfterAction();
       fetchManagerApplications(mgrAppStatus);
       fetchStats();

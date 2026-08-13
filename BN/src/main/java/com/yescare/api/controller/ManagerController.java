@@ -40,7 +40,7 @@ public class ManagerController {
 
     // 동행 시작
     @PatchMapping("/reservations/{id}/start")
-    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ROLE_MANAGER')")
+    @PreAuthorize("hasAuthority('ROLE_MANAGER_PRO') or hasAuthority('ROLE_MANAGER_FREE') or hasAuthority('MANAGER_PRO') or hasAuthority('MANAGER_FREE')")
     public ResponseEntity<?> startAccompany(@PathVariable("id") Long id, @AuthenticationPrincipal String email) {
         reservationService.startAccompany(id, email);
         return ResponseEntity.ok(Map.of("message", "동행 서비스가 시작되었습니다."));
@@ -48,7 +48,7 @@ public class ManagerController {
 
     // 동행 완료
     @PatchMapping("/reservations/{id}/complete")
-    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ROLE_MANAGER')")
+    @PreAuthorize("hasAuthority('ROLE_MANAGER_PRO') or hasAuthority('ROLE_MANAGER_FREE') or hasAuthority('MANAGER_PRO') or hasAuthority('MANAGER_FREE')")
     public ResponseEntity<?> completeAccompany(@PathVariable("id") Long id, @AuthenticationPrincipal String email) {
         reservationService.completeAccompany(id, email);
         return ResponseEntity.ok(Map.of("message", "동행 서비스가 종료되었습니다. 리포트를 작성해 주세요."));
@@ -56,7 +56,7 @@ public class ManagerController {
 
     // 추가 요금 등록
     @PostMapping("/reservations/{id}/extra-charge")
-    @PreAuthorize("hasAuthority('MANAGER') or hasAuthority('ROLE_MANAGER')")
+    @PreAuthorize("hasAuthority('ROLE_MANAGER_PRO') or hasAuthority('ROLE_MANAGER_FREE') or hasAuthority('MANAGER_PRO') or hasAuthority('MANAGER_FREE')")
     public ResponseEntity<?> addExtraCharge(
             @PathVariable("id") Long id,
             @RequestBody ExtraChargeRequest request,

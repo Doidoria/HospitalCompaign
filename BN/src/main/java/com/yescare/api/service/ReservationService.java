@@ -453,7 +453,6 @@ public class ReservationService {
         String dayOfWeekKor = getKoreanDayOfWeek(targetStart.getDayOfWeek());
         LocalTime targetTime = targetStart.toLocalTime();
 
-        // LocalDateTime 기반으로 수학적 오차(자정 넘김) 원천 차단
         int estimatedHours = (reservation.getCategory() != null && reservation.getCategory().contains("정밀")) ? 5 : 3;
         LocalDateTime targetEnd = targetStart.plusHours(estimatedHours);
 
@@ -463,14 +462,17 @@ public class ReservationService {
         LocalDateTime startOfDay = targetStart.toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = targetStart.toLocalDate().atTime(23, 59, 59);
 
-        System.out.println("=== 🔍 매니저 배정 필터링 시작 (예약번호: " + reservationId + ") ===");
-
         for (Manager manager : allManagers) {
             Member member = manager.getMember();
             String managerName = member.getName() + "(ID:" + member.getId() + ")";
 
             if (!member.isActive()) continue;
-            if (member.getRole() != Role.MANAGER && !member.getRole().name().contains("MANAGER")) continue;
+
+            Role role = member.getRole();
+            if (role != Role.MANAGER_PRO && role != Role.MANAGER_FREE) {
+                continue;
+            }
+
             if (reservation.getMember().getId().equals(member.getId())) continue;
 
             String availDays = manager.getAvailableDays();
@@ -478,14 +480,12 @@ public class ReservationService {
 
             if (!isWithinAvailableTime(manager.getAvailableTime(), targetTime, targetEnd.toLocalTime())) continue;
 
-            // 일단 그날 스케줄 전부 다 가져옴
             List<Reservation> dailySchedules = reservationRepository.findManagerDailySchedules(
                     member, startOfDay, endOfDay
             );
 
             boolean isOverlapping = false;
             for (Reservation schedule : dailySchedules) {
-                // 핵심: 취소된 예약이거나, 지금 배정하려고 열어둔 '바로 그 예약'이면 겹침 검사 패스!
                 if (schedule.getStatus() == ReservationStatus.CANCELLED || schedule.getId().equals(reservationId)) {
                     continue;
                 }
@@ -494,9 +494,7 @@ public class ReservationService {
                 int existHours = (schedule.getCategory() != null && schedule.getCategory().contains("정밀")) ? 5 : 3;
                 LocalDateTime existEnd = existStart.plusHours(existHours);
 
-                // 완벽한 시간 교집합(Overlap) 수학 공식 적용
                 if (targetStart.isBefore(existEnd) && targetEnd.isAfter(existStart)) {
-                    System.out.println("❌ " + managerName + " 제외: 기존 일정과 겹침 (" + existStart.toLocalTime() + " ~ " + existEnd.toLocalTime() + ")");
                     isOverlapping = true;
                     break;
                 }
@@ -504,15 +502,21 @@ public class ReservationService {
 
             if (isOverlapping) continue;
 
-            System.out.println("✅ " + managerName + " -> 배정 가능 (시간 겹침 없음)");
-
             Map<String, Object> managerData = new HashMap<>();
             managerData.put("id", member.getId());
             managerData.put("name", member.getName());
             managerData.put("email", member.getEmail());
             managerData.put("availableDays", manager.getAvailableDays() == null ? "상시" : manager.getAvailableDays());
             managerData.put("availableTime", manager.getAvailableTime() == null ? "상시" : manager.getAvailableTime());
-            managerData.put("role", member.getRole().name());
+
+            String managerTypeStr = "PRO";
+            if (manager.getManagerType() != null) {
+                managerTypeStr = manager.getManagerType().name(); // PRO 또는 FREE
+            } else if (role == Role.MANAGER_FREE) {
+                managerTypeStr = "FREE";
+            }
+            managerData.put("managerType", managerTypeStr);
+            managerData.put("role", role.name()); // 프론트에서 권한 제어용
             managerData.put("address", member.getAddress() == null ? "" : member.getAddress());
 
             resultList.add(managerData);

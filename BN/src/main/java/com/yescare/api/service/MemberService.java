@@ -156,12 +156,12 @@ public class MemberService {
         return Map.of(
                 "totalCount", memberRepository.count(),
                 "userCount", memberRepository.countByRole(Role.USER),
-                "managerCount", memberRepository.countByRole(Role.MANAGER),
+                "managerCount", memberRepository.countByRole(Role.MANAGER_PRO) + memberRepository.countByRole(Role.MANAGER_FREE),
                 "suspendedCount", memberRepository.countByIsActiveFalse()
         );
     }
 
-    // ✅ 프론트엔드 대시 기입 대응을 위해 연락처 정규화 처리 추가
+    // 프론트엔드 대시 기입 대응을 위해 연락처 정규화 처리
     @Transactional(readOnly = true)
     public Map<String, String> findIdInfo(String name, String phoneNumber) {
         String normalizedPhone = phoneNumber != null ? phoneNumber.replaceAll("[^0-9]", "") : "";

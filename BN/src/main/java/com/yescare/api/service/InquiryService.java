@@ -112,7 +112,7 @@ public class InquiryService {
         // 본인인지 확인
         boolean isOwner = inquiry.getMember().getId().equals(member.getId());
         // 관리자나 매니저인지 확인 (Role enum 확인)
-        boolean isAdminOrManager = member.getRole().name().equals("ADMIN") || member.getRole().name().equals("MANAGER");
+        boolean isAdminOrManager = member.getRole().name().equals("ADMIN") || member.getRole().name().contains("MANAGER");
 
         // 본인도 아니고, 관리자/매니저도 아니면 403 차단!
         if (!isOwner && !isAdminOrManager) {

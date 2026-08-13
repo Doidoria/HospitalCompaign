@@ -131,7 +131,11 @@ export default function ManagerListModalContent({ managers, pickupAddress, onSel
                 <div className="flex-1 min-w-0">
                   <h4 className="font-extrabold text-slate-800 text-sm mb-0.5 flex items-center gap-1.5">
                     <span className="truncate">{manager.name}</span>
-                    <span className="shrink-0 font-bold text-blue-600 text-[9px] bg-blue-100/50 px-1.5 py-0.5 rounded-full border border-blue-200/50">PRO</span>
+                    {manager.managerType === 'FREE' ? (
+                      <span className="shrink-0 font-bold text-emerald-600 text-[9px] bg-emerald-100/50 px-1.5 py-0.5 rounded-full border border-emerald-200/50">FREE</span>
+                    ) : (
+                      <span className="shrink-0 font-bold text-blue-600 text-[9px] bg-blue-100/50 px-1.5 py-0.5 rounded-full border border-blue-200/50">PRO</span>
+                    )}
                   </h4>
                   <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1 truncate w-full">
                     <MapPin className="w-3 h-3 text-slate-400" />

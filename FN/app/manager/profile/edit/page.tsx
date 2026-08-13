@@ -1,8 +1,9 @@
+// app/manager/profile/edit/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, FileText, Award, Briefcase, Star, CheckCircle2, AlertCircle, Eye } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Award, Briefcase, Star, CheckCircle2, AlertCircle, Eye, CalendarDays, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { managerApi, authApi } from '@/src/api/index';
 import { Toast } from '@/src/utils/alert';
@@ -12,11 +13,17 @@ export default function ManagerProfileEditPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [userName, setUserName] = useState("");
+  const [managerType, setManagerType] = useState("PRO");
+  
   const [profileForm, setProfileForm] = useState({
     introduction: '',
     career: '',
-    certifications: ''
+    certifications: '',
+    availableDays: [] as string[],
+    availableTime: ''
   });
+
+  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
   // 1. 기존 정보 불러오기
   useEffect(() => {
@@ -29,11 +36,15 @@ export default function ManagerProfileEditPage() {
 
         const profileRes = await managerApi.getManagerProfile(meRes.data.id);
         if (isMounted && profileRes.data) {
-          const { introduction, career, certifications } = profileRes.data;
+          const { introduction, career, certifications, managerType, availableDays, availableTime } = profileRes.data;
+          
+          setManagerType(managerType || 'PRO'); // 백엔드에서 준 타입 바인딩
           setProfileForm({
             introduction: introduction === '인사말이 없습니다.' ? '' : (introduction || ''),
             career: career === '경력 정보가 없습니다.' ? '' : (career || ''),
-            certifications: certifications === '자격증 정보 없음' ? '' : (certifications || '')
+            certifications: certifications === '자격증 정보 없음' ? '' : (certifications || ''),
+            availableDays: availableDays && availableDays !== '미지정' ? availableDays.split(',') : [],
+            availableTime: availableTime === '미지정' ? '' : (availableTime || '')
           });
         }
       } catch (error) {
@@ -53,6 +64,16 @@ export default function ManagerProfileEditPage() {
     setProfileForm(prev => ({ ...prev, [name]: value }));
   }, []);
 
+  // 요일 토글 핸들러
+  const toggleDay = (day: string) => {
+    setProfileForm(prev => ({
+      ...prev,
+      availableDays: prev.availableDays.includes(day)
+        ? prev.availableDays.filter(d => d !== day)
+        : [...prev.availableDays, day]
+    }));
+  };
+
   // 3. 저장 로직
   const handleSave = async () => {
     if (!profileForm.introduction.trim()) {
@@ -62,7 +83,10 @@ export default function ManagerProfileEditPage() {
 
     setIsSaving(true);
     try {
-      await managerApi.updateManagerProfile(profileForm);
+      await managerApi.updateManagerProfile({
+        ...profileForm,
+        availableDays: profileForm.availableDays.join(',')
+      });
       Toast.fire({ icon: 'success', title: '프로필이 업데이트되었습니다.' });
       router.push('/manager/dashboard');
     } catch (error) {
@@ -161,6 +185,45 @@ export default function ManagerProfileEditPage() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
                 />
               </div>
+
+              {/* 활동 요일 및 시간 변경 폼 */}
+              <div className="pt-4 border-t border-slate-100">
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
+                  <CalendarDays className="w-4 h-4 text-indigo-500" /> 활동 가능 요일
+                </label>
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {DAYS.map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={`w-[42px] h-[42px] rounded-xl font-bold text-sm transition-all duration-200 border-2 ${
+                        profileForm.availableDays.includes(day)
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm'
+                          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+                  <Clock className="w-4 h-4 text-indigo-500" /> 활동 가능 시간
+                </label>
+                <select
+                  name="availableTime"
+                  value={profileForm.availableTime}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, availableTime: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all text-slate-700"
+                >
+                  <option value="" disabled>시간대를 선택해주세요</option>
+                  <option value="오전 (09:00~13:00)">오전 (09:00~13:00)</option>
+                  <option value="오후 (13:00~18:00)">오후 (13:00~18:00)</option>
+                  <option value="종일 (09:00~18:00)">종일 (09:00~18:00)</option>
+                  <option value="협의 가능">시간 협의 가능</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -188,7 +251,15 @@ export default function ManagerProfileEditPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-xl font-extrabold text-slate-900">{userName || "매니저 성함"}</h3>
-                  <span className="bg-emerald-100 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-md">인증됨</span>
+                  {managerType === 'PRO' ? (
+                    <span className="bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                      예스케어 PRO
+                    </span>
+                  ) : (
+                    <span className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                      프리랜서 FREE
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 text-amber-500 font-bold text-sm">
                   <Star className="w-4 h-4 fill-current" /> 5.0 <span className="text-slate-300 font-medium ml-1">(리뷰 0개)</span>

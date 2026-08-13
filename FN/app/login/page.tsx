@@ -54,7 +54,7 @@ export default function LoginPage() {
       const userRole = meData?.role; 
       
       // [유저 탭]으로 로그인했는데 매니저 권한인 경우
-      if (loginType === 'user' && userRole === 'MANAGER') {
+      if (loginType === 'user' && userRole.includes('MANAGER')) {
         await YesAlert.fire({ icon: 'info', title: '안내', text: '매니저 계정입니다. 다음부터는 [동행 매니저] 탭에서 로그인해 주세요.', timer: 2500 });
         router.push('/manager/dashboard'); 
         return;
@@ -69,7 +69,7 @@ export default function LoginPage() {
       
       // 권한별 페이지 이동
       if (userRole === 'ADMIN') router.push('/admin');
-      else if (userRole === 'MANAGER') router.push('/manager/dashboard');
+      else if (userRole.includes('MANAGER')) router.push('/manager/dashboard');
       else router.push('/');
 
     } catch (error: any) {

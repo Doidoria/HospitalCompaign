@@ -27,6 +27,7 @@ export default function ManagerDashboard() {
   const [mySchedules, setMySchedules] = useState<any[]>([]);
   const [managerName, setManagerName] = useState('매니저');
   const [managerId, setManagerId] = useState<number | null>(null);
+  const [managerRole, setManagerRole] = useState('MANAGER_PRO');
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,14 +72,14 @@ export default function ManagerDashboard() {
       if (!token) throw new Error('No token');
 
       const meRes = await authApi.getMe();
-      if (meRes.data.role !== 'MANAGER' && meRes.data.role !== 'ADMIN') {
-        // 🚨 text -> html 속성으로 변경, Swal -> YesAlert 로 변경
+      if (!meRes.data.role.includes('MANAGER') && meRes.data.role !== 'ADMIN') {
         YesAlert.fire({ icon: 'error', title: '접근 제한', html: '매니저 전용 페이지입니다.' });
         router.push('/');
         return;
       }
       setManagerName(meRes.data.name);
       setManagerId(meRes.data.id);
+      setManagerRole(meRes.data.role);
 
       const mySchedulesRes = await reservationApi.getManagerSchedules();
       setMySchedules(mySchedulesRes.data);
@@ -244,7 +245,11 @@ export default function ManagerDashboard() {
           
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 bg-white/10 text-emerald-300 text-[11px] font-bold rounded-full border border-white/10 backdrop-blur-md">PRO</span>
+              <span className={`px-2.5 py-1 bg-white/10 text-[11px] font-bold rounded-full border border-white/10 backdrop-blur-md ${
+                managerRole === 'MANAGER_FREE' ? 'text-emerald-300' : 'text-blue-300'
+              }`}>
+                {managerRole === 'MANAGER_FREE' ? 'FREE' : 'PRO'}
+              </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-1.5 tracking-tight">{managerName} 매니저님</h1>
             <p className="text-slate-300 text-sm font-medium">오늘도 따뜻한 동행을 부탁드립니다 ✨</p>

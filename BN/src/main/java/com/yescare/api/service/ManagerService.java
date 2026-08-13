@@ -32,7 +32,7 @@ public class ManagerService {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
 
-        if (member.getRole() == Role.MANAGER || member.getRole() == Role.ADMIN) {
+        if (member.getRole() == Role.MANAGER_PRO || member.getRole() == Role.MANAGER_FREE || member.getRole() == Role.ADMIN) {
             throw new IllegalStateException("이미 매니저 권한이 있습니다.");
         }
 
@@ -87,7 +87,8 @@ public class ManagerService {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
-        if (member.getRole() == Role.MANAGER) {
+        // PRO 또는 FREE 매니저 권한을 가지고 있는지 체크
+        if (member.getRole() == Role.MANAGER_PRO || member.getRole() == Role.MANAGER_FREE) {
             return Map.of("status", "APPROVED", "title", "매니저 승인 완료", "description", "축하합니다! 매니저 자격이 최종 승인되었습니다.");
         }
 
@@ -104,23 +105,35 @@ public class ManagerService {
 
     @Transactional(readOnly = true)
     public long getActiveManagerCount() {
-        return memberRepository.countByRole(Role.MANAGER);
+        return memberRepository.countByRole(Role.MANAGER_PRO) + memberRepository.countByRole(Role.MANAGER_FREE);
     }
 
     @Transactional
-    public String approveManager(Long memberId) {
+    public String approveManager(Long memberId, Manager.ManagerType managerType) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
-        member.approveManager();
+
+        // 매니저 타입에 따른 Role 매핑
+        Role newRole = (managerType == Manager.ManagerType.PRO) ? Role.MANAGER_PRO : Role.MANAGER_FREE;
+        member.approveManager(newRole);
 
         managerApplicationRepository.findByMember(member).ifPresent(app -> {
             app.approve();
             if (managerRepository.findByMemberId(member.getId()).isEmpty()) {
-                Manager newManager = new Manager(member, app.getMotivation(), app.getExperience(), app.getLicenseName(), app.getAvailableDays(), app.getAvailableTime());
+                // Manager 생성 시 managerType 필드 함께 전달
+                Manager newManager = Manager.builder()
+                        .member(member)
+                        .introduction(app.getMotivation())
+                        .career(app.getExperience())
+                        .certifications(app.getLicenseName())
+                        .availableDays(app.getAvailableDays())
+                        .availableTime(app.getAvailableTime())
+                        .managerType(managerType)
+                        .build();
                 managerRepository.save(newManager);
             }
         });
-        return member.getName() + " 님이 매니저로 승인되었습니다.";
+        return member.getName() + " 님이 " + (managerType == Manager.ManagerType.PRO ? "예스케어 PRO" : "프리랜서 FREE") + " 매니저로 승인되었습니다.";
     }
 
     @Transactional
@@ -139,8 +152,17 @@ public class ManagerService {
         Member managerMember = memberRepository.findById(managerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 매니저입니다."));
 
+        // 매니저 엔티티 조회 (없으면 임시 생성)
         Manager manager = managerRepository.findByMemberId(managerId)
-                .orElse(new Manager(managerMember, "인사말이 없습니다.", "경력 정보가 없습니다.", "자격증 정보 없음", "미지정", "미지정"));
+                .orElse(Manager.builder()
+                        .member(managerMember)
+                        .introduction("인사말이 없습니다.")
+                        .career("경력 정보가 없습니다.")
+                        .certifications("자격증 정보 없음")
+                        .availableDays("미지정")
+                        .availableTime("미지정")
+                        .managerType(managerMember.getRole() == Role.MANAGER_FREE ? Manager.ManagerType.FREE : Manager.ManagerType.PRO)
+                        .build());
 
         List<Review> reviews = reviewRepository.findByReservation_ManagerId(managerId);
         double averageRating = reviews.isEmpty() ? 0.0 : reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
@@ -151,9 +173,10 @@ public class ManagerService {
                 manager.getCareer(),
                 manager.getIntroduction(),
                 averageRating,
-                reviews.size(), // 리뷰 개수 반영
+                reviews.size(),
                 manager.getAvailableDays(),
-                manager.getAvailableTime()
+                manager.getAvailableTime(),
+                manager.getManagerType() != null ? manager.getManagerType().name() : (managerMember.getRole() == Role.MANAGER_FREE ? "FREE" : "PRO")
         );
     }
 }

@@ -34,14 +34,23 @@ public class Manager {
     @Column(name = "available_time")
     private String availableTime;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "manager_type", length = 20)
+    private ManagerType managerType;
+
+    public enum ManagerType {
+        PRO, FREE
+    }
+
     @Builder
-    public Manager(Member member, String introduction, String career, String certifications, String availableDays, String availableTime) {
+    public Manager(Member member, String introduction, String career, String certifications, String availableDays, String availableTime, ManagerType managerType) {
         this.member = member;
         this.introduction = introduction;
         this.career = career;
         this.certifications = certifications;
         this.availableDays = availableDays;
         this.availableTime = availableTime;
+        this.managerType = managerType;
     }
 
     public void updateProfile(String introduction, String career, String certifications, String availableDays, String availableTime) {

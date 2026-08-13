@@ -1,5 +1,6 @@
 package com.yescare.api.controller;
 
+import com.yescare.api.domain.Manager.ManagerType;
 import com.yescare.api.domain.Member;
 import com.yescare.api.dto.*;
 import com.yescare.api.exception.RequireAccountLinkException;
@@ -179,8 +180,11 @@ public class MemberController {
 
     @PatchMapping("/{memberId}/approve")
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<String> approveManager(@PathVariable("memberId") Long memberId) {
-        String resultMsg = managerService.approveManager(memberId);
+    public ResponseEntity<String> approveManager(
+            @PathVariable("memberId") Long memberId,
+            @RequestParam(value = "type", defaultValue = "PRO") ManagerType managerType // 프론트에서 ?type=PRO 또는 ?type=FREE 로 전달
+    ) {
+        String resultMsg = managerService.approveManager(memberId, managerType);
         return ResponseEntity.ok(resultMsg);
     }
 
