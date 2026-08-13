@@ -74,7 +74,7 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
         reservationTime: formattedTime,
         transportation: selectedRequest.transportation || '택시 이용',
         mobility: selectedRequest.mobility || '독립 보행 가능',
-        requirements: selectedRequest.requirements || '',
+        requirements: selectedRequest.requirements || selectedRequest.memo || '',
         detailedContent: selectedRequest.detailedContent || '',
         doctorInquiry: selectedRequest.doctorInquiry || ''
       });
@@ -363,7 +363,7 @@ export default function EditModal({ isOpen, onClose, selectedRequest, onSuccess 
 
               <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-slate-500" /> 보호자 전달 및 기본 요구사항
+                  <FileText className="w-3.5 h-3.5 text-slate-500" /> 보호자 특별 요청사항
                 </label>
                 <textarea name="requirements" value={formData.requirements} onChange={handleChange} rows={2}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"

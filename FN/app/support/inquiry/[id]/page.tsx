@@ -33,7 +33,7 @@ export default function InquiryDetailPage() {
     
     try {
       await inquiryApi.deleteInquiry(Number(id));
-      await Toast.fire({ icon: 'success', title: '삭제되었습니다.' });
+      await Toast.fire({ icon: 'success', timer: 1000, title: '삭제되었습니다.' });
       router.replace('/support/faq'); // 삭제 후 목록(또는 FAQ)으로 이동
     } catch (error: any) {
       console.error('삭제 에러:', error);
