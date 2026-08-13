@@ -46,6 +46,7 @@ public class ReservationResponse {
     private Boolean hasReport;
     private Integer extraChargeAmount;
     private String extraChargeReason;
+    private String extraPaymentStatus;
 
     // 환자 사전 건강 정보
     private String bloodType;
@@ -93,6 +94,7 @@ public class ReservationResponse {
         this.hasReport = (entity.getReport() != null); // 리포트가 DB에 존재하면 true, 없으면 false 반환
         this.extraChargeAmount = entity.getExtraChargeAmount();
         this.extraChargeReason = entity.getExtraChargeReason();
+        this.extraPaymentStatus = entity.getExtraPaymentStatus();
 
         this.bloodType = entity.getBloodType();
         this.underlyingDisease = entity.getUnderlyingDisease();

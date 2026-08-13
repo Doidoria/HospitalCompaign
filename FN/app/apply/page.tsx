@@ -155,7 +155,11 @@ export default function ApplyPage() {
     let bName = data.buildingName || '';
 
     // 1. 주소를 합치기 전 병원 키워드 검사
-    const hospitalKeywords = ['병원', '의원', '치과', '한의원', '보건소', '센터', '클리닉', '대학'];
+    const hospitalKeywords = [
+      '병원', '의원', '치과', '한의원', '보건소', '클리닉',
+      '정형외과', '내과', '외과', '소아과', '산부인과', '피부과', '안과', '이비인후과', '정신건강의학과', '재활의학과',
+      '응급실', '수술센터', '검진센터', '건강검진센터', '치료센터', '의료센터', '보건센터'
+    ];
     const isHospital = hospitalKeywords.some(keyword => bName.includes(keyword) || fullAddress.includes(keyword));
 
     if (bName) fullAddress += ` (${bName})`;

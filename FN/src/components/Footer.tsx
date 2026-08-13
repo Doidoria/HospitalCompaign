@@ -66,7 +66,7 @@ export default function Footer() {
           </div>
 
           {/* 카카오톡 / 채널톡 상담 버튼 */}
-          <a href="http://pf.kakao.com/_yxcrbX/chat" target="_blank" rel="noopener noreferrer"
+          <a href="http://pf.kakao.com/_yxcrbX" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 w-full sm:w-fit mt-2 px-5 py-2.5 bg-[#347dec] hover:bg-[#97c3ff] text-black font-bold rounded-xl transition-colors active:scale-95 shadow-sm">
             <Headset className="w-5 h-5" />
             채널 톡

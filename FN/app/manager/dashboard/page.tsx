@@ -323,7 +323,7 @@ export default function ManagerDashboard() {
               </div>
             ) : (
               currentItems.map((req) => {
-                console.log("예약번호", req.id, "의 백엔드 데이터:", req);
+                // console.log("예약번호", req.id, "의 백엔드 데이터:", req);
                 const { date, time } = formatDateTime(req.reservationTime);
                 const isConfirmed = req.status === 'CONFIRMED' || req.status === '예약 확정';
                 const isInProgress = req.status === 'IN_PROGRESS' || req.status === '동행 진행 중';
