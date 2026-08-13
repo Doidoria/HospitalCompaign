@@ -271,9 +271,18 @@ export const inquiryApi = {
   // 상세 조회
   getInquiry: (id: number) => apiClient.get(`/api/inquiries/${id}`),
 
-  // 비밀글 비밀번호 확인 API
+  // 비밀글 비밀번호 확인
   checkPassword: (id: number, password: string) => 
     apiClient.post(`/api/inquiries/${id}/check-password`, { password }),
+
+  // 수정 및 삭제
+  updateInquiry: (id: number, formData: FormData) => 
+    apiClient.put(`/api/inquiries/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  deleteInquiry: (id: number) => 
+    apiClient.delete(`/api/inquiries/${id}`),
 };
 
 // 팝업창 (Popup)

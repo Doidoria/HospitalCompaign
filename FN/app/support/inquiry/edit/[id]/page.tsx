@@ -1,48 +1,65 @@
-// app/support/inquiry/page.tsx
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { ChevronLeft, Send, ImagePlus, X } from 'lucide-react';
-import { inquiryApi } from '@/src/api/index'; // 중앙 API 모듈
-import { Toast } from '@/src/utils/alert';    // 공통 Toast 유틸리티 
-import Image from 'next/image';
+import { inquiryApi } from '@/src/api/index'; 
+import { Toast } from '@/src/utils/alert'; 
 
-export default function InquiryCreatePage() {
+export default function InquiryEditPage() {
   const router = useRouter();
-
-  // 사용자 문의 기본 작성란
-  const INQUIRY_TEMPLATE = `[문의 상세 내용]
-(예약 관련 문의라면 예약하신 날짜와 환자 성함을 꼭 적어주세요.)
- - 예약 날짜 : 
- - 환자 성함 : 
- - 내용 : 
-
-
-[환자 특이사항 (선택)]
-(휠체어 이용 여부, 거동 상태 등 매니저가 알아야 할 사항이 있다면 적어주세요.)
- - `;
+  const { id } = useParams();
 
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX_IMAGES = 3;
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-  // 텍스트 데이터 상태
   const [formData, setFormData] = useState({
     category: '',
     title: '',
-    content: INQUIRY_TEMPLATE,
-    isPrivate: true, // 기본값을 비공개로 설정
-    password: ''     // 비밀번호 상태
+    content: '',
+    isPrivate: true,
+    password: '' 
   });
+
+  const [loading, setLoading] = useState(true);
+
+  // 1. 기존 데이터 불러오기
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        const response = await inquiryApi.getInquiry(Number(id));
+        const data = response.data;
+        
+        // 답변 완료 상태면 강제로 튕겨냄 (백엔드에서도 막지만 프론트에서도 방어)
+        if (data.status === 'ANSWERED') {
+          Toast.fire({ icon: 'warning', title: '답변이 완료된 문의는 수정할 수 없습니다.' });
+          router.replace(`/support/inquiry/${id}`);
+          return;
+        }
+
+        setFormData({
+          category: data.category,
+          title: data.title,
+          content: data.content,
+          isPrivate: data.isPrivate ?? true,
+          password: '' // 비밀번호는 새로 입력받거나 비워둠
+        });
+      } catch (error) {
+        Toast.fire({ icon: 'error', title: '데이터를 불러올 수 없습니다.' });
+        router.back();
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [id]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     
-    // 용량 체크 로직 (Toast 적용)
     const validFiles = selectedFiles.filter(file => {
       if (file.size > MAX_FILE_SIZE) {
         Toast.fire({
@@ -75,7 +92,7 @@ export default function InquiryCreatePage() {
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  // 중앙 집중화된 API 모듈 사용 및 Toast 연동
+  // 2. 수정 API 호출
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -87,9 +104,9 @@ export default function InquiryCreatePage() {
     submitData.append('category', formData.category);
     submitData.append('title', formData.title);
     submitData.append('content', formData.content);
-
     submitData.append('isPrivate', String(formData.isPrivate));
-    if (formData.isPrivate) {
+    
+    if (formData.isPrivate && formData.password) {
         submitData.append('password', formData.password);
     }
     
@@ -98,44 +115,40 @@ export default function InquiryCreatePage() {
     });
 
     try {
-      // 1. API 호출
-      await inquiryApi.submitInquiry(submitData);
+      // updateInquiry 호출 (PUT 요청)
+      await inquiryApi.updateInquiry(Number(id), submitData);
       
-      // 2. 성공 알림 (사용자가 토스트를 볼 수 있도록 await 처리)
       await Toast.fire({
         icon: 'success',
         timer: 1000,
-        title: '문의가 성공적으로 접수되었습니다.'
+        title: '문의가 성공적으로 수정되었습니다.'
       });
       
-      // 3. 페이지 이동
-      router.push('/support/faq');
+      router.replace(`/support/inquiry/${id}`);
     } catch (error) {
-      console.error('문의 접수 에러:', error);
+      console.error('문의 수정 에러:', error);
       Toast.fire({
         icon: 'error',
         timer: 2000,
-        title: '문의 접수 중 오류가 발생했습니다. 다시 시도해주세요.'
+        title: '문의 수정 중 오류가 발생했습니다.'
       });
     }
   };
+
+  if (loading) return <div className="flex justify-center py-20">로딩 중...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 flex justify-center">
       <div className="w-full max-w-2xl bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 md:p-10">
         
-        {/* 헤더 */}
         <div className="flex items-center mb-8">
           <button onClick={() => router.back()} className="mr-4 p-2 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">1:1 문의하기</h1>
+          <h1 className="text-2xl font-bold text-gray-900">문의 수정하기</h1>
         </div>
 
-        {/* 작성 폼 */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* 카테고리 선택 */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">문의 유형 <span className="text-red-500">*</span></label>
             <select 
@@ -152,7 +165,6 @@ export default function InquiryCreatePage() {
             </select>
           </div>
 
-          {/* 제목 입력 */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">제목 <span className="text-red-500">*</span></label>
             <input 
@@ -161,43 +173,36 @@ export default function InquiryCreatePage() {
               placeholder="문의 제목을 입력해주세요"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all 
-              text-gray-900 placeholder:text-gray-400"
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-gray-900"
             />
           </div>
 
-          {/* 내용 입력 */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">내용 <span className="text-red-500">*</span></label>
-            <textarea required rows={15} placeholder="문의하실 내용을 자세히 적어주세요. (개인정보는 포함하지 않도록 주의해주세요)"
+            <textarea required rows={15} 
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all 
-              resize-none text-gray-900 placeholder:text-gray-400"
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all resize-none text-gray-900"
             />
           </div>
 
-          {/* 이미지 첨부 영역 */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">사진 첨부 <span className="text-gray-400 font-normal text-xs ml-1">(최대 3장)</span></label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              사진 재첨부 <span className="text-gray-400 font-normal text-xs ml-1">(새로 첨부 시 기존 사진은 삭제됩니다)</span>
+            </label>
             <div className="flex flex-wrap gap-3">
-              {/* 첨부 버튼 */}
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={files.length >= MAX_IMAGES}
-                className="w-20 h-20 flex flex-col items-center justify-center gap-1 bg-gray-50 border border-dashed border-gray-300 rounded-xl hover:bg-gray-100 
-                transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-500"
+                className="w-20 h-20 flex flex-col items-center justify-center gap-1 bg-gray-50 border border-dashed border-gray-300 rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-50 text-gray-500"
               >
                 <ImagePlus className="w-6 h-6" />
                 <span className="text-xs font-medium">{files.length}/{MAX_IMAGES}</span>
               </button>
               
-              {/* 숨겨진 파일 인풋 */}
               <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" multiple className="hidden"/>
 
-              {/* 이미지 미리보기 리스트 */}
               {previewUrls.map((url, index) => (
                 <div key={url} className="relative w-20 h-20 rounded-xl border border-gray-200 overflow-hidden group">
                   <img src={url} alt={`preview-${index}`} className="w-full h-full object-cover" />
-                  {/* 삭제 버튼 (오버레이) */}
                   <button type="button" onClick={() => removeImage(index)}
                     className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity">
                     <X className="w-3 h-3" />
@@ -207,11 +212,10 @@ export default function InquiryCreatePage() {
             </div>
           </div>
 
-          {/* 하단 버튼 */}
           <div className="pt-4">
             <button type="submit"
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-              <Send className="w-5 h-5" /> 문의 접수하기
+              <Send className="w-5 h-5" /> 수정 완료하기
             </button>
           </div>
         </form>

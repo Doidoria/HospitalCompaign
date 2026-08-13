@@ -200,4 +200,60 @@ public class InquiryService {
                 .createdAt(inquiry.getCreatedDate().toString()) // 필요시 포맷팅
                 .build();
     }
+
+    @Transactional
+    public void updateInquiry(Long id, InquiryRequest request, Member member) {
+        Inquiry inquiry = inquiryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 문의입니다."));
+
+        // 1. 소유자 확인
+        if (!inquiry.getMember().getId().equals(member.getId())) {
+            throw new AccessDeniedException("본인의 문의글만 수정할 수 있습니다.");
+        }
+
+        // 2. 답변 완료 상태 확인 (핵심)
+        if (inquiry.getStatus() == InquiryStatus.ANSWERED) {
+            throw new IllegalStateException("이미 답변이 완료된 문의는 수정할 수 없습니다.");
+        }
+
+        // 3. 이미지 업데이트 로직 (새로운 이미지가 업로드된 경우 기존 이미지 대체)
+        List<String> updatedImageUrls = inquiry.getImageUrls();
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            if (request.getImages().size() > 3) {
+                throw new IllegalArgumentException("이미지는 최대 3장까지만 업로드 가능합니다.");
+            }
+            updatedImageUrls = new ArrayList<>();
+            for (MultipartFile file : request.getImages()) {
+                if (file.getSize() > MAX_IMAGE_SIZE) {
+                    throw new IllegalArgumentException("첨부 이미지는 5MB를 초과할 수 없습니다.");
+                }
+                updatedImageUrls.add(fileStorageService.uploadFile(file, "inquiries"));
+            }
+        }
+
+        // 4. 비밀번호 갱신 처리
+        String encodedPassword = null;
+        if (request.isPrivate() && request.getPassword() != null && !request.getPassword().isEmpty()) {
+            encodedPassword = passwordEncoder.encode(request.getPassword());
+        }
+
+        // 5. 엔티티 업데이트 (더티 체킹)
+        inquiry.update(request.getTitle(), request.getContent(), request.isPrivate(), encodedPassword, updatedImageUrls);
+    }
+
+    @Transactional
+    public void deleteInquiry(Long id, Member member) {
+        Inquiry inquiry = inquiryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 문의입니다."));
+
+        if (!inquiry.getMember().getId().equals(member.getId())) {
+            throw new AccessDeniedException("본인의 문의글만 삭제할 수 있습니다.");
+        }
+
+        if (inquiry.getStatus() == InquiryStatus.ANSWERED) {
+            throw new IllegalStateException("이미 답변이 완료된 문의는 삭제할 수 없습니다.");
+        }
+
+        inquiryRepository.delete(inquiry);
+    }
 }

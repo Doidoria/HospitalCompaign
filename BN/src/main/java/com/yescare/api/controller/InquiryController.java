@@ -67,4 +67,29 @@ public class InquiryController {
         // 200 OK와 함께 비밀글 상세 내용을 프론트엔드로 즉시 반환!
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Void>> updateInquiry(
+            @PathVariable Long id,
+            @ModelAttribute InquiryRequest request,
+            Authentication authentication) {
+
+        Member member = memberRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자를 찾을 수 없습니다."));
+
+        inquiryService.updateInquiry(id, request, member);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteInquiry(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        Member member = memberRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자를 찾을 수 없습니다."));
+
+        inquiryService.deleteInquiry(id, member);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

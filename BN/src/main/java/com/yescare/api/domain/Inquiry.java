@@ -48,4 +48,16 @@ public class Inquiry extends BaseTimeEntity {
         this.answer = answer;
         this.status = InquiryStatus.ANSWERED;
     }
+
+    public void update(String title, String content, boolean isPrivate, String password, List<String> imageUrls) {
+        this.title = title;
+        this.content = content;
+        this.isPrivate = isPrivate;
+        if (password != null) {
+            this.password = password;
+        }
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            this.imageUrls = imageUrls;
+        }
+    }
 }

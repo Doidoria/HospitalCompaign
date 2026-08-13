@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, MessageCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, MessageCircle, Clock, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import { inquiryApi } from '@/src/api/index';
 import { Toast } from '@/src/utils/alert';
 
@@ -28,17 +28,53 @@ export default function InquiryDetailPage() {
     fetchDetail();
   }, [id]);
 
+  const handleDelete = async () => {
+    if (!window.confirm('정말 이 문의를 삭제하시겠습니까?')) return;
+    
+    try {
+      await inquiryApi.deleteInquiry(Number(id));
+      await Toast.fire({ icon: 'success', title: '삭제되었습니다.' });
+      router.replace('/support/faq'); // 삭제 후 목록(또는 FAQ)으로 이동
+    } catch (error: any) {
+      console.error('삭제 에러:', error);
+      Toast.fire({ 
+        icon: 'error', 
+        title: error.response?.data?.message || '삭제에 실패했습니다.' 
+      });
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-20">로딩 중...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center">
       <div className="w-full max-w-2xl bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
         {/* 상단 헤더 */}
-        <div className="p-6 border-b border-gray-100 flex items-center gap-4">
-          <button onClick={() => router.back()} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </button>
-          <h1 className="text-xl font-bold text-gray-900">문의 상세 내용</h1>
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.back()} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">문의 상세 내용</h1>
+          </div>
+          
+          {/* 답변 대기(PENDING) 상태일 때만 수정/삭제 버튼 노출 */}
+          {inquiry.status === 'PENDING' && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => router.push(`/support/inquiry/edit/${id}`)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <Edit className="w-4 h-4" /> 수정
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" /> 삭제
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="p-8">
