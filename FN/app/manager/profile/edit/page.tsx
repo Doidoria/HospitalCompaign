@@ -26,6 +26,7 @@ export default function ManagerProfileEditPage() {
   const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
   // 1. 기존 정보 불러오기
+  // 1. 기존 정보 불러오기
   useEffect(() => {
     let isMounted = true;
     const fetchMyProfile = async () => {
@@ -36,15 +37,24 @@ export default function ManagerProfileEditPage() {
 
         const profileRes = await managerApi.getManagerProfile(meRes.data.id);
         if (isMounted && profileRes.data) {
-          const { introduction, career, certifications, managerType, availableDays, availableTime } = profileRes.data;
-          
-          setManagerType(managerType || 'PRO'); // 백엔드에서 준 타입 바인딩
+          const { introduction, career, certifications, availableDays, availableTime } = profileRes.data;
+
+          let parsedDays: string[] = [];
+          if (availableDays && availableDays !== '미지정' && availableDays !== '상시') {
+            parsedDays = availableDays.split(',').map((d: string) => d.trim());
+          }
+
+          let parsedTime = availableTime || '';
+          if (parsedTime === '미지정' || parsedTime === '상시') {
+            parsedTime = '';
+          }
+
           setProfileForm({
             introduction: introduction === '인사말이 없습니다.' ? '' : (introduction || ''),
             career: career === '경력 정보가 없습니다.' ? '' : (career || ''),
             certifications: certifications === '자격증 정보 없음' ? '' : (certifications || ''),
-            availableDays: availableDays && availableDays !== '미지정' ? availableDays.split(',') : [],
-            availableTime: availableTime === '미지정' ? '' : (availableTime || '')
+            availableDays: parsedDays, // 💡 공백 제거된 배열 저장
+            availableTime: parsedTime
           });
         }
       } catch (error) {
