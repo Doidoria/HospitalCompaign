@@ -221,10 +221,7 @@ export default function ManagerProfileEditPage() {
                 <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
                   <Clock className="w-4 h-4 text-indigo-500" /> 활동 가능 시간
                 </label>
-                <select
-                  name="availableTime"
-                  value={profileForm.availableTime}
-                  onChange={(e) => setProfileForm(prev => ({ ...prev, availableTime: e.target.value }))}
+                <select name="availableTime" value={profileForm.availableTime} onChange={(e) => setProfileForm(prev => ({ ...prev, availableTime: e.target.value }))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all text-slate-700"
                 >
                   <option value="" disabled>시간대를 선택해주세요</option>
@@ -232,6 +229,12 @@ export default function ManagerProfileEditPage() {
                   <option value="오후 (13:00~18:00)">오후 (13:00~18:00)</option>
                   <option value="종일 (09:00~18:00)">종일 (09:00~18:00)</option>
                   <option value="협의 가능">시간 협의 가능</option>
+                  {profileForm.availableTime && 
+                   !['오전 (09:00~13:00)', '오후 (13:00~18:00)', '종일 (09:00~18:00)', '협의 가능'].includes(profileForm.availableTime) && (
+                    <option value={profileForm.availableTime}>
+                      {profileForm.availableTime}
+                    </option>
+                  )}
                 </select>
               </div>
             </div>
