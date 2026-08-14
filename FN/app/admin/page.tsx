@@ -305,25 +305,26 @@ export default function AdminDashboardPage() {
 
   const handleViewMemberProfile = (member: any) => {
     const isAdmin = member.role.includes('ADMIN');
-    const isManager = member.role.includes('MANAGER');
+    const isManagerPro = member.role === 'MANAGER_PRO';   // 💡 추가
+    const isManagerFree = member.role === 'MANAGER_FREE'; // 💡 추가
     
     MySwal.fire({
       title: '',
       html: (
         <div className="text-left w-full">
-          {/* 1. 상단 프로필 헤더 영역 */}
+          {/* 매니저 상단 프로필 헤더 영역 */}
           <div className="bg-slate-900 px-6 pt-10 pb-12 flex flex-col items-center justify-center text-center">
             {/* 이니셜 아바타 */}
             <div className="w-16 h-16 bg-white/10 text-white rounded-full flex items-center justify-center text-2xl font-black mb-3 border border-white/20 shadow-inner">
               {member.name.substring(0, 1)}
             </div>
-            {/* 권한 뱃지 */}
             <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-extrabold mb-1.5 border ${
               isAdmin ? 'bg-purple-500/20 text-purple-200 border-purple-500/30' :
-              isManager ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30' :
+              isManagerPro ? 'bg-blue-500/20 text-blue-200 border-blue-500/30' : 
+              isManagerFree ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30' :
               'bg-slate-500/30 text-slate-300 border-slate-500/30'
             }`}>
-              {isAdmin ? '최고 관리자' : isManager ? '동행 매니저' : '일반 고객'}
+              {isAdmin ? '최고 관리자' : isManagerPro ? '예스케어 PRO' : isManagerFree ? '프리랜서 FREE' : '일반 고객'}
             </span>
             <h3 className="text-white text-xl font-extrabold">{member.name}</h3>
             <p className="text-slate-400 text-xs mt-0.5">{member.email}</p>
