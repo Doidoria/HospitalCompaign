@@ -132,20 +132,26 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
   const handleViewDetails = (mgr: ManagerApplication) => {
     YesAlert.fire({
       title: '지원서 상세 내용',
+      width: '32rem',
       html: `
-        <div class="w-full text-left mt-4 max-h-[55vh] overflow-y-auto pr-1 text-slate-700 space-y-4 break-words" style="width: 100%; box-sizing: border-box;">
+        <div class="w-full mt-4 max-h-[60vh] overflow-y-auto pr-2 text-slate-700 space-y-5" style="width: 100%; box-sizing: border-box; text-align: left;">
+          
           <div class="w-full" style="width: 100%;">
-            <span class="block text-[11px] font-bold text-slate-400 mb-1.5">관련 경력</span>
-            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed shadow-sm" style="width: 100%; box-sizing: border-box;">
+            <span class="block text-[12px] font-bold text-slate-500 mb-2">관련 경력</span>
+            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed" 
+                 style="width: 100%; box-sizing: border-box; min-height: 100px; height: auto; text-align: left; word-break: keep-all; overflow-wrap: break-word;">
               ${mgr.experience ? mgr.experience : '<span class="text-slate-400 italic">작성된 내용이 없습니다.</span>'}
             </div>
           </div>
+
           <div class="w-full" style="width: 100%;">
-            <span class="block text-[11px] font-bold text-slate-400 mb-1.5">지원 동기</span>
-            <div class="bg-blue-50/40 border border-blue-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed shadow-sm" style="width: 100%; box-sizing: border-box;">
+            <span class="block text-[12px] font-bold text-slate-500 mb-2">지원 동기</span>
+            <div class="bg-blue-50/30 border border-blue-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed" 
+                 style="width: 100%; box-sizing: border-box; min-height: 100px; height: auto; text-align: left; word-break: keep-all; overflow-wrap: break-word;">
               ${mgr.motivation ? mgr.motivation : '<span class="text-slate-400 italic">작성된 내용이 없습니다.</span>'}
             </div>
           </div>
+
         </div>
       `,
       showCancelButton: false,
