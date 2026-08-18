@@ -23,7 +23,7 @@ export default function ManagerProfileEditPage() {
     availableTime: ''
   });
 
-  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+  const DAYS = ['월', '화', '수', '목', '금', '토'];
 
   // 1. 기존 정보 불러오기
   // 1. 기존 정보 불러오기

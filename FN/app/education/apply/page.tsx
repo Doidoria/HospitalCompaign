@@ -29,7 +29,7 @@ export default function EducationApplyPage() {
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [availableTime, setAvailableTime] = useState('');
 
-  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+  const DAYS = ['월', '화', '수', '목', '금', '토'];
   const toggleDay = (day: string) => {
     setAvailableDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
   };
