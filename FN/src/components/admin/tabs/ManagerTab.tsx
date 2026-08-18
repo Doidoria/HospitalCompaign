@@ -133,14 +133,18 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
     YesAlert.fire({
       title: '지원서 상세 내용',
       html: `
-        <div class="w-full text-left mt-4 max-h-[55vh] overflow-y-auto pr-1 text-slate-700 space-y-4 break-words">
-          <div>
+        <div class="w-full text-left mt-4 max-h-[55vh] overflow-y-auto pr-1 text-slate-700 space-y-4 break-words" style="width: 100%; box-sizing: border-box;">
+          <div class="w-full" style="width: 100%;">
             <span class="block text-[11px] font-bold text-slate-400 mb-1.5">관련 경력</span>
-            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed">${mgr.experience || '작성된 내용이 없습니다.'}</div>
+            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed shadow-sm" style="width: 100%; box-sizing: border-box;">
+              ${mgr.experience ? mgr.experience : '<span class="text-slate-400 italic">작성된 내용이 없습니다.</span>'}
+            </div>
           </div>
-          <div>
+          <div class="w-full" style="width: 100%;">
             <span class="block text-[11px] font-bold text-slate-400 mb-1.5">지원 동기</span>
-            <div class="bg-blue-50/40 border border-blue-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed">${mgr.motivation || '작성된 내용이 없습니다.'}</div>
+            <div class="bg-blue-50/40 border border-blue-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed shadow-sm" style="width: 100%; box-sizing: border-box;">
+              ${mgr.motivation ? mgr.motivation : '<span class="text-slate-400 italic">작성된 내용이 없습니다.</span>'}
+            </div>
           </div>
         </div>
       `,
