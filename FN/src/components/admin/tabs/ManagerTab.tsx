@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserPlus, Loader2, FileText, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import { adminApi } from '@/src/api/index';
-import { Toast, YesAlert } from '@/src/utils/alert';
+import { Toast, YesAlert, MySwal } from '@/src/utils/alert';
 import EmptyState from '../ui/EmptyState';
 
 interface ManagerApplication {
@@ -128,26 +128,24 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
     }
   };
 
-  // 지원서 상세 보기 팝업 함수
+  // 지원서 상세 보기 팝업 함수 (모바일 반응형 & 패딩 최적화)
   const handleViewDetails = (mgr: ManagerApplication) => {
-    YesAlert.fire({
-      title: '지원서 상세 내용',
+    MySwal.fire({
+      title: '<span class="text-base sm:text-lg font-extrabold text-slate-800">지원서 상세 내용</span>',
       width: '32rem',
       html: `
-        <div class="w-full mt-4 max-h-[60vh] overflow-y-auto pr-2 text-slate-700 space-y-5" style="width: 100%; box-sizing: border-box; text-align: left;">
+        <div class="w-full text-left mt-1 max-h-[60vh] overflow-y-auto pr-1.5 space-y-4 sm:space-y-5">
           
-          <div class="w-full" style="width: 100%;">
-            <span class="block text-[12px] font-bold text-slate-500 mb-2">관련 경력</span>
-            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed" 
-                 style="width: 100%; box-sizing: border-box; min-height: 100px; height: auto; text-align: left; word-break: keep-all; overflow-wrap: break-word;">
+          <div class="flex flex-col">
+            <span class="text-[11px] sm:text-xs font-bold text-slate-500 mb-1.5">관련 경력</span>
+            <div class="bg-slate-50 border border-slate-200 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl text-[13px] sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed min-h-[80px] h-auto break-keep">
               ${mgr.experience ? mgr.experience : '<span class="text-slate-400 italic">작성된 내용이 없습니다.</span>'}
             </div>
           </div>
 
-          <div class="w-full" style="width: 100%;">
-            <span class="block text-[12px] font-bold text-slate-500 mb-2">지원 동기</span>
-            <div class="bg-blue-50/30 border border-blue-100 p-4 rounded-xl text-sm whitespace-pre-wrap leading-relaxed" 
-                 style="width: 100%; box-sizing: border-box; min-height: 100px; height: auto; text-align: left; word-break: keep-all; overflow-wrap: break-word;">
+          <div class="flex flex-col">
+            <span class="text-[11px] sm:text-xs font-bold text-slate-500 mb-1.5">지원 동기</span>
+            <div class="bg-blue-50/30 border border-blue-100 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl text-[13px] sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed min-h-[80px] h-auto break-keep">
               ${mgr.motivation ? mgr.motivation : '<span class="text-slate-400 italic">작성된 내용이 없습니다.</span>'}
             </div>
           </div>
@@ -155,7 +153,12 @@ export default function ManagerTab({ refreshBadges }: ManagerTabProps) {
         </div>
       `,
       showCancelButton: false,
-      confirmButtonText: '닫기'
+      confirmButtonText: '닫기',
+      customClass: {
+        popup: 'rounded-xl sm:rounded-2xl p-4 sm:p-6',
+        confirmButton: 'bg-slate-800 text-white font-bold w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-2 rounded-lg text-sm sm:text-base hover:bg-slate-700 transition-colors'
+      },
+      buttonsStyling: false
     });
   };
 
