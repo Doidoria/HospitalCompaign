@@ -398,7 +398,6 @@ export default function ReportWritePage() {
             </motion.div>
 
             {/* 진료 요약 및 다음 예약 일정 */}
-            {/* 진료 요약 및 다음 예약 일정 */}
             <motion.div variants={itemVariants} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-6">
               
               {/* 1. 진료 요약 섹션 */}

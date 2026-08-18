@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -24,8 +26,10 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        log.info("🚀 [JWT Filter] API 요청: {} {}", request.getMethod(), request.getRequestURI());
+
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            response.setStatus(HttpServletResponse.SC_OK);
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -39,12 +43,21 @@ public class JwtFilter extends OncePerRequestFilter {
                 String role = jwtProvider.getRole(token);
                 request.setAttribute("userEmail", email);
 
-                // 스프링 시큐리티 본부에 권한 등록
+                log.info("✅ [JWT Filter] 토큰 정상 승인 - 사용자: {}, 원본 Role: {}", email, role);
+
+                String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                log.info("🎯 [JWT Filter] 스프링 시큐리티에 등록될 최종 권한: {}", authority);
+
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(email, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                        new UsernamePasswordAuthenticationToken(email, null, List.of(new SimpleGrantedAuthority(authority)));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                log.error("❌ [JWT Filter] 토큰 검증 실패 (만료 또는 위조)");
             }
+        } else {
+            log.warn("⚠️ [JWT Filter] 헤더에 토큰이 없거나 형식이 잘못되었습니다. Authorization: {}", authorization);
         }
+
         filterChain.doFilter(request, response);
     }
 }

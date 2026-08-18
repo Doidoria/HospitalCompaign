@@ -24,7 +24,7 @@ public class ReportController {
     private final ObjectMapper objectMapper;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('MANAGER') || hasAuthority('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'MANAGER_PRO', 'MANAGER_FREE', 'ADMIN')")
     public ApiResponse<Long> create(
             @RequestPart("request") ReportRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
@@ -39,7 +39,7 @@ public class ReportController {
 
     // 기존 리포트 수정 및 재전송 (PUT 요청 처리)
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('MANAGER') || hasAuthority('ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'MANAGER_PRO', 'MANAGER_FREE', 'ADMIN')")
     public ApiResponse<Long> update(
             @PathVariable Long id,
             @RequestPart("request") ReportRequest request,
