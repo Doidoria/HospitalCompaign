@@ -13,7 +13,7 @@ import Link from 'next/link';
 const FAQS = [
   {
     question: '결제는 어떻게 진행되나요?',
-    answer: '현재는 예약 확정을 위해 기본 서비스 요금에 대한 [무통장 입금 및 계좌이체]만 지원하고 있습니다. 보호자님들의 더욱 편리한 결제를 위해 신용카드 및 간편결제 시스템이 곧 도입될 예정이오니 많은 양해 부탁드립니다.'
+    answer: '예스케어는 보호자님들의 더욱 편리한 서비스 이용을 위해 신용/체크카드 및 다양한 간편결제(카카오페이, 네이버페이, 토스페이 등) 시스템을 지원하고 있습니다. 또한, 기존과 동일하게 무통장 입금(가상계좌) 및 실시간 계좌이체를 통한 예약 확정도 가능하오니, 신청 단계에서 원하시는 결제 수단을 편하게 선택해 주시면 됩니다.'
   },
   {
     question: '예약을 취소하거나 변경하고 싶어요.',
@@ -192,13 +192,14 @@ export default function GuidePage() {
               <div>
                 <div className="flex items-center gap-3 mb-3">
                   <CreditCard className="w-7 h-7 text-emerald-400" />
-                  <h3 className="text-2xl font-bold text-white">결제 계좌 안내</h3>
-                  <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
-                    카드 결제 준비 중
+                  <h3 className="text-2xl font-bold text-white">결제 수단 안내</h3>
+                  <span className="px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-bold rounded-full border border-blue-500/20">
+                    통합 결제 지원
                   </span>
                 </div>
                 <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-                  신속한 매니저 배정을 위해 현재 무통장 입금 및 계좌이체를 통한<br className="hidden md:block" /> 선결제 방식으로 운영되고 있습니다.
+                  신용/체크카드 및 다양한 간편결제(카카오페이, 네이버페이, 토스페이 등)를 지원합니다.<br className="hidden md:block" /> 
+                  기존과 동일하게 무통장 입금(가상계좌) 및 실시간 계좌이체도 자유롭게 이용하실 수 있습니다.
                 </p>
               </div>
               <div className="w-full md:w-auto bg-slate-900 p-6 rounded-3xl flex flex-col sm:flex-row items-center gap-6 border border-slate-700">
