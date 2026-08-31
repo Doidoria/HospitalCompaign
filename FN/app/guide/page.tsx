@@ -202,7 +202,7 @@ export default function GuidePage() {
                   기존과 동일하게 무통장 입금(가상계좌) 및 실시간 계좌이체도 자유롭게 이용하실 수 있습니다.
                 </p>
               </div>
-              <div className="w-full md:w-auto bg-slate-900 p-6 rounded-3xl flex flex-col sm:flex-row items-center gap-6 border border-slate-700">
+              <div className="w-full md:w-xl bg-slate-900 p-6 rounded-3xl flex flex-col sm:flex-row items-center gap-6 border border-slate-700">
                 <div className="text-center sm:text-left">
                   <p className="text-slate-400 text-xs font-medium mb-1">하나은행 (예금주: 주식회사 웰커뮤니티)</p>
                   <p className="text-white text-xl md:text-xl font-mono font-bold tracking-wider">053-982277-80904</p>
