@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/managers/profile").authenticated()
                         .requestMatchers("/api/members/managers/count").permitAll()
                         .requestMatchers("/api/members/apply-manager").authenticated()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")   // 관리자 API 일괄 보호
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class)

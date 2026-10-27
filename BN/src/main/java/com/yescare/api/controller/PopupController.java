@@ -6,6 +6,7 @@ import com.yescare.api.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,12 +28,14 @@ public class PopupController {
     }
 
     // 2. [어드민 페이지] 모든 팝업 설정 조회
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/api/admin/popups")
     public List<Popup> getAllPopups() {
         return popupRepository.findAll();
     }
 
     // 3. [어드민 페이지] 팝업 이미지 업로드 및 등록/수정 (FormData 처리)
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/api/admin/popups", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createOrUpdatePopup(
             @RequestParam(value = "id", required = false) Long id, // 추가: id 유무로 생성/수정 구분
@@ -71,6 +74,7 @@ public class PopupController {
     }
 
     // 4. [어드민 페이지] 사용 여부(상태) 즉시 변경
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/api/admin/popups/{id}/status")
     public Popup togglePopupStatus(@PathVariable Long id, @RequestBody Map<String, Boolean> payload) {
         Popup popup = popupRepository.findById(id)
@@ -83,6 +87,7 @@ public class PopupController {
     }
 
     // 5. [어드민 페이지] 팝업 삭제
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/api/admin/popups/{id}")
     public String deletePopup(@PathVariable Long id) {
         popupRepository.deleteById(id);
