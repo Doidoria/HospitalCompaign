@@ -287,6 +287,13 @@ public class Reservation {
         this.extraChargeReason = reason;
     }
 
+    // 기본 요금 결제 완료 처리 (토스 승인 성공 후 호출)
+    public void completePayment(String orderId, String paymentKey) {
+        this.orderId = orderId;
+        this.paymentKey = paymentKey;
+        this.paymentStatus = "DONE";
+    }
+
     // 추가 요금 결제 완료 처리 메서드
     public void completeExtraPayment(String extraOrderId, String extraPaymentKey) {
         this.extraOrderId = extraOrderId;

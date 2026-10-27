@@ -20,6 +20,8 @@ export default function ApplyPage() {
 
   // 토스 위젯 상태 관리
   const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
+    // 결제수단 위젯 인스턴스 (카테고리 변경 시 금액 갱신용)
+  const paymentMethodsRef = useRef<ReturnType<PaymentWidgetInstance['renderPaymentMethods']> | null>(null);
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || "";
   const customerKey = "generate-random-customer-key";
 
@@ -93,6 +95,9 @@ export default function ApplyPage() {
 
   // 사용자가 선택한 동행 목적(category)에 따라 동적으로 기본 요금 책정
   const calculatedBaseFee = formData.category === '일반 진료' ? 44000 : 66000; // 정밀 검사 등은 더 비싸게
+    // 위젯 로딩 중에 카테고리가 바뀌어도 최신 금액으로 렌더링하기 위한 ref
+  const baseFeeRef = useRef(calculatedBaseFee);
+  baseFeeRef.current = calculatedBaseFee;
 
   // 페이지 로드 시 결제 위젯 렌더링
   useEffect(() => {
@@ -105,7 +110,7 @@ export default function ApplyPage() {
         const widget = await loadPaymentWidget(clientKey, customerKey);
         paymentWidgetRef.current = widget;
         
-        widget.renderPaymentMethods('#payment-widget', { value: calculatedBaseFee });
+        paymentMethodsRef.current = widget.renderPaymentMethods('#payment-widget', { value: baseFeeRef.current });
         widget.renderAgreement('#agreement', { variantKey: 'AGREEMENT' });
       } catch (error) {
         console.error("결제 위젯 렌더링 실패:", error);
@@ -114,6 +119,11 @@ export default function ApplyPage() {
     
     fetchPaymentWidget();
   }, []);
+
+    // 카테고리(일반 진료/정밀 검사) 변경 시 결제 위젯 금액 동기화
+  useEffect(() => {
+    paymentMethodsRef.current?.updateAmount(calculatedBaseFee);
+  }, [calculatedBaseFee]);
 
   const handleSmartChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

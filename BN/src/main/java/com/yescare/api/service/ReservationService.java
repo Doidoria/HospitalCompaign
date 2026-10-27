@@ -62,40 +62,50 @@ public class ReservationService {
             throw new IllegalStateException("해당 시간에 이미 예약된 내역이 존재합니다.");
         }
 
-        // 토스페이먼츠 최종 결제 승인 API 호출 로직
-        if (request.getPaymentKey() != null && request.getOrderId() != null) {
-            try {
-                RestTemplate restTemplate = new RestTemplate();
-                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        // 3. 결제 금액 검증: 가격은 서버가 정한다 (클라이언트 amount는 비교용으로만 사용)
+        int serverBaseFee = resolveBaseFee(request.getCategory());
 
-                String encodedAuth = java.util.Base64.getEncoder()
-                        .encodeToString((tossSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        if (request.getPaymentKey() == null || request.getPaymentKey().isBlank()
+                || request.getOrderId() == null || request.getOrderId().isBlank()) {
+            throw new IllegalArgumentException("결제 정보가 누락되었습니다.");
+        }
+        if (request.getAmount() == null || request.getAmount() != serverBaseFee) {
+            throw new IllegalArgumentException("결제 금액이 서비스 요금과 일치하지 않습니다.");
+        }
+        if (reservationRepository.existsByOrderId(request.getOrderId())) {
+            throw new IllegalStateException("이미 처리된 결제입니다.");
+        }
 
-                headers.setBasicAuth(encodedAuth);
-                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+        // 4. 토스페이먼츠 최종 결제 승인 (서버가 정한 금액으로 승인 → 실제 결제 금액이 다르면 토스가 거절)
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
 
-                Map<String, Object> paymentPayload = new HashMap<>();
-                paymentPayload.put("orderId", request.getOrderId());
-                paymentPayload.put("amount", request.getAmount());
-                paymentPayload.put("paymentKey", request.getPaymentKey());
+            String encodedAuth = java.util.Base64.getEncoder()
+                    .encodeToString((tossSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-                org.springframework.http.HttpEntity<Map<String, Object>> httpEntity = new org.springframework.http.HttpEntity<>(paymentPayload, headers);
+            headers.setBasicAuth(encodedAuth);
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
 
-                // 토스 서버로 최종 승인 요청
-                org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
-                        "https://api.tosspayments.com/v1/payments/confirm",
-                        httpEntity,
-                        String.class
-                );
+            Map<String, Object> paymentPayload = new HashMap<>();
+            paymentPayload.put("orderId", request.getOrderId());
+            paymentPayload.put("amount", serverBaseFee);
+            paymentPayload.put("paymentKey", request.getPaymentKey());
 
-                if (!response.getStatusCode().is2xxSuccessful()) {
-                    throw new IllegalStateException("결제 승인에 실패했습니다.");
-                }
-            } catch (Exception e) {
-                System.err.println("토스 결제 승인 에러: " + e.getMessage());
-                // 결제 승인 실패 시 예외를 발생시켜 DB 저장을 막습니다.
-                throw new IllegalStateException("결제 검증 과정에서 오류가 발생했습니다. 금액이나 주문번호가 조작되었을 수 있습니다.");
+            org.springframework.http.HttpEntity<Map<String, Object>> httpEntity = new org.springframework.http.HttpEntity<>(paymentPayload, headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://api.tosspayments.com/v1/payments/confirm",
+                    httpEntity,
+                    String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new IllegalStateException("결제 승인에 실패했습니다.");
             }
+        } catch (Exception e) {
+            System.err.println("토스 결제 승인 에러 (orderId: " + request.getOrderId() + "): " + e.getMessage());
+            throw new IllegalStateException("결제 승인에 실패했습니다. 결제가 완료되지 않았다면 다시 시도해 주세요.");
         }
 
         Reservation newReservation = Reservation.builder()
@@ -121,9 +131,10 @@ public class ReservationService {
                 .medication(request.getMedication())
                 .preparedDocuments(request.getPreparedDocuments())
                 .status(ReservationStatus.WAITING)
-                .baseFee(request.getAmount()) // 선입금된 기본 요금 저장
+                .baseFee(serverBaseFee) // 서버가 계산한 기본 요금 저장
                 .build();
 
+        newReservation.completePayment(request.getOrderId(), request.getPaymentKey());
         reservationRepository.save(newReservation);
 
         // 알림톡 발송
@@ -742,5 +753,20 @@ public class ReservationService {
 
         // 4. DB 상태 업데이트 (결제 완료)
         reservation.completeExtraPayment(request.getOrderId(), request.getPaymentKey());
+    }
+
+    // 서비스 기본 요금 정책 (FN app/apply/page.tsx의 금액 표시와 반드시 동일하게 유지)
+    private static final Map<String, Integer> BASE_FEE_BY_CATEGORY = Map.of(
+            "일반 진료", 44000,
+            "정밀 검사", 66000
+    );
+
+    private int resolveBaseFee(String category) {
+        // Map.of는 null 키 조회 시 NPE가 발생하므로 먼저 확인
+        Integer fee = (category == null) ? null : BASE_FEE_BY_CATEGORY.get(category);
+        if (fee == null) {
+            throw new IllegalArgumentException("알 수 없는 서비스 유형입니다.");
+        }
+        return fee;
     }
 }

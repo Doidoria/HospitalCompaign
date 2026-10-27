@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { YesAlert } from '@/src/utils/alert';
 import { reservationApi } from '@/src/api/index';
+import axios from 'axios';
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
@@ -63,12 +64,16 @@ export default function PaymentSuccessPage() {
         
         router.push('/mypage');
 
-      } catch (error: any) {
+        } catch (error: unknown) {
         console.error('결제 승인 실패:', error);
-        YesAlert.fire({ 
+        // 서버가 내려준 사유(금액 불일치, 중복 결제 등)가 있으면 그대로 안내
+        const serverMessage = axios.isAxiosError<{ message?: string }>(error)
+          ? error.response?.data?.message
+          : undefined;
+        await YesAlert.fire({ 
           icon: 'error', 
           title: '결제 승인 실패', 
-          text: '결제 검증 중 문제가 발생했습니다. 고객센터로 문의해주세요.' 
+          text: serverMessage ?? '결제 검증 중 문제가 발생했습니다. 고객센터로 문의해주세요.' 
         });
         router.push('/apply/fail');
       }

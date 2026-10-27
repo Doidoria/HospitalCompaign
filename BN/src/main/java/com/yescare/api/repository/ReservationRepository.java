@@ -64,4 +64,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    // 결제 주문번호 중복 처리 방지
+    boolean existsByOrderId(String orderId);
 }
