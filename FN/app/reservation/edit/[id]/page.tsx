@@ -413,14 +413,13 @@ export default function ReservationEditPage() {
                     </div>
                     상세 진료 및 검사 내용
                   </label>
-                  <select 
-                    value={category} 
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="text-sm border border-blue-200 rounded-xl px-3 py-2 outline-none text-blue-800 bg-white cursor-pointer font-bold shadow-sm focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="일반 진료">일반 진료</option>
-                    <option value="정밀 검사">정밀 검사</option>
-                  </select>
+                  {/* 서비스 유형은 요금과 연결되어 있어 수정 불가 (차액 결제 기능 도입 전까지) */}
+                  <div className="flex flex-col items-start md:items-end gap-1">
+                    <span className="text-sm border border-blue-200 rounded-xl px-3 py-2 text-blue-800 bg-blue-50 font-bold">
+                      {category}
+                    </span>
+                    <span className="text-xs text-gray-500">서비스 유형 변경은 고객센터로 문의해 주세요.</span>
+                  </div>
                 </div>
                 
                 {category === '일반 진료' ? (

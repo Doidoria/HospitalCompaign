@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     question: '이용 시간이 예정보다 길어지면 어떻게 되나요?',
-    answer: '안내된 기본 시간(2시간 또는 3시간)을 초과할 경우, 30분 단위로 5,500원의 추가 요금이 발생합니다. 추가 요금은 서비스가 모두 종료된 후 매니저의 안내에 따라 추가로 계좌이체 해 주시면 됩니다.'
+    answer: '안내된 기본 시간(2시간 또는 3시간)을 초과할 경우, 30분 단위로 11,000원의 추가 요금이 발생합니다. 추가 요금은 서비스가 모두 종료된 후 매니저의 안내에 따라 추가로 계좌이체 해 주시면 됩니다.'
   }
 ];
 
@@ -124,6 +124,9 @@ export default function GuidePage() {
                     <span className="text-base font-medium text-slate-400 mb-1">원</span>
                   </div>
                 </div>
+                <p className="text-xs text-slate-400 px-1">
+                  * 예약은 일반 진료(기본 2시간) / 정밀 검사(기본 3시간)로 진행되며, 기본 시간 초과 시 30분당 11,000원이 추가됩니다.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

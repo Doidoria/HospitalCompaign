@@ -302,6 +302,10 @@ public class ReservationService {
         if (reservation.getStatus() != ReservationStatus.WAITING) {
             throw new IllegalStateException("매칭 대기 상태에서만 수정할 수 있습니다.");
         }
+        // 서비스 유형 변경 시 요금이 달라지므로 차액 결제 기능 도입 전까지 변경 차단
+        if (request.getCategory() != null && !request.getCategory().equals(reservation.getCategory())) {
+            throw new IllegalArgumentException("서비스 유형(일반 진료/정밀 검사)은 변경할 수 없습니다. 변경이 필요하시면 고객센터로 문의해 주세요.");
+        }
         reservation.updateDetails(
                 request.getHospitalName(),
                 request.getReservationTime(),

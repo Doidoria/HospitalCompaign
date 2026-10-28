@@ -44,6 +44,7 @@ public class ReservationResponse {
     private String reviewComment;
     private Long managerId;
     private Boolean hasReport;
+    private Integer baseFee; // 결제된 기본 요금
     private Integer extraChargeAmount;
     private String extraChargeReason;
     private String extraPaymentStatus;
@@ -92,6 +93,7 @@ public class ReservationResponse {
         this.noRevisit = entity.getNoRevisit() != null ? entity.getNoRevisit() : false;
         this.revisitCount = entity.getRevisitCount();
         this.hasReport = (entity.getReport() != null); // 리포트가 DB에 존재하면 true, 없으면 false 반환
+        this.baseFee = entity.getBaseFee();
         this.extraChargeAmount = entity.getExtraChargeAmount();
         this.extraChargeReason = entity.getExtraChargeReason();
         this.extraPaymentStatus = entity.getExtraPaymentStatus();

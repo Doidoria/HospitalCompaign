@@ -60,8 +60,8 @@ export default function ReservationDetailPage() {
         // 백엔드에서 주는 가입 경로 정보 저장 (없으면 기본값 LOCAL)
         setAuthProvider(userRes.data.provider || 'LOCAL');
         const apiData = resDetail.data;
-        // 기본요금 44,000원으로 세팅 및 추가요금 백엔드 데이터와 맵핑
-        const baseFee = apiData.baseFee || 44000;
+        // 실제 결제된 기본요금 사용 (과거 데이터처럼 값이 없으면 카테고리 요금으로 표시)
+        const baseFee: number = apiData.baseFee ?? (apiData.category === '정밀 검사' ? 66000 : 44000);
         const extraFee = apiData.extraChargeAmount || 0;
 
         const dateObj = new Date(apiData.reservationTime);
@@ -81,10 +81,10 @@ export default function ReservationDetailPage() {
             ? { id: String(apiData.managerId) || '', name: apiData.managerName, license: '전문 교육 수료', rating: '5.0' } 
             : null,
           payment: { 
-            baseFee: 44000, 
-            extraFee: apiData.extraChargeAmount || 0, 
+            baseFee: baseFee, 
+            extraFee: extraFee, 
             extraReason: apiData.extraChargeReason || '',
-            totalFee: 44000 + (apiData.extraChargeAmount || 0) 
+            totalFee: baseFee + extraFee 
           },
           category: apiData.category || '진료',
           detailedContent: apiData.detailedContent || '',
@@ -426,7 +426,7 @@ export default function ReservationDetailPage() {
           <div className="space-y-4 text-sm px-1">
             {/* 기본 요금 */}
             <div className="flex justify-between text-slate-500 items-center">
-              <span>기본 동행 요금 (2시간)</span>
+              <span>기본 동행 요금 ({reservation.category === '정밀 검사' ? '정밀 검사 · 기본 3시간' : '일반 진료 · 기본 2시간'})</span>
               <span className="font-medium text-slate-700">{reservation.payment.baseFee.toLocaleString()}원</span>
             </div>
             
