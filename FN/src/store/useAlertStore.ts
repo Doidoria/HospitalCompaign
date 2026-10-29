@@ -11,6 +11,7 @@ interface AlertOptions {
   cancelButtonText?: string;
   input?: 'textarea' | 'text' | 'number' | 'email' | 'password';
   inputValue?: string | number;
+  inputPlaceholder?: string;
   inputValidator?: (value: string) => string | null;
 }
 
@@ -47,6 +48,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
       confirmButtonText: undefined, // 이전 팝업의 '탈퇴 진행' 텍스트 초기화
       cancelButtonText: undefined,  // 이전 팝업의 취소 텍스트 초기화 
       input: undefined, 
+      inputPlaceholder: undefined,
       inputValidator: undefined 
     });
   }

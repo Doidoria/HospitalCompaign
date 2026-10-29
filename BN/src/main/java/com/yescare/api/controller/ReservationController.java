@@ -45,8 +45,8 @@ public class ReservationController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')") // 본인 취소 또는 관리자 직권 취소
-    public ResponseEntity<String> cancelReservation(@PathVariable Long id) {
-        reservationService.deleteReservation(id);
+    public ResponseEntity<String> cancelReservation(@PathVariable Long id, Principal principal) {
+        reservationService.deleteReservation(id, principal.getName());
         return ResponseEntity.ok("예약 번호 " + id + "번이 성공적으로 취소(삭제)되었습니다.");
     }
 
@@ -89,8 +89,8 @@ public class ReservationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReservationResponse> getReservationDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(reservationService.getReservationDetail(id));
+    public ResponseEntity<ReservationResponse> getReservationDetail(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(reservationService.getReservationDetail(id, principal.getName()));
     }
 
     // 2. 매니저 대시보드 - 신규 동행 요청 (WAITING) 목록
@@ -123,8 +123,8 @@ public class ReservationController {
     }
 
     @PostMapping("/{id}/reviews")
-    public ResponseEntity<String> addReview(@PathVariable Long id, @RequestBody ReviewRequest request) {
-        reservationService.addReview(id, request.getRating(), request.getComment());
+    public ResponseEntity<String> addReview(@PathVariable Long id, @RequestBody ReviewRequest request, Principal principal) {
+        reservationService.addReview(id, principal.getName(), request.getRating(), request.getComment());
         return ResponseEntity.ok("리뷰가 성공적으로 등록되었습니다.");
     }
 
@@ -190,9 +190,10 @@ public class ReservationController {
     @PostMapping("/{id}/extra-payment/confirm")
     public ResponseEntity<?> confirmExtraPayment(
             @PathVariable("id") Long id,
-            @RequestBody ExtraPaymentRequest request) {
+            @RequestBody ExtraPaymentRequest request,
+            Principal principal) {
 
-        reservationService.confirmExtraPayment(id, request);
+        reservationService.confirmExtraPayment(id, principal.getName(), request);
         return ResponseEntity.ok().body("추가 요금 결제 승인이 완료되었습니다.");
     }
 }

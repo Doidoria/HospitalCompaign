@@ -32,11 +32,12 @@ public class ReportService {
     private final KakaoAlimtalkService kakaoAlimtalkService;
     private final FileStorageService fileStorageService;
     private final TemplateEngine templateEngine;
+    private final ReservationAccessChecker reservationAccessChecker;
 
     @Transactional
-    public Long createReport(ReportRequest request, List<MultipartFile> images) {
-        Reservation reservation = reservationRepository.findById(request.getReservationId())
-                .orElseThrow(() -> new IllegalArgumentException("예약 정보를 찾을 수 없습니다."));
+    public Long createReport(ReportRequest request, List<MultipartFile> images, String email) {
+        // 배정된 매니저 또는 관리자만 리포트 작성 가능
+        Reservation reservation = reservationAccessChecker.getManagedOrAdmin(request.getReservationId(), email);
 
         if (request.getNoNextSchedule() != null && request.getNoNextSchedule()) {
             reservation.setNoRevisit(true);
@@ -93,11 +94,12 @@ public class ReportService {
     }
 
     @Transactional
-    public Long updateReport(Long reportId, ReportRequest request, List<MultipartFile> images) {
+    public Long updateReport(Long reportId, ReportRequest request, List<MultipartFile> images, String email) {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 리포트를 찾을 수 없습니다."));
 
-        Reservation reservation = report.getReservation();
+        // 배정된 매니저 또는 관리자만 리포트 수정 가능
+        Reservation reservation = reservationAccessChecker.getManagedOrAdmin(report.getReservation().getId(), email);
         reservation.completeAccompany();
 
         if (request.getNoNextSchedule() != null && request.getNoNextSchedule()) {
@@ -111,8 +113,14 @@ public class ReportService {
         List<String> finalImageUrls = new ArrayList<>();
 
         // 프론트엔드에서 지우지 않고 남겨둔 기존 사진 URL 먼저 담기
+        // (이 리포트에 원래 있던 사진만 허용 → 임의의 외부 URL 주입 방지)
         if (request.getRetainedImages() != null) {
-            finalImageUrls.addAll(request.getRetainedImages());
+            List<String> existingImages = report.getImageUrls() != null ? report.getImageUrls() : new ArrayList<>();
+            for (String retained : request.getRetainedImages()) {
+                if (existingImages.contains(retained)) {
+                    finalImageUrls.add(retained);
+                }
+            }
         }
 
         // 새로 추가된 사진 업로드 후 담기
@@ -246,7 +254,9 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReportResponse getReportByReservationId(Long reservationId) {
+    public ReportResponse getReportByReservationId(Long reservationId, String email) {
+        // 예약한 고객 / 배정된 매니저 / 관리자만 조회 가능
+        reservationAccessChecker.getViewable(reservationId, email);
         return reportRepository.findByReservationId(reservationId)
                 .map(ReportResponse::new)
                 .orElse(null);
@@ -254,7 +264,9 @@ public class ReportService {
 
     // 마이페이지 PDF 다운로드용 메서드
     @Transactional(readOnly = true)
-    public byte[] downloadPdf(Long reservationId) {
+    public byte[] downloadPdf(Long reservationId, String email) {
+        // 예약한 고객 / 배정된 매니저 / 관리자만 다운로드 가능
+        reservationAccessChecker.getViewable(reservationId, email);
         Report report = reportRepository.findByReservationId(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 예약에 대한 리포트가 없습니다."));
 

@@ -151,7 +151,7 @@ export default function ReservationDetailPage() {
       return;
     }
 
-    const { value: password } = await YesAlert.fire({
+    const { isConfirmed, value: password } = await YesAlert.fire({
       title: '예약 취소 본인 확인',
       text: '보안을 위해 계정 비밀번호를 한 번 더 입력해 주세요.',
       input: 'password',
@@ -167,18 +167,22 @@ export default function ReservationDetailPage() {
       }
     });
 
-    if (password) {
-      try {
-        await authApi.login({ email: userEmail, password });
-        await reservationApi.cancel(reservation.id as any);
-
-        Toast.fire({ icon: 'success', title: '예약이 정상적으로 취소되었습니다.' });
-        router.push('/mypage');
-      } catch (error) {
-        Toast.fire({ icon: 'error', title: '비밀번호가 일치하지 않거나 오류가 발생했습니다.' });
-      }
+    if (!isConfirmed) return;
+    if (!password) {
+      Toast.fire({ icon: 'warning', title: '비밀번호를 입력해 주세요.' });
+      return;
     }
-  }, [reservation.status, reservation.id, userEmail, router]);
+
+    try {
+      await authApi.login({ email: userEmail, password });
+      await reservationApi.cancel(reservation.id as any);
+
+      Toast.fire({ icon: 'success', title: '예약이 정상적으로 취소되었습니다.' });
+      router.push('/mypage');
+    } catch (error) {
+      Toast.fire({ icon: 'error', title: '비밀번호가 일치하지 않거나 오류가 발생했습니다.' });
+    }
+  }, [reservation.status, reservation.id, userEmail, authProvider, router]);
 
   const pageVariants: Variants = {
     hidden: { opacity: 0, y: 15 },

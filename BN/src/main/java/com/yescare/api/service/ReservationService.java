@@ -34,6 +34,7 @@ public class ReservationService {
     private final ManagerRepository managerRepository;
     private final KakaoAlimtalkService kakaoAlimtalkService;
     private final SlackNotificationService slackNotificationService;
+    private final ReservationAccessChecker reservationAccessChecker;
 
     @Value("${toss.secret-key}")
     private String tossSecretKey;
@@ -191,11 +192,10 @@ public class ReservationService {
      * 예약 취소(삭제) 기능
      */
     @Transactional // DB 데이터를 건드리는 작업이므로 필수!
-    public void deleteReservation(Long id) {
+    public void deleteReservation(Long id, String email) {
 
-        // 1. 지울 예약이 DB에 존재하는지 확인합니다.
-        Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다. (ID: " + id + ")"));
+        // 1. 예약 존재 + 본인 또는 관리자인지 확인
+        Reservation reservation = reservationAccessChecker.getOwnedOrAdmin(id, email);
 
         // 예약이 취소되기 직전에 알림톡 발송
         kakaoAlimtalkService.sendReservationChangedOrCanceled(
@@ -333,9 +333,9 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
-    public ReservationResponse getReservationDetail(Long id) {
-        Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 예약을 찾을 수 없습니다. (ID: " + id + ")"));
+    public ReservationResponse getReservationDetail(Long id, String email) {
+        // 예약한 고객 / 배정된 매니저 / 관리자만 조회 가능 (건강 정보 포함)
+        Reservation reservation = reservationAccessChecker.getViewable(id, email);
 
         return new ReservationResponse(reservation);
     }
@@ -416,9 +416,9 @@ public class ReservationService {
     }
 
     @Transactional
-    public void addReview(Long reservationId, int rating, String comment) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+    public void addReview(Long reservationId, String email, int rating, String comment) {
+        // 예약한 고객 본인만 리뷰 작성 가능
+        Reservation reservation = reservationAccessChecker.getOwned(reservationId, email);
 
         if (reservation.getStatus() != ReservationStatus.COMPLETED) {
             throw new IllegalStateException("동행이 완료된 건만 리뷰 작성이 가능합니다.");
@@ -711,9 +711,9 @@ public class ReservationService {
 
     // 추가 요금 최종 결제 승인 로직
     @Transactional
-    public void confirmExtraPayment(Long reservationId, ExtraPaymentRequest request) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+    public void confirmExtraPayment(Long reservationId, String email, ExtraPaymentRequest request) {
+        // 예약한 고객 본인만 추가 요금 결제 가능
+        Reservation reservation = reservationAccessChecker.getOwned(reservationId, email);
 
         // 1. 금액 위변조 검증: DB에 청구된 금액과 고객이 실제 결제한 금액이 같은지 확인
         if (reservation.getExtraChargeAmount() == null || !reservation.getExtraChargeAmount().equals(request.getAmount())) {

@@ -9,7 +9,7 @@ import { AlertCircle, CheckCircle2, Info, HelpCircle, XCircle } from 'lucide-rea
 export default function GlobalAlert() {
   const { 
     isOpen, title, text, html, icon, showCancelButton, confirmButtonText, 
-    cancelButtonText, input, inputValue: initialInputValue, inputValidator, close 
+        cancelButtonText, input, inputValue: initialInputValue, inputPlaceholder, inputValidator, close
   } = useAlertStore();
   
   const [inputValue, setInputValue] = useState('');
@@ -71,6 +71,21 @@ export default function GlobalAlert() {
               <textarea value={inputValue} onChange={(e) => { setInputValue(e.target.value); setErrorMsg(null); }}
                 className={`w-full p-3 bg-slate-50 border ${errorMsg ? 'border-red-400 focus:ring-red-500' : 'border-slate-200 focus:ring-blue-500'} rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 resize-none h-24`}
                 placeholder="내용을 입력하세요..."
+              />
+              {errorMsg && <p className="text-xs text-red-500 font-bold mt-1 text-left">{errorMsg}</p>}
+            </div>
+          )}
+          {(input === 'text' || input === 'password' || input === 'email') && (
+            <div className="w-full mt-2 mb-4">
+              <input
+                type={input}
+                value={inputValue}
+                onChange={(e) => { setInputValue(e.target.value); setErrorMsg(null); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleConfirm(); }}
+                placeholder={inputPlaceholder}
+                autoFocus
+                autoComplete={input === 'password' ? 'current-password' : 'off'}
+                className={`w-full px-4 py-3 bg-slate-50 border ${errorMsg ? 'border-red-400 focus:ring-red-500' : 'border-slate-200 focus:ring-blue-500'} rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 transition-all`}
               />
               {errorMsg && <p className="text-xs text-red-500 font-bold mt-1 text-left">{errorMsg}</p>}
             </div>
