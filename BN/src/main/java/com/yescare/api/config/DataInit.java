@@ -5,10 +5,12 @@ import com.yescare.api.domain.Role;
 import com.yescare.api.repository.MemberRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("local")
 @RequiredArgsConstructor
 public class DataInit {
 

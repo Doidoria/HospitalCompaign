@@ -32,3 +32,6 @@ spring:
 
 toss:
   secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
+
+jwt:
+  secret: yescare-local-dev-secret-key-must-be-long-enough-for-hs256

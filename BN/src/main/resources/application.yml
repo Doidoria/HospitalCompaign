@@ -25,7 +25,7 @@ spring:
             enable: true
 
 jwt:
-  secret: ${JWT_SECRET_KEY:yescare-local-dev-secret-key-must-be-long-enough-for-hs256}
+  secret: ${JWT_SECRET_KEY}
   expiration_time: 86400000
 
 coolsms:

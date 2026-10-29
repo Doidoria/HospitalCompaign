@@ -90,7 +90,7 @@ export default function Footer() {
             </button>
             <p className="text-slate-400 mt-1">예금주 : 주식회사 웰커뮤니티</p>
             <p className="text-[11px] text-red-400 mt-2 bg-red-950/30 inline-block px-2 py-1 rounded-md">
-              * 입금 시 반드시 신청자명으로 기재해 주세요.
+              * 카드 결제 장애 시에만 이용해 주세요. 입금 전 반드시 채널톡으로 문의해 주시고, 신청자명으로 입금해 주세요.
             </p>
           </div>
 
