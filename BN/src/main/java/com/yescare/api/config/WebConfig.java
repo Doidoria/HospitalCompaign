@@ -1,6 +1,9 @@
 package com.yescare.api.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -9,9 +12,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+
+    private final Environment environment;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 로컬 파일 저장소(/uploads)는 local 프로필에서만 사용 (운영은 S3)
+        if (!environment.acceptsProfiles(Profiles.of("local"))) {
+            return;
+        }
+
         // 리눅스(EC2) 환경에서도 절대 길을 잃지 않도록 절대 경로로 변환하여 매핑합니다.
         Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads");
         String uploadPath = uploadDir.toFile().getAbsolutePath();

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/inquiries")
 @RequiredArgsConstructor
 // 💡 컨트롤러 전체에 관리자/매니저 권한 설정 (프로젝트의 Role 정책에 맞게 조절하세요)
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminInquiryController {
 
     private final InquiryService inquiryService;

@@ -51,3 +51,6 @@ Thumbs.db
 
 # Project specific
 backend-src-code.xml
+
+### Local file uploads ###
+uploads/

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin/notices")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')") // 관리자 권한 필수
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminNoticeController {
 
     private final NoticeService noticeService;
