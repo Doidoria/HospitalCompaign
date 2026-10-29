@@ -125,7 +125,7 @@ public class InquiryService {
                 .title(inquiry.getTitle())
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus().name())
-                .imageUrls(inquiry.getImageUrls())
+                .imageUrls(fileStorageService.toAccessUrls(inquiry.getImageUrls()))
                 .answer(inquiry.getAnswer())
                 .createdAt(inquiry.getCreatedDate().toString())
                 .build();
@@ -195,7 +195,7 @@ public class InquiryService {
                 .title(inquiry.getTitle())
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus().name())
-                .imageUrls(inquiry.getImageUrls())
+                .imageUrls(fileStorageService.toAccessUrls(inquiry.getImageUrls()))
                 .answer(inquiry.getAnswer())
                 .createdAt(inquiry.getCreatedDate().toString()) // 필요시 포맷팅
                 .build();

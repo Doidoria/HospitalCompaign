@@ -51,4 +51,27 @@ public class LocalFileStorageService implements FileStorageService {
             throw new RuntimeException("파일 업로드에 실패했습니다.", e);
         }
     }
+
+    // 로컬은 /uploads/** 정적 경로로 바로 접근 가능하므로 그대로 반환
+    @Override
+    public String toAccessUrl(String storedUrl) {
+        return storedUrl;
+    }
+
+    @Override
+    public byte[] readFile(String storedUrl) {
+        try {
+            java.nio.file.Path baseDir = java.nio.file.Paths.get(System.getProperty("user.dir"), "uploads")
+                    .toAbsolutePath().normalize();
+            String relative = toStoredUrl(storedUrl).replaceFirst("^/?uploads/", "");
+            java.nio.file.Path target = baseDir.resolve(relative).normalize();
+            // ../ 등으로 uploads 폴더 밖을 읽지 못하도록 차단
+            if (!target.startsWith(baseDir)) {
+                throw new IllegalArgumentException("허용되지 않은 파일 경로입니다.");
+            }
+            return java.nio.file.Files.readAllBytes(target);
+        } catch (IOException e) {
+            throw new RuntimeException("로컬 파일 읽기에 실패했습니다.", e);
+        }
+    }
 }

@@ -27,6 +27,12 @@ public class ReportResponse {
 
     private List<String> imageUrls = new ArrayList<>();
 
+    // 화면용 접근 주소(S3 서명 URL 등)로 교체
+    public ReportResponse withImageUrls(List<String> accessUrls) {
+        this.imageUrls = accessUrls != null ? accessUrls : new ArrayList<>();
+        return this;
+    }
+
     public ReportResponse(Report entity) {
         this.id = entity.getId();
         this.hospitalName = entity.getReservation().getHospitalName();

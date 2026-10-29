@@ -18,6 +18,12 @@ public class ManagerAppResponse {
     private String experience;
     private String motivation;
 
+    // 화면용 접근 주소(S3 서명 URL 등)로 교체
+    public ManagerAppResponse withCertificateUrl(String accessUrl) {
+        this.certificateUrl = accessUrl;
+        return this;
+    }
+
     public ManagerAppResponse(ManagerApplication entity) {
         this.id = entity.getId();
         this.memberId = entity.getMember().getId(); // 승인할 때 이 회원 번호가 필요합니다.

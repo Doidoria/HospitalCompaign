@@ -50,7 +50,7 @@ public class ReportService {
         if (images != null && !images.isEmpty()) {
             for (MultipartFile image : images) {
                 if (!image.isEmpty()) {
-                    String url = fileStorageService.uploadFile(image);
+                    String url = fileStorageService.uploadFile(image, "reports");
                     uploadedImageUrls.add(url);
                 }
             }
@@ -117,8 +117,10 @@ public class ReportService {
         if (request.getRetainedImages() != null) {
             List<String> existingImages = report.getImageUrls() != null ? report.getImageUrls() : new ArrayList<>();
             for (String retained : request.getRetainedImages()) {
-                if (existingImages.contains(retained)) {
-                    finalImageUrls.add(retained);
+                // 화면에서 받은 서명 URL → DB 저장 형태로 정규화 후 비교
+                String stored = fileStorageService.toStoredUrl(retained);
+                if (existingImages.contains(stored)) {
+                    finalImageUrls.add(stored);
                 }
             }
         }
@@ -127,7 +129,7 @@ public class ReportService {
         if (images != null && !images.isEmpty()) {
             for (MultipartFile image : images) {
                 if (!image.isEmpty()) {
-                    String url = fileStorageService.uploadFile(image);
+                    String url = fileStorageService.uploadFile(image, "reports");
                     finalImageUrls.add(url);
                 }
             }
@@ -196,23 +198,14 @@ public class ReportService {
             List<String> base64Images = new ArrayList<>();
             for (String img : images) {
                 try {
-                    // 외부 S3 링크면 그대로 사용, 로컬이면 파일 읽어서 Base64 인코딩
-                    if (img.startsWith("http")) {
-                        base64Images.add(img);
-                    } else {
-                        String fileName = img.replace("/uploads/", "");
-                        Path imagePath = Paths.get("uploads", fileName);
-                        if (Files.exists(imagePath)) {
-                            byte[] fileBytes = Files.readAllBytes(imagePath);
-                            String base64Data = Base64.getEncoder().encodeToString(fileBytes);
-                            String mimeType = Files.probeContentType(imagePath);
-                            if (mimeType == null) mimeType = "image/jpeg";
-                            // 데이터 URI 스킴으로 조립
-                            base64Images.add("data:" + mimeType + ";base64," + base64Data);
-                        }
-                    }
+                    // S3(비공개)/로컬 모두 서버가 직접 읽어서 Base64 데이터 URI로 PDF에 삽입
+                    byte[] fileBytes = fileStorageService.readFile(img);
+                    String mimeType = java.net.URLConnection.guessContentTypeFromName(fileStorageService.toStoredUrl(img));
+                    if (mimeType == null) mimeType = "image/jpeg";
+                    String base64Data = Base64.getEncoder().encodeToString(fileBytes);
+                    base64Images.add("data:" + mimeType + ";base64," + base64Data);
                 } catch (Exception e) {
-                    System.out.println("PDF 이미지 인코딩 실패: " + img);
+                    System.out.println("PDF 이미지 인코딩 실패 (reportId: " + report.getId() + ")");
                 }
             }
             context.setVariable("imageUrls", base64Images);
@@ -250,7 +243,7 @@ public class ReportService {
     public ReportResponse getReportByReservation(Long reservationId) {
         Report report = reportRepository.findByReservationId(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 예약에 대한 리포트가 없습니다."));
-        return new ReportResponse(report);
+        return toResponse(report);
     }
 
     @Transactional(readOnly = true)
@@ -258,7 +251,7 @@ public class ReportService {
         // 예약한 고객 / 배정된 매니저 / 관리자만 조회 가능
         reservationAccessChecker.getViewable(reservationId, email);
         return reportRepository.findByReservationId(reservationId)
-                .map(ReportResponse::new)
+                .map(this::toResponse)
                 .orElse(null);
     }
 
@@ -275,5 +268,10 @@ public class ReportService {
 
         // 기존에 만들어둔 고품질 PDF 생성 메서드 재활용!
         return generatePdfBytes(report, images);
+    }
+
+    // 응답 변환: 사진 주소를 화면용 접근 주소(S3 서명 URL)로 교체
+    private ReportResponse toResponse(Report report) {
+        return new ReportResponse(report).withImageUrls(fileStorageService.toAccessUrls(report.getImageUrls()));
     }
 }

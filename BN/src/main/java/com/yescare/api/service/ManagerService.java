@@ -26,6 +26,7 @@ public class ManagerService {
     private final ManagerRepository managerRepository;
     private final ManagerApplicationRepository managerApplicationRepository;
     private final ReviewRepository reviewRepository;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public void saveManagerApplication(ManagerApplyRequest request, String email, String certificateUrl) {
@@ -68,7 +69,8 @@ public class ManagerService {
     public List<ManagerAppResponse> getManagerApplicationsByStatus(String status) {
         // 💡 "WAITING" 고정값 대신 전달받은 status로 조회
         return managerApplicationRepository.findByStatus(status).stream()
-                .map(ManagerAppResponse::new)
+                .map(app -> new ManagerAppResponse(app)
+                        .withCertificateUrl(fileStorageService.toAccessUrl(app.getCertificateUrl())))
                 .collect(Collectors.toList());
     }
 

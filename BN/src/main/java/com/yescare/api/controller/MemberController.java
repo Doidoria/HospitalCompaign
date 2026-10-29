@@ -138,7 +138,7 @@ public class MemberController {
 
         String fileUrl = null;
         if (file != null && !file.isEmpty()) {
-            fileUrl = fileStorageService.uploadFile(file);
+            fileUrl = fileStorageService.uploadFile(file, "certificates");
         }
         managerService.saveManagerApplication(request, email, fileUrl);
 
