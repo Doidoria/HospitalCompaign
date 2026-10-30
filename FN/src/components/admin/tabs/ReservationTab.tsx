@@ -76,7 +76,7 @@ const exportToCsv = (data: Reservation[]) => {
     res.time,
     `"${res.patient}"`,
     `"${res.hospital.split('///')[0].trim()}"`, // 병원주소 가공 반영
-    res.status === 'WAITING' ? '매칭 대기' : res.status === 'CONFIRMED' ? '예약 확정' : res.status === 'COMPLETED' ? '이용 완료' : '취소됨',
+    res.status === 'PAYMENT_PENDING' ? '결제 대기' : res.status === 'WAITING' ? '매칭 대기' : res.status === 'CONFIRMED' ? '예약 확정' : res.status === 'IN_PROGRESS' ? '동행 중' : res.status === 'COMPLETED' ? '이용 완료' : '취소됨',
     res.manager
   ]);
 
@@ -301,8 +301,10 @@ export default function ReservationTab({
 
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white border border-slate-200 text-sm font-semibold text-slate-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
               <option value="">상태 전체</option>
+              <option value="PAYMENT_PENDING">결제 대기</option>
               <option value="WAITING">매칭 대기</option>
               <option value="CONFIRMED">예약 확정</option>
+              <option value="IN_PROGRESS">동행 중</option>
               <option value="COMPLETED">이용 완료</option>
               <option value="CANCELLED">취소됨</option>
             </select>
@@ -377,6 +379,9 @@ export default function ReservationTab({
                       ) : (
                         <select value={res.status} onChange={(e) => handleStatusChange(res.id, e.target.value)} 
                           className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                          {/* 현재 상태가 목록에 없으면 첫 옵션으로 잘못 표시되므로 표시용 옵션 추가 */}
+                          {res.status === 'PAYMENT_PENDING' && <option value="PAYMENT_PENDING">결제 대기</option>}
+                          {res.status === 'IN_PROGRESS' && <option value="IN_PROGRESS">동행 중</option>}
                           <option value="WAITING">매칭 대기</option>
                           <option value="CONFIRMED">예약 확정</option>
                         </select>

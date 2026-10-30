@@ -88,6 +88,9 @@ export const reservationApi = {
   // 추가 요금 결제 승인 요청
   confirmExtraPayment: (id: number, data: { paymentKey: string, orderId: string, amount: number }) =>
     apiClient.post(`/api/reservations/${id}/extra-payment/confirm`, data),
+  // 대리 신청 예약의 보호자 선결제 승인
+  confirmProxyPayment: (id: number, data: { paymentKey: string, orderId: string, amount: number }) =>
+    apiClient.post(`/api/reservations/${id}/payment/confirm`, data),
 };
 
 // ==========================================
