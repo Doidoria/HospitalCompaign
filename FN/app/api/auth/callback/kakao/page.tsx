@@ -72,7 +72,8 @@ function KakaoCallbackContent() {
                      카카오 로그인 정보(<b>${existingEmail || '카카오 계정'}</b>)를 우선하여 
                      하나의 계정으로 <strong>통합 연동</strong>하시겠습니까?<br/><br/>
                      <span style="color:#ef4444; font-size:13px; font-weight: 500;">
-                       ※ 기존의 병원 동행 예약 내역 및 이용 기록은 안전하게 유지됩니다.
+                       ※ 기존의 병원 동행 예약 내역 및 이용 기록은 안전하게 유지됩니다.<br/>
+                       ※ 통합 후 로그인 아이디가 카카오 이메일로 변경되며, 이후에는 카카오 로그인으로 이용해 주세요.
                      </span>`,
               showCancelButton: true,
               confirmButtonText: '네, 연동하고 로그인하기',

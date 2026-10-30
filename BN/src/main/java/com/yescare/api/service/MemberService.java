@@ -110,6 +110,16 @@ public class MemberService {
     @Transactional
     public void updateMember(String email, MemberUpdateRequest request) {
         Member member = getMemberByEmail(email);
+
+        // 전화번호 변경 시 다른 회원과 중복되지 않도록 검사 (카카오 연동·아이디 찾기가 전화번호 기준)
+        String newPhone = request.getPhoneNumber() != null ? request.getPhoneNumber().replaceAll("[^0-9]", "") : "";
+        if (!newPhone.isEmpty() && !newPhone.equals(member.getPhoneNumber())) {
+            memberRepository.findByPhoneNumber(newPhone).ifPresent(other -> {
+                if (!other.getId().equals(member.getId())) {
+                    throw new IllegalStateException("이미 다른 계정에서 사용 중인 전화번호입니다.");
+                }
+            });
+        }
         member.updateInfo(
                 request.getName(), request.getPhoneNumber(), request.getZipCode(),
                 request.getAddress(), request.getDetailAddress(),

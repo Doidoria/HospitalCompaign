@@ -199,6 +199,14 @@ public class KakaoAuthService {
         String kakaoEmail = (String) kakaoAccount.get("email");
         String kakaoPhone = normalizePhoneNumber((String) kakaoAccount.get("phone_number"));
 
+        // 연동 기준 정보(이메일, 전화번호)가 없으면 진행 불가
+        if (kakaoEmail == null || kakaoEmail.isBlank()) {
+            throw new IllegalArgumentException("카카오 계정의 이메일 제공 동의가 필요합니다.");
+        }
+        if (kakaoPhone == null || kakaoPhone.isBlank()) {
+            throw new IllegalArgumentException("카카오 계정의 전화번호 제공 동의가 필요합니다.");
+        }
+
         // 변경하려는 카카오 이메일을 이미 다른 계정이 점유하고 있는지 교차 검증
         Optional<Member> emailConflictCheck = memberRepository.findByEmail(kakaoEmail);
         if (emailConflictCheck.isPresent()) {
@@ -208,6 +216,11 @@ public class KakaoAuthService {
         // 2. 전화번호로 기존 LOCAL 회원 찾기
         Member member = memberRepository.findByPhoneNumber(kakaoPhone)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
+
+        // 일반(LOCAL) 가입 계정만 통합 대상 (이미 카카오 계정이면 덮어쓰지 않음)
+        if (!"LOCAL".equals(member.getProvider())) {
+            throw new IllegalStateException("이미 소셜 계정과 연동된 회원입니다. 카카오 로그인을 이용해 주세요.");
+        }
 
         // 3. 카카오 정보 우선 덮어쓰기 (기존 기록은 id로 유지됨)
         member.overwriteWithKakaoInfo(
