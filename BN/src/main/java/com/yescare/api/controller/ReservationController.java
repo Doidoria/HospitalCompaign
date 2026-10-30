@@ -186,6 +186,18 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getAllReservationsForExcel(keyword, status));
     }
 
+    // 대리 신청 예약의 보호자 선결제 승인 API
+    @PostMapping("/{id}/payment/confirm")
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER_PRO', 'MANAGER_FREE', 'ADMIN')")
+    public ResponseEntity<?> confirmProxyPayment(
+            @PathVariable("id") Long id,
+            @RequestBody ExtraPaymentRequest request,
+            Principal principal) {
+
+        reservationService.confirmProxyPayment(id, principal.getName(), request);
+        return ResponseEntity.ok().body("결제가 완료되어 매니저 매칭이 시작됩니다.");
+    }
+
     // 추가 요금 결제 승인 API
     @PostMapping("/{id}/extra-payment/confirm")
     public ResponseEntity<?> confirmExtraPayment(

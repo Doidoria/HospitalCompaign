@@ -70,7 +70,7 @@ export default function ReservationDetailPage() {
 
         setReservation({
           id: String(apiData.id),
-          status: apiData.status === 'WAITING' ? '매칭 대기' : apiData.status,
+          status: apiData.status === 'WAITING' ? '매칭 대기' : apiData.status === 'PAYMENT_PENDING' ? '결제 대기' : apiData.status,
           date: dateStr,
           time: timeStr,
           hospital: apiData.hospitalName,
@@ -117,14 +117,14 @@ export default function ReservationDetailPage() {
     return () => { isMounted = false; };
   }, [params.id, router]);
 
+  // 대리 신청 예약의 보호자 선결제 페이지로 이동
   const handlePayment = useCallback(() => {
-    Toast.fire({ icon: 'info', title: '결제창으로 이동합니다.' });
-    setReservation(prev => ({ ...prev, status: '예약 확정' }));
-  }, []);
+    router.push(`/pay/reservation/${reservation.id}`);
+  }, [router, reservation.id]);
 
   const handleCancel = useCallback(async () => {
-    if (reservation.status !== '매칭 대기') {
-      Toast.fire({ icon: 'warning', title: '매칭 대기 상태에서만 취소가 가능합니다.' });
+    if (reservation.status !== '매칭 대기' && reservation.status !== '결제 대기') {
+      Toast.fire({ icon: 'warning', title: '매칭 대기 또는 결제 대기 상태에서만 취소가 가능합니다.' });
       return;
     }
 
@@ -474,9 +474,16 @@ export default function ReservationDetailPage() {
           )}
           <div className="flex gap-3">
             {reservation.status === '결제 대기' && (
+              <>
               <button onClick={handlePayment} className="flex-1 bg-indigo-600 text-white font-bold py-4.5 rounded-[20px] shadow-[0_4px_20px_rgba(79,70,229,0.3)] hover:bg-indigo-700 transition-all active:scale-[0.98]">
                 결제 진행하기
               </button>
+              <button onClick={handleCancel}
+                className="flex-1 bg-white border-2 border-slate-100 text-slate-600 font-bold py-4 rounded-[20px] hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+              >
+                <XCircle className="w-5 h-5" /> 예약 취소
+              </button>
+              </>
             )}
             {reservation.status === '매칭 대기' ? (
               <>

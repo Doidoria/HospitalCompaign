@@ -294,6 +294,15 @@ public class Reservation {
         this.paymentStatus = "DONE";
     }
 
+    // 대리 신청 예약의 보호자 선결제 완료 처리 → 매칭 대기로 전환
+    public void completeProxyPayment(String orderId, String paymentKey) {
+        if (this.status != ReservationStatus.PAYMENT_PENDING) {
+            throw new IllegalStateException("결제 대기 상태의 예약만 결제할 수 있습니다.");
+        }
+        completePayment(orderId, paymentKey);
+        this.status = ReservationStatus.WAITING;
+    }
+
     // 추가 요금 결제 완료 처리 메서드
     public void completeExtraPayment(String extraOrderId, String extraPaymentKey) {
         this.extraOrderId = extraOrderId;

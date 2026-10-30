@@ -372,6 +372,9 @@ public class ReservationService {
             }
         }
 
+        // 대리 신청도 일반 예약과 동일한 요금 정책 적용 (알 수 없는 카테고리는 차단)
+        int proxyBaseFee = resolveBaseFee(data.get("category"));
+
         // 원본 예약 버튼을 '신청 완료'로 잠금 처리!
         old.setHasProxy(true);
 
@@ -400,7 +403,9 @@ public class ReservationService {
                 // 재방문 회차 저장 및 메모 조합
                 .revisitCount(data.get("revisitCount"))
                 .memo("[매니저 대리 신청 - " + data.get("revisitCount") + "] " + data.get("memo"))
-                .status(ReservationStatus.WAITING)
+                // 보호자 선결제 전까지 매칭 불가 (결제 완료 시 WAITING으로 전환)
+                .status(ReservationStatus.PAYMENT_PENDING)
+                .baseFee(proxyBaseFee)
                 .build();
 
         reservationRepository.save(newRes);
@@ -757,6 +762,72 @@ public class ReservationService {
 
         // 4. DB 상태 업데이트 (결제 완료)
         reservation.completeExtraPayment(request.getOrderId(), request.getPaymentKey());
+    }
+
+    // 대리 신청 예약의 보호자 선결제 승인
+    @Transactional
+    public void confirmProxyPayment(Long reservationId, String email, ExtraPaymentRequest request) {
+        // 예약한 고객(보호자) 본인만 결제 가능
+        Reservation reservation = reservationAccessChecker.getOwned(reservationId, email);
+
+        if (reservation.getStatus() != ReservationStatus.PAYMENT_PENDING) {
+            throw new IllegalStateException("결제 대기 상태의 예약이 아닙니다.");
+        }
+        if (request.getPaymentKey() == null || request.getPaymentKey().isBlank()
+                || request.getOrderId() == null || request.getOrderId().isBlank()) {
+            throw new IllegalArgumentException("결제 정보가 누락되었습니다.");
+        }
+        // 금액은 서버에 저장된 기본 요금 기준으로 검증
+        int baseFee = reservation.getBaseFee() != null ? reservation.getBaseFee() : resolveBaseFee(reservation.getCategory());
+        if (request.getAmount() == null || request.getAmount() != baseFee) {
+            throw new IllegalArgumentException("결제 금액이 서비스 요금과 일치하지 않습니다.");
+        }
+        if (reservationRepository.existsByOrderId(request.getOrderId())) {
+            throw new IllegalStateException("이미 처리된 결제입니다.");
+        }
+
+        confirmTossPayment(request.getOrderId(), request.getPaymentKey(), baseFee);
+
+        // 결제 완료 → 매칭 대기로 전환
+        reservation.completeProxyPayment(request.getOrderId(), request.getPaymentKey());
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm");
+        kakaoAlimtalkService.sendReservationComplete(
+                reservation.getMember().getPhoneNumber(),
+                reservation.getMember().getName(),
+                reservation.getReservationTime().format(formatter),
+                reservation.getHospitalName()
+        );
+        slackNotificationService.sendNewReservationAlert(reservation);
+    }
+
+    // 토스페이먼츠 최종 결제 승인 공통 호출 (실패 시 예외 → 트랜잭션 롤백)
+    private void confirmTossPayment(String orderId, String paymentKey, int amount) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            String encodedAuth = java.util.Base64.getEncoder()
+                    .encodeToString((tossSecretKey + ":").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            headers.setBasicAuth(encodedAuth);
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            Map<String, Object> paymentPayload = new HashMap<>();
+            paymentPayload.put("orderId", orderId);
+            paymentPayload.put("amount", amount);
+            paymentPayload.put("paymentKey", paymentKey);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://api.tosspayments.com/v1/payments/confirm",
+                    new org.springframework.http.HttpEntity<>(paymentPayload, headers),
+                    String.class
+            );
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new IllegalStateException("결제 승인에 실패했습니다.");
+            }
+        } catch (Exception e) {
+            System.err.println("토스 결제 승인 에러 (orderId: " + orderId + "): " + e.getMessage());
+            throw new IllegalStateException("결제 승인에 실패했습니다. 결제가 완료되지 않았다면 다시 시도해 주세요.");
+        }
     }
 
     // 서비스 기본 요금 정책 (FN app/apply/page.tsx의 금액 표시와 반드시 동일하게 유지)

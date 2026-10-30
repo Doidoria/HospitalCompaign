@@ -258,7 +258,7 @@ export default function ProxyReservationPage() {
       await YesAlert.fire({ 
         icon: 'success', 
         title: '대리 신청 완료', 
-        text: '다음 일정이 성공적으로 접수되었으며, 고객님께 접수 안내 알림톡이 발송되었습니다.', 
+        text: '다음 일정이 접수되었습니다. 보호자님이 마이페이지에서 결제를 완료하면 매니저 매칭이 시작됩니다.', 
         confirmButtonColor: '#ea580c' 
       });
       router.push('/manager/dashboard');

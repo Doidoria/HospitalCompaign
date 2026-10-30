@@ -120,6 +120,8 @@ export default function MyPage() {
     })
     .sort((a, b) => {
       const getStatusPriority = (status: string) => {
+        if (status === 'PAYMENT_PENDING') return 0; // 결제가 필요한 예약을 가장 위에
+        if (status === 'IN_PROGRESS') return 1;
         if (status === 'CONFIRMED' || status === '예약 확정') return 1;
         if (status === 'WAITING' || status === '매칭 대기') return 2;
         return 3;
@@ -197,7 +199,8 @@ export default function MyPage() {
 
         // 2. 취소나 완료가 아닌 '진행 중(WAITING, CONFIRMED)'인 모든 예약을 찾음
         const active = processedData.filter((res: any) => 
-            res.status === 'WAITING' || res.status === 'CONFIRMED' || res.status === '매칭 대기' || res.status === '예약 확정'
+            res.status === 'PAYMENT_PENDING' || res.status === 'WAITING' || res.status === 'CONFIRMED' || res.status === 'IN_PROGRESS' ||
+            res.status === '매칭 대기' || res.status === '예약 확정'
         );
         // 3. 완료되었거나 취소된 예약은 과거 내역으로
         const past = processedData.filter((res: any) => 
@@ -572,7 +575,13 @@ export default function MyPage() {
                             </div>
                           ) : (
                             <div className="mt-6 pt-5 border-t border-slate-100 relative z-10 text-center">
-                              <p className="text-sm text-slate-500 font-medium">현재 최적의 동행 매니저를 <span className="text-indigo-500 font-bold">매칭 중</span>입니다.</p>
+                              {req.status === 'PAYMENT_PENDING' ? (
+                                <Link href={`/pay/reservation/${req.id}`} className="inline-flex items-center gap-1 text-sm font-bold text-indigo-600 hover:text-indigo-700">
+                                  매니저가 대리 신청한 예약입니다. <span className="underline underline-offset-2">결제하고 매칭 시작하기</span>
+                                </Link>
+                              ) : (
+                                <p className="text-sm text-slate-500 font-medium">현재 최적의 동행 매니저를 <span className="text-indigo-500 font-bold">매칭 중</span>입니다.</p>
+                              )}
                             </div>
                           )}
                           <Activity className="absolute -bottom-10 -right-10 w-56 h-56 text-indigo-50/60 pointer-events-none transition-transform group-hover:scale-110 duration-500 z-0" />
