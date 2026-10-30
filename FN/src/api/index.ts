@@ -25,7 +25,9 @@ export const authApi = {
   sendSms: (phone: string) => apiClient.post('/api/members/sms/send', { phone }),
   verifySms: (phone: string, code: string) => apiClient.post('/api/members/sms/verify', { phone, code }),
   verifyPassword: (password: string) => apiClient.post('/api/members/verify-password', { password }),
-  changePassword: (newPassword: string) => apiClient.put('/api/members/password', { newPassword }),
+  // 일반 회원은 현재 비밀번호 필수, 서버에서 최근 휴대폰 인증 여부도 확인
+  changePassword: (newPassword: string, currentPassword?: string) =>
+    apiClient.put('/api/members/password', { newPassword, currentPassword }),
   updateMe: (data: any) => apiClient.put('/api/members/me', data),
   // 마이페이지 신청 상태 조회
   getManagerAppStatus: () => apiClient.get('/api/members/me/manager-application'),

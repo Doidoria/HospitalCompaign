@@ -93,7 +93,7 @@ public class MemberController {
 
     @PutMapping("/password")
     public ResponseEntity<String> changePassword(@AuthenticationPrincipal String email, @RequestBody PasswordChangeRequest request) {
-        memberService.changePassword(email, request.getNewPassword());
+        memberService.changePassword(email, request.getCurrentPassword(), request.getNewPassword());
         return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
     }
 

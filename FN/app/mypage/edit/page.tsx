@@ -171,7 +171,7 @@ export default function MyInfoEditPage() {
     }
 
     try {
-      await authApi.changePassword(newPassword);
+      await authApi.changePassword(newPassword, isKakaoUser ? undefined : password);
       Toast.fire({ icon: 'success', title: '비밀번호가 성공적으로 변경되었습니다. 다시 인증해주세요.' });
       
       setNewPassword(''); 

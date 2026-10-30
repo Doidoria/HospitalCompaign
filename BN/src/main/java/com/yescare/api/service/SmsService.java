@@ -24,6 +24,10 @@ public class SmsService {
     @Value("${coolsms.sender}")
     private String senderNumber;
 
+    // 로컬 환경에서는 실제 문자를 보내지 않고 콘솔에 인증번호만 출력 (Solapi 허용 IP 제한·비용 회피)
+    @Value("${spring.profiles.active:}")
+    private String activeProfile;
+
     private DefaultMessageService messageService;
 
     // 1. 인증번호 저장소
@@ -36,6 +40,10 @@ public class SmsService {
     private final Map<String, ScheduledFuture<?>> expiryTasks = new ConcurrentHashMap<>();
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+    // 4. 최근 인증 성공 기록 (비밀번호 변경 등 후속 요청에서 서버가 인증 여부를 확인하기 위함)
+    private final Map<String, Long> verifiedUntil = new ConcurrentHashMap<>();
+    private static final long VERIFIED_TTL_MILLIS = 10 * 60 * 1000; // 인증 후 10분간 유효
 
     // 쿨타임 제한 (예: 1분 = 60000 밀리초)
     private static final long COOLDOWN_MILLIS = 60000;
@@ -84,7 +92,14 @@ public class SmsService {
         message.setText("[예스케어] 본인확인 인증번호는 [" + code + "] 입니다. 3분 내에 입력해주세요.");
 
         try {
-            this.messageService.sendOne(new SingleMessageSendingRequest(message));
+            if (activeProfile.contains("local")) {
+                System.out.println("\n=======================================");
+                System.out.println("📱 [로컬 가짜 문자] 수신번호: " + phoneNumber);
+                System.out.println("🔑 인증번호: " + code);
+                System.out.println("=======================================\n");
+            } else {
+                this.messageService.sendOne(new SingleMessageSendingRequest(message));
+            }
 
             // 발송이 성공해야만 쿨타임 저장
             lastRequestTimes.put(phoneNumber, currentTime);
@@ -114,6 +129,7 @@ public class SmsService {
         if (savedCode != null && savedCode.equals(code)) {
             // 인증 성공 시 즉시 데이터 파기 (타이머도 취소하여 메모리 절약)
             verificationCodes.remove(phoneNumber);
+            verifiedUntil.put(normalize(phoneNumber), System.currentTimeMillis() + VERIFIED_TTL_MILLIS);
             if (expiryTasks.containsKey(phoneNumber)) {
                 expiryTasks.get(phoneNumber).cancel(false);
                 expiryTasks.remove(phoneNumber);
@@ -121,5 +137,18 @@ public class SmsService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * 최근 10분 내 인증에 성공한 번호인지 확인하고, 확인되면 기록을 소모(1회용)
+     */
+    public boolean consumeRecentVerification(String phoneNumber) {
+        if (phoneNumber == null) return false;
+        Long until = verifiedUntil.remove(normalize(phoneNumber));
+        return until != null && until > System.currentTimeMillis();
+    }
+
+    private String normalize(String phoneNumber) {
+        return phoneNumber == null ? "" : phoneNumber.replaceAll("[^0-9]", "");
     }
 }

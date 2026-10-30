@@ -27,6 +27,7 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final KakaoAuthService kakaoAuthService;
     private final KakaoAlimtalkService kakaoAlimtalkService;
+    private final SmsService smsService;
 
     @Transactional
     public Long join(MemberJoinRequest request) {
@@ -110,16 +111,6 @@ public class MemberService {
     @Transactional
     public void updateMember(String email, MemberUpdateRequest request) {
         Member member = getMemberByEmail(email);
-
-        // 전화번호 변경 시 다른 회원과 중복되지 않도록 검사 (카카오 연동·아이디 찾기가 전화번호 기준)
-        String newPhone = request.getPhoneNumber() != null ? request.getPhoneNumber().replaceAll("[^0-9]", "") : "";
-        if (!newPhone.isEmpty() && !newPhone.equals(member.getPhoneNumber())) {
-            memberRepository.findByPhoneNumber(newPhone).ifPresent(other -> {
-                if (!other.getId().equals(member.getId())) {
-                    throw new IllegalStateException("이미 다른 계정에서 사용 중인 전화번호입니다.");
-                }
-            });
-        }
         member.updateInfo(
                 request.getName(), request.getPhoneNumber(), request.getZipCode(),
                 request.getAddress(), request.getDetailAddress(),
@@ -127,9 +118,31 @@ public class MemberService {
         );
     }
 
+    // 비밀번호 정책: 8자 이상, 영문 + 숫자 + 특수문자 포함 (FN 검증과 동일 기준)
+    private static final java.util.regex.Pattern PASSWORD_POLICY =
+            java.util.regex.Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z0-9\\s]).{8,}$");
+
     @Transactional
-    public void changePassword(String email, String newPassword) {
+    public void changePassword(String email, String currentPassword, String newPassword) {
         Member member = getMemberByEmail(email);
+
+        // 1. 일반 가입 회원은 현재 비밀번호 확인 (토큰만 탈취된 경우 비밀번호 변경 차단)
+        if ("LOCAL".equals(member.getProvider())) {
+            if (currentPassword == null || !passwordEncoder.matches(currentPassword, member.getPassword())) {
+                throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+            }
+        }
+
+        // 2. 새 비밀번호 정책 검사
+        if (newPassword == null || !PASSWORD_POLICY.matcher(newPassword).matches()) {
+            throw new IllegalArgumentException("비밀번호는 8자 이상, 영문·숫자·특수문자를 모두 포함해야 합니다.");
+        }
+
+        // 3. 본인 휴대폰 인증(최근 10분 내) 확인 - 화면 단계와 무관하게 서버에서 재확인
+        if (!smsService.consumeRecentVerification(member.getPhoneNumber())) {
+            throw new IllegalStateException("휴대폰 인증이 필요합니다. 인증 후 다시 시도해 주세요.");
+        }
+
         member.updatePassword(passwordEncoder.encode(newPassword));
     }
 
